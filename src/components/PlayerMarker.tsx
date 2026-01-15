@@ -13,6 +13,8 @@ interface PlayerMarkerProps {
     // New Props for Responsiveness
     playerSize?: number;
     fontSize?: { number: number; name: number };
+    // Drag and Drop for Bench
+    onDragStart?: (e: React.DragEvent, player: Player) => void;
 }
 
 const PlayerMarker: React.FC<PlayerMarkerProps> = ({
@@ -25,7 +27,8 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
     isSelected,
     shortName,
     playerSize = 36, // Default fallback
-    fontSize = { number: 14, name: 10 }
+    fontSize = { number: 14, name: 10 },
+    onDragStart
 }) => {
 
     // Fallback if shortName is not provided
@@ -46,6 +49,8 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             onMouseDown={onMouseDown}
             onTouchStart={onMouseDown}
             onDoubleClick={onDoubleClick}
+            draggable={!!onDragStart}
+            onDragStart={(e) => onDragStart && onDragStart(e, player)}
         >
             {/* Player Circle */}
             <div

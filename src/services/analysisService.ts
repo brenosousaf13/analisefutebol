@@ -52,6 +52,10 @@ export interface AnalysisData {
     awayArrowsDef: Arrow[];
     awayArrowsOff: Arrow[];
 
+    // Events (stored as JSONB)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    events?: any[];
+
     tags: string[];
 }
 
@@ -111,6 +115,7 @@ export const analysisService = {
                 home_off_notes: data.homeOffNotes,
                 away_team_notes: data.awayTeamNotes,
                 away_off_notes: data.awayOffNotes,
+                events: data.events || [],
                 updated_at: new Date().toISOString()
             };
 
@@ -328,6 +333,7 @@ export const analysisService = {
             homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
             homeSubstitutes, awaySubstitutes,
             homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
+            events: analysis.events || [],
             tags: []
         };
     },

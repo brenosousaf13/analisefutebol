@@ -23,6 +23,7 @@ import { MousePointer2, TrendingUp, Eraser, UserPlus } from 'lucide-react';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
+import BenchArea from '../components/BenchArea';
 // import { useFieldDimensions } from '../hooks/useFieldDimensions';
 // import { getPlayerSize } from '../utils/playerCoordinates';
 
@@ -71,7 +72,7 @@ function Analysis() {
 
     // Timeline Events
     const [events, setEvents] = useState<MatchEvent[]>([]);
-    const [deletedEventIds, setDeletedEventIds] = useState<string[]>([]);
+    // deletedEventIds removed as we sync full state via JSONBModalOpen] = useState(false);
     const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
     const [isEventsExpansionModalOpen, setIsEventsExpansionModalOpen] = useState(false);
     const [eventToEdit, setEventToEdit] = useState<MatchEvent | null>(null);
@@ -327,40 +328,7 @@ function Analysis() {
 
             const savedId = await analysisService.saveAnalysis(data);
 
-            // --- Save Events ---
-            // 1. Delete removed events
-            if (deletedEventIds.length > 0) {
-                await supabase.from('match_events').delete().in('id', deletedEventIds);
-                setDeletedEventIds([]);
-            }
-
-            // 2. Upsert current events
-            if (events.length > 0) {
-                const eventsToSave = events.map(e => {
-                    const { id, ...rest } = e;
-                    // If temp ID, remove it to let DB generate UUID. If real ID, keep it.
-                    const eventData: any = { ...rest, analysis_id: savedId };
-                    if (!id.startsWith('temp_')) {
-                        eventData.id = id;
-                    }
-                    return eventData;
-                });
-
-                const { error: eventsError } = await supabase
-                    .from('match_events')
-                    .upsert(eventsToSave);
-
-                if (eventsError) throw eventsError;
-
-                // 3. Reload events to get real IDs
-                const { data: freshEvents } = await supabase
-                    .from('match_events')
-                    .select('*')
-                    .eq('analysis_id', savedId)
-                    .order('minute', { ascending: false });
-
-                if (freshEvents) setEvents(freshEvents as MatchEvent[]);
-            }
+            setEvents(events); // Ensure local state is in sync if needed, though usually it is.
 
             setCurrentAnalysisId(savedId);
             setSaveStatus('success');
@@ -374,7 +342,7 @@ function Analysis() {
         }
     }, [currentAnalysisId, homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
         homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes, notasCasa, notasVisitante,
-        homeScore, awayScore, events, deletedEventIds, matchState, homeTeamNotes,
+        homeScore, awayScore, events, matchState, homeTeamNotes,
         notasCasaUpdatedAt, notasVisitanteUpdatedAt]);
 
     // Load existing analysis if available
@@ -397,6 +365,9 @@ function Analysis() {
                     setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
                     setNotasVisitante(data.notasVisitante);
                     setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
+
+                    // Load Events
+                    setEvents(data.events || []);
 
                     // Load arrows for both teams
                     setHomeArrows({
@@ -478,22 +449,8 @@ function Analysis() {
         }
     };
 
-    // Load Events
-    useEffect(() => {
-        if (!currentAnalysisId) return;
-        const fetchEvents = async () => {
-            const { data, error } = await supabase
-                .from('match_events')
-                .select('*')
-                .eq('analysis_id', currentAnalysisId)
-                .order('minute', { ascending: false });
-
-            if (!error && data) {
-                setEvents(data as MatchEvent[]);
-            }
-        };
-        fetchEvents();
-    }, [currentAnalysisId]);
+    // Events are now loaded as part of the main analysis object
+    // useEffect(() => { ... }) removed
 
     const handleSaveEvent = async (eventData: any) => {
         if (eventToEdit) {
@@ -523,16 +480,8 @@ function Analysis() {
         setIsAddEventModalOpen(true);
     };
 
-    const handleDeleteEvent = async (id: string) => {
-        const { error } = await supabase
-            .from('match_events')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error deleting event:', error);
-            alert('Erro ao excluir evento');
-        } else {
+    const handleDeleteEvent = (id: string) => {
+        if (window.confirm('Tem certeza que deseja excluir este evento?')) {
             setEvents(prev => prev.filter(e => e.id !== id));
         }
     };
@@ -553,6 +502,43 @@ function Analysis() {
             setAwaySubstitutes(prev => prev.filter(p => p.id !== player.id));
             setAwayPlayersDef(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
             setAwayPlayersOff(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
+        }
+    };
+
+    // --- Drag and Drop Handlers ---
+
+    // When dragging FROM Field
+    const handleFieldDragStart = (e: React.DragEvent, player: Player) => {
+        e.dataTransfer.setData('player', JSON.stringify(player));
+        e.dataTransfer.setData('source', 'field');
+        e.dataTransfer.setData('team', viewTeam); // Use viewTeam as source team
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    // When dragging FROM Bench (for potential future bench-to-field DnD)
+    const handleBenchDragStart = (_player: Player) => {
+        // BenchArea handles setData, we just track if needed or log
+        // console.log('Bench drag start:', player);
+    };
+
+    // When dropping ON Bench
+    const handleDropToBench = (player: Player) => {
+        // Move from field to bench
+        if (viewTeam === 'home') {
+            setHomePlayersDef(prev => prev.filter(p => p.id !== player.id));
+            setHomePlayersOff(prev => prev.filter(p => p.id !== player.id));
+            // Add to bench if not already there (safety check)
+            setHomeSubstitutes(prev => {
+                if (prev.some(p => p.id === player.id)) return prev;
+                return [...prev, { ...player, position: { x: 0, y: 0 } }];
+            });
+        } else {
+            setAwayPlayersDef(prev => prev.filter(p => p.id !== player.id));
+            setAwayPlayersOff(prev => prev.filter(p => p.id !== player.id));
+            setAwaySubstitutes(prev => {
+                if (prev.some(p => p.id === player.id)) return prev;
+                return [...prev, { ...player, position: { x: 0, y: 0 } }];
+            });
         }
     };
 
@@ -774,6 +760,7 @@ function Analysis() {
                                     arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                    onPlayerDragStart={handleFieldDragStart}
                                 />
                             </div>
                         </div>
@@ -797,6 +784,7 @@ function Analysis() {
                                     arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                    onPlayerDragStart={handleFieldDragStart}
                                 />
                             </div>
                         </div>
@@ -807,32 +795,15 @@ function Analysis() {
                 <div className="flex items-center gap-4 overflow-x-auto w-full mr-4">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reservas</span>
 
-                    <div className="flex items-center gap-3 pb-1"> {/* pb-1 for scrollbar clearance */}
-                        {/* Real Reserves from State */}
-                        {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
-                            <div
-                                key={sub.id}
-                                className="flex flex-col items-center group cursor-pointer"
-                                onClick={() => handleMoveToField(sub)}
-                                onDoubleClick={(e) => {
-                                    e.stopPropagation();
-                                    handleBenchDoubleClick(sub);
-                                }}
-                                title={`${sub.name} - Clique para mover ao campo, duplo clique para editar`}
-                            >
-                                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border-2 border-gray-500 flex items-center justify-center text-white font-bold group-hover:border-green-500 group-hover:bg-gray-600 transition-all shadow-sm">
-                                    {sub.number}
-                                </div>
-                                <span className="text-[10px] text-gray-400 mt-0.5 max-w-[50px] truncate text-center group-hover:text-white transition-colors">
-                                    {sub.name.split(' ').pop()}
-                                </span>
-                            </div>
-                        ))}
-
-                        {/* Empty state if no reserves */}
-                        {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length === 0 && (
-                            <span className="text-xs text-gray-600 italic">Clique + para adicionar reservas</span>
-                        )}
+                    <div className="flex items-center gap-3 pb-1 w-full"> {/* pb-1 for scrollbar clearance */}
+                        <BenchArea
+                            players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
+                            team={viewTeam}
+                            onPlayerDrop={handleDropToBench}
+                            onPlayerDragStart={handleBenchDragStart}
+                            onPlayerDoubleClick={handleBenchDoubleClick}
+                            onMoveToField={handleMoveToField}
+                        />
                     </div>
                 </div>
                 <button
