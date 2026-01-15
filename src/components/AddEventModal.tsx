@@ -103,16 +103,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm md:p-4 animate-in fade-in duration-200">
-            <div className="bg-panel-dark border border-gray-700 w-full md:max-w-lg rounded-t-3xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col h-[85vh] md:h-auto md:max-h-[90vh] animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300">
-
-                {/* Mobile Handle */}
-                <div className="md:hidden flex justify-center py-3 bg-panel-dark border-b border-gray-700/50 shrink-0">
-                    <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-panel-dark border border-gray-700 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-black/20 shrink-0">
+                <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-black/20">
                     <h2 className="text-white font-bold text-lg flex items-center gap-2">
                         <span className="text-accent-green">{initialData ? '✏️' : '+'}</span> {initialData ? 'Editar Evento' : 'Adicionar Evento'}
                     </h2>

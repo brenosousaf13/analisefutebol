@@ -18,7 +18,7 @@ import AddEventModal from '../components/AddEventModal';
 import MatchTimeline, { type MatchEvent } from '../components/MatchTimeline';
 import EventsExpansionModal from '../components/EventsExpansionModal';
 
-import { MousePointer2, TrendingUp, Eraser, UserPlus, FileText, Zap, ChevronUp, ChevronDown, Plus } from 'lucide-react';
+import { MousePointer2, TrendingUp, Eraser, UserPlus } from 'lucide-react';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 // import { useFieldDimensions } from '../hooks/useFieldDimensions';
@@ -92,10 +92,11 @@ function Analysis() {
     const [isCreatePlayerModalOpen, setIsCreatePlayerModalOpen] = useState(false);
 
     // Responsive State
-    const [isMobile, setIsMobile] = useState(false);
+    // const [isMobile, setIsMobile] = useState(false);
     // const [isTablet, setIsTablet] = useState(false);
-    const [reservesExpanded, setReservesExpanded] = useState(false);
+    // const [reservesExpanded, setReservesExpanded] = useState(false);
 
+    /*
     useEffect(() => {
         const checkSize = () => {
             setIsMobile(window.innerWidth < 768);
@@ -105,6 +106,7 @@ function Analysis() {
         window.addEventListener('resize', checkSize);
         return () => window.removeEventListener('resize', checkSize);
     }, []);
+    */
 
     // --- Helpers ---
     const convertLineupToPlayers = (lineup: Lineup): Player[] => {
@@ -578,292 +580,197 @@ function Analysis() {
                         )}
                     </div>
 
-                    {/* Header Section Compact */}
-                    <div className="h-12 flex items-center justify-between px-4 border-b border-gray-700 bg-nav-dark sticky top-0 z-30 shrink-0">
-                        <div className="flex items-center gap-2">
-                            {matchState ? (
-                                <>
-                                    <h1 className="text-lg font-semibold text-white">Análise de Partida</h1>
-                                    <span className="text-gray-500">·</span>
-                                    <span className="text-sm text-gray-400">
-                                        {matchState.teams.home.name} x {matchState.teams.away.name}
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <h1 className="text-lg font-semibold text-white">Prancheta Tática</h1>
-                                    <span className="text-gray-500">·</span>
-                                    <span className="text-sm text-gray-400">Sandbox</span>
-                                </>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500 hidden md:inline">Salvo: 10:42</span>
-                            <div className="flex items-center gap-1">
-                                <button className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors">
-                                    <Share2 className="w-4 h-4" />
-                                </button>
-                                <button className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors">
-                                    <Download className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <button
-                                onClick={handleSave}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all shadow-lg
-                                ${saveStatus === 'success' ? 'bg-green-600 text-white' : 'bg-accent-green hover:bg-green-600 text-white'}
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500 mr-2">Último salvamento: 10:42 AM</span>
+                        <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+                            <Share2 size={18} />
+                        </button>
+                        <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+                            <Download size={18} />
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-lg
+                                ${saveStatus === 'success' ? 'bg-green-600 text-white' : 'bg-accent-green hover:bg-green-500 text-white'}
                             `}
-                            >
-                                <Save className="w-4 h-4" />
-                                <span className="hidden md:inline">{saveStatus === 'success' ? 'Salvo' : 'Salvar'}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Unified Controls Row */}
-                    <div className="h-11 px-4 flex items-center justify-between bg-panel-dark/50 shrink-0 border-b border-gray-700/50">
-                        {/* Team Toggle */}
-                        <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700">
-                            <button
-                                onClick={() => setViewTeam('home')}
-                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
-                            >
-                                CASA
-                            </button>
-                            <button
-                                onClick={() => setViewTeam('away')}
-                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
-                            >
-                                VISITANTE
-                            </button>
-                        </div>
-
-                        {/* Phase Tabs */}
-                        <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700">
-                            {['defensive', 'offensive', 'transition'].map((phase) => (
-                                <button
-                                    key={phase}
-                                    onClick={() => setActivePhase(phase as any)}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold capitalize transition-all 
-                                    ${activePhase === phase
-                                            ? (phase === 'defensive' ? 'bg-red-600 text-white' : phase === 'offensive' ? 'bg-accent-green text-white' : 'bg-accent-yellow text-gray-900')
-                                            : 'text-gray-400 hover:text-white'
-                                        }
-                                `}
-                                >
-                                    {phase === 'defensive' ? 'Def' : phase === 'offensive' ? 'Ofensivo' : 'Trans'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col h-full overflow-hidden">
-                        {/* Main Content: Toolbar + Field */}
-                        <div className="flex-1 relative overflow-hidden flex items-center p-4 gap-4">
-
-                            {/* Left Toolbar */}
-                            <div className="flex flex-col bg-[#242938] rounded-xl p-2 gap-1 z-30 shrink-0 shadow-xl border border-gray-700">
-                                <button
-                                    onClick={() => setInteractionMode('move')}
-                                    className={`p-2 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                                    title="Mover Jogadores"
-                                >
-                                    <MousePointer2 size={24} />
-                                </button>
-                                <button
-                                    onClick={() => setInteractionMode('draw')}
-                                    className={`p-2 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                                    title="Desenhar Setas"
-                                >
-                                    <TrendingUp size={24} />
-                                </button>
-                                <button
-                                    onClick={() => setIsCreatePlayerModalOpen(true)}
-                                    className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-                                    title="Adicionar Jogador"
-                                >
-                                    <UserPlus size={24} />
-                                </button>
-
-                                {/* Separator */}
-                                <div className="h-px bg-gray-700 my-1 mx-1" />
-
-                                <button
-                                    onClick={handleClearArrows}
-                                    className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors hover:text-red-400"
-                                    title="Limpar Setas"
-                                >
-                                    <Eraser size={24} />
-                                </button>
-                            </div>
-
-                            {/* Field Container */}
-                            <div className="flex-1 h-full relative flex items-center justify-center overflow-hidden rounded-xl">
-                                <TacticalField
-                                    players={getCurrentPlayers()}
-                                    onPlayerMove={handlePlayerMove}
-                                    onPlayerClick={handlePlayerClick}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={interactionMode}
-                                    arrows={arrows[activePhase]}
-                                    onAddArrow={handleAddArrow}
-                                    onRemoveArrow={handleRemoveArrow}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Reserves Bar (Compact) */}
-                        <div className={`
-                        border-t border-gray-700 bg-[#1a1f2e] px-4 shrink-0
-                        ${reservesExpanded ? 'py-3' : 'py-2'}
-                        transition-all duration-200 z-40
-                    `}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider shrink-0">
-                                        Reservas
-                                    </span>
-
-                                    {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length === 0 ? (
-                                        <span className="text-xs text-gray-500 italic">Vazio</span>
-                                    ) : (
-                                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                                            {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
-                                                <div
-                                                    key={sub.id}
-                                                    onDoubleClick={() => handleBenchDoubleClick(sub)}
-                                                    className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-xs font-bold text-gray-900 cursor-grab hover:bg-yellow-400"
-                                                    title={sub.name}
-                                                >
-                                                    {sub.number}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                    <button
-                                        onClick={() => setIsCreatePlayerModalOpen(true)}
-                                        className="p-1.5 text-green-500 hover:bg-gray-700 rounded"
-                                        title="Adicionar jogador"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setReservesExpanded(!reservesExpanded)}
-                                        className="p-1.5 text-gray-400 hover:bg-gray-700 rounded"
-                                        title={reservesExpanded ? "Recolher" : "Expandir"}
-                                    >
-                                        {reservesExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Expanded View with Names */}
-                            {reservesExpanded && (viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length > 0 && (
-                                <div className="flex items-start gap-4 mt-3 pt-3 border-t border-gray-700 overflow-x-auto pb-2">
-                                    {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
-                                        <div key={sub.id} className="flex flex-col items-center flex-shrink-0 w-16 group cursor-pointer" onDoubleClick={() => handleBenchDoubleClick(sub)}>
-                                            <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-sm font-bold text-gray-900 group-hover:scale-110 transition-transform">
-                                                {sub.number}
-                                            </div>
-                                            <span className="text-[10px] text-gray-400 mt-1 text-center line-clamp-2 w-full leading-tight">
-                                                {sub.name}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-
-                        {/* Modals */}
-
-                        <CreatePlayerModal
-                            isOpen={isCreatePlayerModalOpen}
-                            onClose={() => setIsCreatePlayerModalOpen(false)}
-                            onConfirm={handleCreatePlayer}
-                            existingNumbers={[
-                                ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef).map(p => p.number),
-                                ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(p => p.number)
-                            ]}
-                            // @ts-ignore
-                            isMobile={isMobile}
-                        />
-
-                        <NotesModal
-                            isOpen={isNotesModalOpen}
-                            onClose={() => setIsNotesModalOpen(false)}
-                            homeTeamName={matchState?.teams.home.name || 'Casa'}
-                            awayTeamName={matchState?.teams.away.name || 'Visitante'}
-                            homeNotes={notasCasa}
-                            awayNotes={notasVisitante}
-                            homeUpdatedAt={notasCasaUpdatedAt}
-                            awayUpdatedAt={notasVisitanteUpdatedAt}
-                            onSave={handleNoteSave}
-                            saveStatus={autoSaveStatus}
-                            // @ts-ignore
-                            isMobile={isMobile}
-                        />
-
-                        <AddEventModal
-                            isOpen={isAddEventModalOpen}
-                            onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
-                            onSave={handleSaveEvent}
-                            homeTeamName={matchState?.teams.home.name || 'Casa'}
-                            awayTeamName={matchState?.teams.away.name || 'Visitante'}
-                            homePlayers={homePlayersDef}
-                            awayPlayers={awayPlayersDef}
-                            homeSubstitutes={homeSubstitutes}
-                            awaySubstitutes={awaySubstitutes}
-                            initialData={eventToEdit}
-                            // @ts-ignore
-                            isMobile={isMobile}
-                        />
-
-                        <EventsExpansionModal
-                            isOpen={isEventsExpansionModalOpen}
-                            onClose={() => setIsEventsExpansionModalOpen(false)}
-                            events={events}
-                            onAddEvent={handleAddEventClick}
-                            onEditEvent={handleEditEventRequest}
-                            onDeleteEvent={handleDeleteEvent}
-                            // @ts-ignore
-                            isMobile={isMobile}
-                        />
-
-
+                        >
+                            <Save size={16} />
+                            {saveStatus === 'success' ? 'Salvo' : 'Salvar Análise'}
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Floating Action Buttons (Mobile/Tablet) */}
-            <div className="fixed bottom-4 right-4 flex flex-col gap-3 z-50 xl:hidden">
-                <button
-                    onClick={() => setIsNotesModalOpen(true)}
-                    className="w-12 h-12 bg-[#242938] rounded-full shadow-lg flex items-center justify-center border border-gray-700 hover:bg-gray-700 text-white transition-transform active:scale-95"
-                    title="Notas"
-                >
-                    <FileText className="w-5 h-5" />
-                </button>
+                {/* Sub-Header / Controls */}
+                <div className="px-8 py-4 flex items-center justify-between">
+                    {/* Team Toggle */}
+                    <div className="flex bg-panel-dark rounded-lg p-1 border border-gray-700">
+                        <button
+                            onClick={() => setViewTeam('home')}
+                            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            CASA
+                        </button>
+                        <button
+                            onClick={() => setViewTeam('away')}
+                            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            VISITANTE
+                        </button>
+                    </div>
 
-                <button
-                    onClick={() => setIsEventsExpansionModalOpen(true)}
-                    className="w-12 h-12 bg-[#242938] rounded-full shadow-lg flex items-center justify-center border border-gray-700 hover:bg-gray-700 text-white transition-transform active:scale-95"
-                    title="Eventos"
-                >
-                    <Zap className="w-5 h-5" />
-                </button>
+                    {/* Phase Tabs */}
+                    <div className="flex bg-panel-dark rounded-lg p-1 border border-gray-700">
+                        {['defensive', 'offensive', 'transition'].map((phase) => (
+                            <button
+                                key={phase}
+                                onClick={() => setActivePhase(phase as any)}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold capitalize transition-all 
+                                    ${activePhase === phase
+                                        ? (phase === 'defensive' ? 'bg-red-600 text-white' : phase === 'offensive' ? 'bg-accent-green text-white' : 'bg-accent-yellow text-gray-900')
+                                        : 'text-gray-400 hover:text-white'
+                                    }
+                                `}
+                            >
+                                {phase === 'defensive' ? 'Defensivo' : phase === 'offensive' ? 'Ofensivo' : 'Transição'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                <button
-                    onClick={handleSave}
-                    className="w-12 h-12 bg-green-500 rounded-full shadow-lg flex items-center justify-center hover:bg-green-600 text-white transition-transform active:scale-95"
-                    title="Salvar"
-                >
-                    <Save className="w-5 h-5" />
-                </button>
+                {/* Main Content: Toolbar + Field */}
+                <div className="flex-1 relative overflow-hidden flex items-center p-4 gap-4">
+
+                    {/* Left Toolbar */}
+                    <div className="flex flex-col bg-panel-dark rounded-xl p-2 gap-2 z-30 shrink-0 shadow-xl border border-gray-700">
+                        <button
+                            onClick={() => setInteractionMode('move')}
+                            className={`p-3 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            title="Mover Jogadores"
+                        >
+                            <MousePointer2 size={20} />
+                        </button>
+                        <button
+                            onClick={() => setInteractionMode('draw')}
+                            className={`p-3 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            title="Desenhar Setas"
+                        >
+                            <TrendingUp size={20} />
+                        </button>
+                        <button
+                            onClick={() => setIsCreatePlayerModalOpen(true)}
+                            className="p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                            title="Adicionar Jogador"
+                        >
+                            <UserPlus size={20} />
+                        </button>
+
+                        {/* Separator */}
+                        <div className="h-px bg-gray-700 my-1 mx-2" />
+
+                        <button
+                            onClick={handleClearArrows}
+                            className="p-3 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors hover:text-red-400"
+                            title="Limpar Setas"
+                        >
+                            <Eraser size={20} />
+                        </button>
+                    </div>
+
+                    {/* Field Container */}
+                    <div className="flex-1 h-full relative flex items-center justify-center overflow-hidden rounded-xl bg-field-pattern shadow-2xl border border-white/5 p-4">
+                        <TacticalField
+                            players={getCurrentPlayers()}
+                            onPlayerMove={handlePlayerMove}
+                            onPlayerClick={handlePlayerClick}
+                            selectedPlayerId={selectedPlayerId}
+                            playerNotes={playerNotes}
+                            mode={interactionMode}
+                            arrows={arrows[activePhase]}
+                            onAddArrow={handleAddArrow}
+                            onRemoveArrow={handleRemoveArrow}
+                        />
+                    </div>
+                </div>
+
+                {/* Reserves Bar (Bottom) */}
+                <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
+                    <div className="flex items-center gap-4 overflow-x-auto w-full mr-4">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reservas</span>
+
+                        <div className="flex items-center gap-2 pb-1"> {/* pb-1 for scrollbar clearance */}
+                            {/* Real Reserves from State ONLY - Removed Mock Data */}
+                            {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
+                                <div
+                                    key={sub.id}
+                                    onDoubleClick={() => handleBenchDoubleClick(sub)}
+                                    className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border border-gray-500 flex items-center justify-center text-white font-bold cursor-grab hover:border-white transition-colors hover:bg-gray-600 shadow-sm"
+                                    title={sub.name}
+                                >
+                                    {sub.number}
+                                </div>
+                            ))}
+
+                            {/* Empty state if no reserves */}
+                            {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length === 0 && (
+                                <span className="text-xs text-gray-600 italic">Lista de reservas vazia</span>
+                            )}
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsCreatePlayerModalOpen(true)}
+                        className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap"
+                    >
+                        <UserPlus size={14} />
+                        <span className="hidden md:inline">Adicionar</span>
+                    </button>
+                </div>
+
+                {/* Modals */}
+                <CreatePlayerModal
+                    isOpen={isCreatePlayerModalOpen}
+                    onClose={() => setIsCreatePlayerModalOpen(false)}
+                    onConfirm={handleCreatePlayer}
+                    existingNumbers={[
+                        ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef).map(p => p.number),
+                        ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(p => p.number)
+                    ]}
+                />
+
+                <NotesModal
+                    isOpen={isNotesModalOpen}
+                    onClose={() => setIsNotesModalOpen(false)}
+                    homeTeamName={matchState?.teams.home.name || 'Casa'}
+                    awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                    homeNotes={notasCasa}
+                    awayNotes={notasVisitante}
+                    homeUpdatedAt={notasCasaUpdatedAt}
+                    awayUpdatedAt={notasVisitanteUpdatedAt}
+                    onSave={handleNoteSave}
+                    saveStatus={autoSaveStatus}
+                />
+
+                <AddEventModal
+                    isOpen={isAddEventModalOpen}
+                    onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
+                    onSave={handleSaveEvent}
+                    homeTeamName={matchState?.teams.home.name || 'Casa'}
+                    awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                    homePlayers={homePlayersDef}
+                    awayPlayers={awayPlayersDef}
+                    homeSubstitutes={homeSubstitutes}
+                    awaySubstitutes={awaySubstitutes}
+                    initialData={eventToEdit}
+                />
+
+                <EventsExpansionModal
+                    isOpen={isEventsExpansionModalOpen}
+                    onClose={() => setIsEventsExpansionModalOpen(false)}
+                    events={events}
+                    onAddEvent={handleAddEventClick}
+                    onEditEvent={handleEditEventRequest}
+                    onDeleteEvent={handleDeleteEvent}
+                />
+
             </div>
         </AnalysisLayout>
     );
