@@ -48,11 +48,16 @@ const EventsExpansionModal: React.FC<EventsExpansionModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-[#1a1f2e] border border-gray-700 w-full max-w-[700px] h-[80vh] max-h-[600px] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm md:p-4 animate-in fade-in duration-200">
+            <div className="bg-[#1a1f2e] border border-gray-700 w-full md:max-w-[700px] h-[85vh] md:h-[80vh] md:max-h-[600px] rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300">
+
+                {/* Mobile Handle */}
+                <div className="md:hidden flex justify-center py-3 bg-[#1a1f2e] border-b border-gray-700/50 shrink-0">
+                    <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
+                </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-black/20">
+                <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-black/20 shrink-0">
                     <div className="w-8"></div> {/* Spacer for centering */}
                     <h2 className="text-white font-bold text-lg uppercase tracking-wider">EVENTOS DA PARTIDA</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">

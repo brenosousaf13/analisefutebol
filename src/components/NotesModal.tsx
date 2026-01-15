@@ -106,14 +106,19 @@ const NotesModal: React.FC<NotesModalProps> = ({
         : '';
 
     return (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end md:items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
             {/* Modal Container */}
-            <div className="bg-[#1a1f2e] w-[90%] max-w-[900px] h-[85vh] max-h-[700px] rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200">
+            <div className="bg-[#1a1f2e] w-full md:w-[90%] md:max-w-[900px] h-[90vh] md:h-[85vh] md:max-h-[700px] rounded-t-3xl md:rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden relative animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300">
+
+                {/* Mobile Handle */}
+                <div className="md:hidden flex justify-center py-3 bg-[#1f2430] border-b border-gray-700/50 shrink-0">
+                    <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
+                </div>
 
                 {/* Confirmation Overlay */}
                 {showCloseConfirmation && (
-                    <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center">
-                        <div className="bg-[#242938] p-6 rounded-xl border border-gray-600 max-w-sm text-center">
+                    <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                        <div className="bg-[#242938] p-6 rounded-xl border border-gray-600 max-w-sm text-center w-full">
                             <h3 className="text-white font-bold text-lg mb-2">Alterações não salvas</h3>
                             <p className="text-gray-400 text-sm mb-6">Você tem alterações que ainda não foram salvas. Deseja sair mesmo assim?</p>
                             <div className="flex gap-3 justify-center">
@@ -135,7 +140,7 @@ const NotesModal: React.FC<NotesModalProps> = ({
                 )}
 
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between bg-[#1f2430]">
+                <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between bg-[#1f2430] shrink-0">
                     <div className="flex-1"></div>
                     <h2 className="text-white font-semibold text-lg tracking-wide">NOTAS DE ANÁLISE</h2>
                     <div className="flex-1 flex justify-end">

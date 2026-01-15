@@ -74,8 +74,14 @@ const CreatePlayerModal: React.FC<CreatePlayerModalProps> = ({ isOpen, onClose, 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#242938] border border-gray-700 rounded-xl w-full max-w-md shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center z-50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[#242938] border border-gray-700 rounded-t-3xl md:rounded-xl w-full md:max-w-md shadow-2xl overflow-hidden scale-100 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200">
+
+                {/* Mobile Handle */}
+                <div className="md:hidden flex justify-center py-3 bg-[#1f2430] border-b border-gray-700/50">
+                    <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
+                </div>
+
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-[#1f2430]">
                     <div>
