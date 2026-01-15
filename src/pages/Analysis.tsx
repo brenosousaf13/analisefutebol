@@ -578,121 +578,124 @@ function Analysis() {
                     </div>
                 </div>
 
-                {/* Main Content: Toolbar + Dual Fields - Unified Background */}
-                <div className="flex-1 flex overflow-hidden bg-[#1e2433] p-3 gap-3">
-                    {/* Left Toolbar */}
-                    <div className="flex flex-col bg-[#242938] rounded-xl p-1.5 gap-1 shrink-0 border border-gray-700/50 self-center">
-                        {/* Mover */}
-                        <button
-                            onClick={() => setInteractionMode('move')}
-                            className={`p-2 rounded-lg transition-all ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Mover jogadores"
-                        >
-                            <MousePointer2 className="w-5 h-5" />
-                        </button>
+                {/* Main Content: Single Unified Container */}
+                <div className="flex-1 flex overflow-hidden p-3">
+                    {/* Single Container with Toolbar + Fields */}
+                    <div className="flex-1 flex bg-[#242938] rounded-xl border border-gray-700/50 overflow-hidden">
+                        {/* Left Toolbar */}
+                        <div className="flex flex-col p-2 gap-1 shrink-0 self-center">
+                            {/* Mover */}
+                            <button
+                                onClick={() => setInteractionMode('move')}
+                                className={`p-2 rounded-lg transition-all ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                                title="Mover jogadores"
+                            >
+                                <MousePointer2 className="w-5 h-5" />
+                            </button>
 
-                        {/* Desenhar setas */}
-                        <button
-                            onClick={() => setInteractionMode('draw')}
-                            className={`p-2 rounded-lg transition-all ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Desenhar deslocamento"
-                        >
-                            <TrendingUp className="w-5 h-5" />
-                        </button>
+                            {/* Desenhar setas */}
+                            <button
+                                onClick={() => setInteractionMode('draw')}
+                                className={`p-2 rounded-lg transition-all ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                                title="Desenhar deslocamento"
+                            >
+                                <TrendingUp className="w-5 h-5" />
+                            </button>
 
-                        {/* Adicionar jogador */}
-                        <button
-                            onClick={() => setIsCreatePlayerModalOpen(true)}
-                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                            title="Adicionar jogador"
-                        >
-                            <UserPlus className="w-5 h-5" />
-                        </button>
+                            {/* Adicionar jogador */}
+                            <button
+                                onClick={() => setIsCreatePlayerModalOpen(true)}
+                                className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                                title="Adicionar jogador"
+                            >
+                                <UserPlus className="w-5 h-5" />
+                            </button>
 
-                        {/* Separador */}
-                        <div className="h-px bg-gray-600 my-1 mx-1" />
+                            {/* Separador */}
+                            <div className="h-px bg-gray-600 my-1 mx-1" />
 
-                        {/* Limpar setas */}
-                        <button
-                            onClick={handleClearArrows}
-                            className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                            title="Limpar setas"
-                        >
-                            <Eraser className="w-5 h-5 text-red-500" />
-                        </button>
+                            {/* Limpar setas */}
+                            <button
+                                onClick={handleClearArrows}
+                                className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                                title="Limpar setas"
+                            >
+                                <Eraser className="w-5 h-5 text-red-500" />
+                            </button>
 
-                        {/* Separador maior */}
-                        <div className="my-2" />
+                            {/* Separador maior */}
+                            <div className="my-2" />
 
-                        {/* Download */}
-                        <button
-                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                            title="Baixar análise"
-                        >
-                            <Download className="w-5 h-5" />
-                        </button>
+                            {/* Download */}
+                            <button
+                                className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                                title="Baixar análise"
+                            >
+                                <Download className="w-5 h-5" />
+                            </button>
 
-                        {/* Salvar */}
-                        <button
-                            onClick={handleSave}
-                            className="p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
-                            title="Salvar análise"
-                        >
-                            {saveStatus === 'loading' ? (
-                                <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
-                            ) : saveStatus === 'success' ? (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                            ) : (
-                                <Save className="w-5 h-5 text-green-500" />
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Dual Fields Grid */}
-                    <div className="flex-1 grid grid-cols-2 gap-3">
-                        {/* Defensive Field */}
-                        <div className="flex flex-col h-full rounded-lg overflow-hidden border border-gray-700/50">
-                            {/* Label - Outside the field */}
-                            <div className="bg-[#242938] py-2 px-4 text-center border-b border-gray-700/50">
-                                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
-                            </div>
-                            {/* Field */}
-                            <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
-                                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                                <TacticalField
-                                    players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
-                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
-                                    onPlayerClick={handlePlayerClick}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={interactionMode}
-                                    arrows={arrows.defensive}
-                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
-                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                />
-                            </div>
+                            {/* Salvar */}
+                            <button
+                                onClick={handleSave}
+                                className="p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
+                                title="Salvar análise"
+                            >
+                                {saveStatus === 'loading' ? (
+                                    <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
+                                ) : saveStatus === 'success' ? (
+                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                ) : (
+                                    <Save className="w-5 h-5 text-green-500" />
+                                )}
+                            </button>
                         </div>
 
-                        {/* Offensive Field */}
-                        <div className="flex flex-col h-full rounded-lg overflow-hidden border border-gray-700/50">
-                            {/* Label - Outside the field */}
-                            <div className="bg-[#242938] py-2 px-4 text-center border-b border-gray-700/50">
-                                <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
+                        {/* Fields Area */}
+                        <div className="flex-1 grid grid-cols-2 gap-4 p-4">
+                            {/* Defensive Field */}
+                            <div className="flex flex-col h-full">
+                                {/* Label */}
+                                <div className="text-center mb-2">
+                                    <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
+                                </div>
+                                {/* Field */}
+                                <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
+                                    <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                                    <TacticalField
+                                        players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                        onPlayerClick={handlePlayerClick}
+                                        selectedPlayerId={selectedPlayerId}
+                                        playerNotes={playerNotes}
+                                        mode={interactionMode}
+                                        arrows={arrows.defensive}
+                                        onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                        onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                    />
+                                </div>
                             </div>
-                            {/* Field */}
-                            <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
-                                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                                <TacticalField
-                                    players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
-                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
-                                    onPlayerClick={handlePlayerClick}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={interactionMode}
-                                    arrows={arrows.offensive}
-                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
-                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                />
+
+                            {/* Offensive Field */}
+                            <div className="flex flex-col h-full">
+                                {/* Label */}
+                                <div className="text-center mb-2">
+                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
+                                </div>
+                                {/* Field */}
+                                <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
+                                    <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                                    <TacticalField
+                                        players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                        onPlayerClick={handlePlayerClick}
+                                        selectedPlayerId={selectedPlayerId}
+                                        playerNotes={playerNotes}
+                                        mode={interactionMode}
+                                        arrows={arrows.offensive}
+                                        onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                        onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
