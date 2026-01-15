@@ -102,6 +102,9 @@ function Analysis() {
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
     const [editingPlayerPhase, setEditingPlayerPhase] = useState<'defensive' | 'offensive' | null>(null);
 
+    // Global Drag State (Manual Mouse Tracking)
+    const [globalDraggingPlayer, setGlobalDraggingPlayer] = useState<Player | null>(null);
+
     // Responsive State
     // const [isMobile, setIsMobile] = useState(false);
     // const [isTablet, setIsTablet] = useState(false);
@@ -539,24 +542,23 @@ function Analysis() {
     };
 
 
-    // --- Drag and Drop Handlers ---
+    // --- Drag and Drop Handlers (Manual Mouse) ---
 
-    // When dragging FROM Field
-    const handleFieldDragStart = (e: React.DragEvent, player: Player) => {
-        e.dataTransfer.setData('player', JSON.stringify(player));
-        e.dataTransfer.setData('source', 'field');
-        e.dataTransfer.setData('team', viewTeam); // Use viewTeam as source team
-        e.dataTransfer.effectAllowed = 'move';
+    const handleDragStart = (player: Player) => {
+        setGlobalDraggingPlayer(player);
     };
 
-    // When dragging FROM Bench (for potential future bench-to-field DnD)
-    const handleBenchDragStart = (_player: Player) => {
-        // BenchArea handles setData, we just track if needed or log
-        // console.log('Bench drag start:', player);
+    const handleDragEnd = () => {
+        setGlobalDraggingPlayer(null);
     };
 
-    // When dropping ON Bench
+    // When dropping ON Bench (from Field)
     const handleDropToBench = (player: Player) => {
+        console.log('Drop to bench:', player.name);
+
+        // Ensure we clear global drag state
+        setGlobalDraggingPlayer(null);
+
         // Move from field to bench
         if (viewTeam === 'home') {
             setHomePlayersDef(prev => prev.filter(p => p.id !== player.id));
@@ -564,17 +566,20 @@ function Analysis() {
             // Add to bench if not already there (safety check)
             setHomeSubstitutes(prev => {
                 if (prev.some(p => p.id === player.id)) return prev;
-                return [...prev, { ...player, position: { x: 0, y: 0 } }];
+                return [...prev, { ...player, position: { x: 50, y: 50 }, isStarter: false }];
             });
         } else {
             setAwayPlayersDef(prev => prev.filter(p => p.id !== player.id));
             setAwayPlayersOff(prev => prev.filter(p => p.id !== player.id));
             setAwaySubstitutes(prev => {
                 if (prev.some(p => p.id === player.id)) return prev;
-                return [...prev, { ...player, position: { x: 0, y: 0 } }];
+                return [...prev, { ...player, position: { x: 50, y: 50 }, isStarter: false }];
             });
         }
     };
+
+    // When dropping ON Bench
+    /* handleDropToBench is defined above, removing duplicate/legacy placeholder if any */
 
     // --- Render ---
 
@@ -794,8 +799,10 @@ function Analysis() {
                                     arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                    onPlayerDragStart={handleFieldDragStart}
+                                    onPlayerDragStart={handleDragStart}
+                                    onPlayerDragEnd={handleDragEnd}
                                     onPlayerDrop={handleDropOnDefensiveField}
+                                    externalDraggingPlayer={globalDraggingPlayer}
                                 />
                             </div>
                         </div>
@@ -819,8 +826,10 @@ function Analysis() {
                                     arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                    onPlayerDragStart={handleFieldDragStart}
+                                    onPlayerDragStart={handleDragStart}
+                                    onPlayerDragEnd={handleDragEnd}
                                     onPlayerDrop={handleDropOnOffensiveField}
+                                    externalDraggingPlayer={globalDraggingPlayer}
                                 />
                             </div>
                         </div>
@@ -836,9 +845,11 @@ function Analysis() {
                             players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
                             team={viewTeam}
                             onPlayerDrop={handleDropToBench}
-                            onPlayerDragStart={handleBenchDragStart}
+                            onPlayerDragStart={handleDragStart}
+                            onPlayerDragEnd={handleDragEnd}
                             onPlayerDoubleClick={handleBenchDoubleClick}
                             onMoveToField={handleMoveToField}
+                            externalDraggingPlayer={globalDraggingPlayer}
                         />
                     </div>
                 </div>

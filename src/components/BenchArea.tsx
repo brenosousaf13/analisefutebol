@@ -6,8 +6,10 @@ interface BenchAreaProps {
     team: 'home' | 'away';
     onPlayerDrop: (player: Player) => void;
     onPlayerDragStart: (player: Player) => void;
+    onPlayerDragEnd?: () => void; // Optional if needed
     onPlayerDoubleClick: (player: Player) => void;
-    onMoveToField: (player: Player) => void; // New prop for click interaction
+    onMoveToField: (player: Player) => void;
+    externalDraggingPlayer?: Player | null; // From field
 }
 
 const BenchArea: React.FC<BenchAreaProps> = ({
@@ -15,47 +17,78 @@ const BenchArea: React.FC<BenchAreaProps> = ({
     team,
     onPlayerDrop,
     onPlayerDragStart,
+    onPlayerDragEnd,
     onPlayerDoubleClick,
-    onMoveToField
+    onMoveToField,
+    externalDraggingPlayer
 }) => {
     const [isDragOver, setIsDragOver] = useState(false);
+    const benchRef = React.useRef<HTMLDivElement>(null);
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault(); // ESSENTIAL to allow drop
-        e.stopPropagation();
-        setIsDragOver(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragOver(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-
-        const playerData = e.dataTransfer.getData('player');
-        const sourceTeam = e.dataTransfer.getData('team');
-        const source = e.dataTransfer.getData('source'); // 'field' or 'bench'
-
-        // Only accept players from the same team
-        if (playerData && sourceTeam === team) {
-            const player = JSON.parse(playerData);
-
-            // Accept from 'field' mainly, but 'bench' could be used for reordering if implemented
-            if (source === 'field') {
-                onPlayerDrop(player);
-            }
+    // --- External Drop Handler (Field -> Bench) ---
+    React.useEffect(() => {
+        if (!externalDraggingPlayer) {
+            setIsDragOver(false);
+            return;
         }
+
+        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+            if (!benchRef.current) return;
+
+            const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+
+            const rect = benchRef.current.getBoundingClientRect();
+            const isOver = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+            setIsDragOver(isOver);
+        };
+
+        const handleMouseUp = (e: MouseEvent | TouchEvent) => {
+            if (!benchRef.current) return;
+
+            const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+            const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
+
+            const rect = benchRef.current.getBoundingClientRect();
+            const isOver = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+
+            if (isOver) {
+                onPlayerDrop(externalDraggingPlayer);
+            }
+            setIsDragOver(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleMouseMove);
+        document.addEventListener('touchend', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
+        };
+    }, [externalDraggingPlayer, onPlayerDrop]);
+
+    // --- Internal Drag Handlers (Bench Reordering / Just Drag Start) ---
+    const handlePlayerMouseDown = (e: React.MouseEvent, player: Player) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        onPlayerDragStart(player);
+
+        // We need to listen for mouseup to trigger onPlayerDragEnd
+        const handleGlobalMouseUp = () => {
+            if (onPlayerDragEnd) onPlayerDragEnd();
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+        document.addEventListener('mouseup', handleGlobalMouseUp);
     };
 
     return (
         <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            ref={benchRef}
+            // Removed DnD handlers
             className={`
         flex items-center gap-3 p-2 rounded-lg transition-all min-h-[60px] flex-1
         ${isDragOver
@@ -69,13 +102,7 @@ const BenchArea: React.FC<BenchAreaProps> = ({
                 {players.map(player => (
                     <div
                         key={player.id}
-                        draggable
-                        onDragStart={(e) => {
-                            e.dataTransfer.setData('player', JSON.stringify(player));
-                            e.dataTransfer.setData('source', 'bench');
-                            e.dataTransfer.setData('team', team);
-                            onPlayerDragStart(player);
-                        }}
+                        onMouseDown={(e) => handlePlayerMouseDown(e, player)}
                         onClick={() => onMoveToField(player)}
                         onDoubleClick={(e) => {
                             e.stopPropagation();

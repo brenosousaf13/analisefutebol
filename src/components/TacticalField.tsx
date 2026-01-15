@@ -18,8 +18,10 @@ interface TacticalFieldProps {
     arrows?: Arrow[];
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
     onRemoveArrow?: (id: string) => void;
-    onPlayerDragStart?: (e: React.DragEvent, player: Player) => void;
+    onPlayerDragStart?: (player: Player) => void;
+    onPlayerDragEnd?: () => void;
     onPlayerDrop?: (player: Player, pos: { x: number, y: number }) => void;
+    externalDraggingPlayer?: Player | null; // For handling drops from bench
 }
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
@@ -34,7 +36,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onAddArrow,
     onRemoveArrow,
     onPlayerDragStart,
-    onPlayerDrop
+    onPlayerDragEnd,
+    onPlayerDrop,
+    externalDraggingPlayer
 }) => {
     // Responsive Field Dimensions
     const { dimensions, containerRef } = useFieldDimensions(1.54);
@@ -43,7 +47,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const playerSize = getPlayerSize(fieldWidth);
     const fontSize = getFontSize(playerSize);
 
-    const [draggingId, setDraggingId] = useState<number | null>(null);
+    // Manual Drag State
+    const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
 
     // Drawing State
     const [isDrawing, setIsDrawing] = useState(false);
@@ -61,29 +68,121 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         };
     };
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault(); // allow drop
-        e.stopPropagation();
-    };
+    // --- Manual Mouse Drag Handlers ---
 
-    const handleDrop = (e: React.DragEvent) => {
+    const handlePlayerMouseDown = (e: React.MouseEvent | React.TouchEvent, player: Player) => {
+        // Only left click
+        if ('button' in e && e.button !== 0) return;
+
         e.preventDefault();
         e.stopPropagation();
 
-        const playerData = e.dataTransfer.getData('player');
-        if (!playerData) return;
+        setDraggingPlayer(player);
+        setTempPosition({ x: player.position.x, y: player.position.y });
 
-        const player = JSON.parse(playerData);
-        const { x, y } = getFieldPercentage(e.clientX, e.clientY);
+        // Calculate offset
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-        if (onPlayerDrop) {
-            onPlayerDrop(player, { x, y });
-        } else if (onPlayerMove) {
-            // Fallback to legacy move if no distinct drop handler,
-            // but strictly we should use onPlayerDrop for reliable DnD
-            onPlayerMove(player.id, { x, y });
-        }
+        // This offset calculation might be tricky with responsive sizing.
+        // Simplified: just store the current mouse pos relative to player center?
+        // Actually, let's just use the difference between mouse and player center in %?
+        // Or simpler: just track mouse delta?
+        // User's code uses getBoundingClientRect.
+        // Let's stick to user's approach roughly but adapted.
+
+        const target = e.currentTarget as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        setDragOffset({
+            x: clientX - (rect.left + rect.width / 2),
+            y: clientY - (rect.top + rect.height / 2)
+        });
+
+        if (onPlayerDragStart) onPlayerDragStart(player);
     };
+
+    // Global Mouse Listeners
+    React.useEffect(() => {
+        if (!draggingPlayer) return;
+
+        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+
+            const pos = getFieldPercentage(clientX - dragOffset.x, clientY - dragOffset.y);
+            setTempPosition(pos);
+        };
+
+        const handleMouseUp = (e: MouseEvent | TouchEvent) => {
+            if (!draggingPlayer) return;
+
+            // Check if inside field
+            const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+            const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
+
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                const isInside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+
+                if (isInside) {
+                    const pos = getFieldPercentage(clientX - dragOffset.x, clientY - dragOffset.y);
+                    if (onPlayerMove) onPlayerMove(draggingPlayer.id, pos);
+                } else {
+                    // Dragged out? Use explicit handler calls later if needed.
+                }
+            }
+
+            setDraggingPlayer(null);
+            setTempPosition(null);
+            if (onPlayerDragEnd) onPlayerDragEnd();
+        };
+
+        document.addEventListener('mousemove', handleMouseMove, { passive: false });
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleMouseMove, { passive: false });
+        document.addEventListener('touchend', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
+        };
+    }, [draggingPlayer, dragOffset, onPlayerMove, onPlayerDragEnd, containerRef]);
+
+
+    // --- External Drop Handler (Bench -> Field) ---
+    React.useEffect(() => {
+        // If we are already dragging this player internally, ignore external drop logic to avoid double events
+        if (!externalDraggingPlayer) return;
+        if (draggingPlayer && draggingPlayer.id === externalDraggingPlayer.id) return;
+
+        const handleExternalMouseUp = (e: MouseEvent | TouchEvent) => {
+            // Check if inside field
+            const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+            const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
+
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                const isInside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+
+                if (isInside && onPlayerDrop) {
+                    const pos = getFieldPercentage(clientX, clientY);
+                    onPlayerDrop(externalDraggingPlayer, pos);
+                }
+            }
+        };
+
+        // We only need mouseup logic. The visual feedback could be improved but functionality first.
+        document.addEventListener('mouseup', handleExternalMouseUp);
+        document.addEventListener('touchend', handleExternalMouseUp);
+
+        return () => {
+            document.removeEventListener('mouseup', handleExternalMouseUp);
+            document.removeEventListener('touchend', handleExternalMouseUp);
+        };
+    }, [externalDraggingPlayer, onPlayerDrop, containerRef]); // Removed unused dependencies
 
     // --- Handlers ---
 
@@ -100,20 +199,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
     // Movement (Player + Drawing)
     const handleMove = (clientX: number, clientY: number) => {
-        // Player Dragging
-        if (mode === 'move' && draggingId !== null && containerRef.current) {
-            const rect = containerRef.current.children[0].getBoundingClientRect(); // Use the inner field div
-            // Calculate percentage directly
-            const xPercent = ((clientX - rect.left) / rect.width) * 100;
-            const yPercent = ((clientY - rect.top) / rect.height) * 100;
-
-            // Clamp values (keeping players inside field with small margin)
-            const newX = Math.max(0, Math.min(100, xPercent));
-            const newY = Math.max(0, Math.min(100, yPercent));
-
-            onPlayerMove(draggingId, { x: newX, y: newY });
-        }
-
         // Drawing Arrow
         if (mode === 'draw' && isDrawing && currentArrow) {
             const { x, y } = getFieldPercentage(clientX, clientY);
@@ -146,8 +231,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             setIsDrawing(false);
             setCurrentArrow(null);
         }
-
-        setDraggingId(null);
     };
 
     return (
@@ -176,8 +259,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 onTouchMove={handleTouchMove}
                 onMouseDown={mode === 'draw' ? handleDrawStart : undefined}
                 onTouchStart={mode === 'draw' ? handleDrawStart : undefined}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
             >
                 {/* Field Markings MSG */}
                 <svg
@@ -242,29 +323,27 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
                 {/* Players Layer */}
                 <div className={`absolute inset-0 z-20 ${mode === 'draw' ? 'pointer-events-none' : ''}`}>
-                    {players.map(player => (
-                        <PlayerMarker
-                            key={player.id}
-                            player={player}
-                            teamColor="yellow"
-                            isDragging={draggingId === player.id}
-                            onMouseDown={() => {
-                                if (mode === 'move') {
-                                    setDraggingId(player.id);
-                                    if (onPlayerClick) onPlayerClick(player);
-                                }
-                            }}
-                            onDoubleClick={() => {
-                                if (onPlayerDoubleClick) onPlayerDoubleClick(player);
-                            }}
-                            hasNote={!!playerNotes[player.id]}
-                            isSelected={selectedPlayerId === player.id}
-                            playerSize={playerSize}
-                            fontSize={fontSize}
-                            onDragStart={onPlayerDragStart}
-                        />
-                    ))}
-                </div>
+                    {players.map(player => {
+                        const isDragging = draggingPlayer?.id === player.id;
+                        const position = isDragging && tempPosition
+                            ? tempPosition // Use temp position while dragging
+                            : player.position;
+
+                        return (
+                            <PlayerMarker
+                                key={player.id}
+                                player={{ ...player, position }}
+                                teamColor="yellow"
+                                isDragging={isDragging}
+                                isSelected={selectedPlayerId === player.id}
+                                hasNote={!!playerNotes[player.id]}
+                                playerSize={playerSize}
+                                fontSize={fontSize}
+                                onDoubleClick={() => onPlayerDoubleClick && onPlayerDoubleClick(player)}
+                                onMouseDown={(e) => handlePlayerMouseDown(e, player)}
+                            />
+                        );
+                    })}</div>
             </div>
         </div>
     );
