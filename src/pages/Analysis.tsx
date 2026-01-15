@@ -22,6 +22,7 @@ import EventsExpansionModal from '../components/EventsExpansionModal';
 import { MousePointer2, TrendingUp, Eraser, UserPlus } from 'lucide-react';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
+import PlayerEditModal from '../components/PlayerEditModal';
 // import { useFieldDimensions } from '../hooks/useFieldDimensions';
 // import { getPlayerSize } from '../utils/playerCoordinates';
 
@@ -93,10 +94,12 @@ function Analysis() {
 
     const [interactionMode, setInteractionMode] = useState<'move' | 'draw'>('move');
 
-
-
     const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
     const [isCreatePlayerModalOpen, setIsCreatePlayerModalOpen] = useState(false);
+
+    // Player Edit Modal State
+    const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+    const [editingPlayerPhase, setEditingPlayerPhase] = useState<'defensive' | 'offensive' | null>(null);
 
     // Responsive State
     // const [isMobile, setIsMobile] = useState(false);
@@ -535,7 +538,13 @@ function Analysis() {
     };
 
     const handleBenchDoubleClick = (player: Player) => {
-        // Move from bench to field
+        // Open edit modal for bench player
+        setEditingPlayer(player);
+        setEditingPlayerPhase('defensive'); // Use defensive as default for bench players
+    };
+
+    // Move player from bench to field (drag and drop or button action)
+    const handleMoveToField = (player: Player) => {
         if (viewTeam === 'home') {
             setHomeSubstitutes(prev => prev.filter(p => p.id !== player.id));
             setHomePlayersDef(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
@@ -551,6 +560,46 @@ function Analysis() {
 
     const handlePlayerClick = (player: Player) => {
         setSelectedPlayerId(player.id);
+    };
+
+    const handlePlayerDoubleClick = (player: Player, phase: 'defensive' | 'offensive') => {
+        setEditingPlayer(player);
+        setEditingPlayerPhase(phase);
+    };
+
+    const handleSaveEditedPlayer = (updatedPlayer: Player) => {
+        const updatePlayerInList = (players: Player[]) =>
+            players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
+
+        // Check if player is in substitutes (bench)
+        const isInHomeSubs = homeSubstitutes.some(p => p.id === updatedPlayer.id);
+        const isInAwaySubs = awaySubstitutes.some(p => p.id === updatedPlayer.id);
+
+        if (isInHomeSubs) {
+            setHomeSubstitutes(updatePlayerInList);
+            return;
+        }
+        if (isInAwaySubs) {
+            setAwaySubstitutes(updatePlayerInList);
+            return;
+        }
+
+        // Player is on the field - update based on phase
+        if (!editingPlayerPhase) return;
+
+        if (viewTeam === 'home') {
+            if (editingPlayerPhase === 'defensive') {
+                setHomePlayersDef(updatePlayerInList);
+            } else {
+                setHomePlayersOff(updatePlayerInList);
+            }
+        } else {
+            if (editingPlayerPhase === 'defensive') {
+                setAwayPlayersDef(updatePlayerInList);
+            } else {
+                setAwayPlayersOff(updatePlayerInList);
+            }
+        }
     };
 
     // Responsive sizing for reserves
@@ -718,6 +767,7 @@ function Analysis() {
                                     players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
                                     onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
                                     onPlayerClick={handlePlayerClick}
+                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
                                     selectedPlayerId={selectedPlayerId}
                                     playerNotes={playerNotes}
                                     mode={interactionMode}
@@ -740,6 +790,7 @@ function Analysis() {
                                     players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
                                     onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
                                     onPlayerClick={handlePlayerClick}
+                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
                                     selectedPlayerId={selectedPlayerId}
                                     playerNotes={playerNotes}
                                     mode={interactionMode}
@@ -756,22 +807,31 @@ function Analysis() {
                 <div className="flex items-center gap-4 overflow-x-auto w-full mr-4">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reservas</span>
 
-                    <div className="flex items-center gap-2 pb-1"> {/* pb-1 for scrollbar clearance */}
-                        {/* Real Reserves from State ONLY - Removed Mock Data */}
+                    <div className="flex items-center gap-3 pb-1"> {/* pb-1 for scrollbar clearance */}
+                        {/* Real Reserves from State */}
                         {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
                             <div
                                 key={sub.id}
-                                onDoubleClick={() => handleBenchDoubleClick(sub)}
-                                className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border border-gray-500 flex items-center justify-center text-white font-bold cursor-grab hover:border-white transition-colors hover:bg-gray-600 shadow-sm"
-                                title={sub.name}
+                                className="flex flex-col items-center group cursor-pointer"
+                                onClick={() => handleMoveToField(sub)}
+                                onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    handleBenchDoubleClick(sub);
+                                }}
+                                title={`${sub.name} - Clique para mover ao campo, duplo clique para editar`}
                             >
-                                {sub.number}
+                                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border-2 border-gray-500 flex items-center justify-center text-white font-bold group-hover:border-green-500 group-hover:bg-gray-600 transition-all shadow-sm">
+                                    {sub.number}
+                                </div>
+                                <span className="text-[10px] text-gray-400 mt-0.5 max-w-[50px] truncate text-center group-hover:text-white transition-colors">
+                                    {sub.name.split(' ').pop()}
+                                </span>
                             </div>
                         ))}
 
                         {/* Empty state if no reserves */}
                         {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length === 0 && (
-                            <span className="text-xs text-gray-600 italic">Lista de reservas vazia</span>
+                            <span className="text-xs text-gray-600 italic">Clique + para adicionar reservas</span>
                         )}
                     </div>
                 </div>
@@ -830,7 +890,16 @@ function Analysis() {
                 onDeleteEvent={handleDeleteEvent}
             />
 
-            {/* Toast Notifications */}
+            {/* Player Edit Modal */}
+            <PlayerEditModal
+                player={editingPlayer}
+                isOpen={!!editingPlayer}
+                onClose={() => {
+                    setEditingPlayer(null);
+                    setEditingPlayerPhase(null);
+                }}
+                onSave={handleSaveEditedPlayer}
+            />
             <Toaster
                 position="bottom-right"
                 toastOptions={{

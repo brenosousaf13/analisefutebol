@@ -5,6 +5,7 @@ interface PlayerMarkerProps {
     player: Player;
     teamColor: 'blue' | 'red' | 'yellow';
     onMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
+    onDoubleClick?: () => void;
     isDragging: boolean;
     hasNote?: boolean;
     isSelected?: boolean;
@@ -18,6 +19,7 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
     player,
     teamColor,
     onMouseDown,
+    onDoubleClick,
     isDragging,
     hasNote,
     isSelected,
@@ -43,6 +45,7 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             }}
             onMouseDown={onMouseDown}
             onTouchStart={onMouseDown}
+            onDoubleClick={onDoubleClick}
         >
             {/* Player Circle */}
             <div

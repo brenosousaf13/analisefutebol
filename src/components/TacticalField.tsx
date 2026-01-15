@@ -9,6 +9,7 @@ interface TacticalFieldProps {
     players: Player[];
     onPlayerMove: (id: number, pos: { x: number, y: number }) => void;
     onPlayerClick?: (player: Player) => void;
+    onPlayerDoubleClick?: (player: Player) => void;
     selectedPlayerId?: number | null;
     playerNotes?: { [key: number]: string };
 
@@ -23,6 +24,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     players,
     onPlayerMove,
     onPlayerClick,
+    onPlayerDoubleClick,
     selectedPlayerId,
     playerNotes = {},
     mode = 'move',
@@ -220,6 +222,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                     setDraggingId(player.id);
                                     if (onPlayerClick) onPlayerClick(player);
                                 }
+                            }}
+                            onDoubleClick={() => {
+                                if (onPlayerDoubleClick) onPlayerDoubleClick(player);
                             }}
                             hasNote={!!playerNotes[player.id]}
                             isSelected={selectedPlayerId === player.id}
