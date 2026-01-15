@@ -79,8 +79,13 @@ function Analysis() {
     const [homeTeamNotes, setHomeTeamNotes] = useState('');
     const [playerNotes, setPlayerNotes] = useState<Record<number, string>>({});
 
-    // Arrows State
-    const [arrows, setArrows] = useState<Record<string, Arrow[]>>({
+    // Arrows State - Separated by team AND phase
+    const [homeArrows, setHomeArrows] = useState<Record<string, Arrow[]>>({
+        'defensive': [],
+        'offensive': [],
+        'transition': []
+    });
+    const [awayArrows, setAwayArrows] = useState<Record<string, Arrow[]>>({
         'defensive': [],
         'offensive': [],
         'transition': []
@@ -309,10 +314,10 @@ function Analysis() {
                 homeSubstitutes,
                 awaySubstitutes,
 
-                homeArrowsDef: arrows.defensive,
-                homeArrowsOff: arrows.offensive,
-                awayArrowsDef: [],
-                awayArrowsOff: [],
+                homeArrowsDef: homeArrows.defensive,
+                homeArrowsOff: homeArrows.offensive,
+                awayArrowsDef: awayArrows.defensive,
+                awayArrowsOff: awayArrows.offensive,
 
                 tags: []
             };
@@ -365,7 +370,7 @@ function Analysis() {
             toast.error('Erro ao salvar análise');
         }
     }, [currentAnalysisId, homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-        homeSubstitutes, awaySubstitutes, arrows, gameNotes, notasCasa, notasVisitante,
+        homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes, notasCasa, notasVisitante,
         homeScore, awayScore, events, deletedEventIds, matchState, homeTeamNotes,
         notasCasaUpdatedAt, notasVisitanteUpdatedAt]);
 
@@ -390,7 +395,20 @@ function Analysis() {
                     setNotasVisitante(data.notasVisitante);
                     setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
 
-                    // Load arrows... (omitted for brevity, assume loaded)
+                    // Load arrows for both teams
+                    setHomeArrows({
+                        defensive: data.homeArrowsDef || [],
+                        offensive: data.homeArrowsOff || [],
+                        transition: []
+                    });
+                    setAwayArrows({
+                        defensive: data.awayArrowsDef || [],
+                        offensive: data.awayArrowsOff || [],
+                        transition: []
+                    });
+
+                    // Reset unsaved changes flag after load
+                    setHasUnsavedChanges(false);
                 }
                 setLoading(false);
             });
@@ -405,7 +423,8 @@ function Analysis() {
     const handleAddArrow = (arrow: Omit<Arrow, 'id'>, phase?: 'defensive' | 'offensive') => {
         const targetPhase = phase || activePhase;
         const newArrow: Arrow = { ...arrow, id: uuidv4() };
-        setArrows(prev => ({
+        const setArrowsFn = viewTeam === 'home' ? setHomeArrows : setAwayArrows;
+        setArrowsFn(prev => ({
             ...prev,
             [targetPhase]: [...(prev[targetPhase] || []), newArrow]
         }));
@@ -413,7 +432,8 @@ function Analysis() {
 
     const handleRemoveArrow = (id: string, phase?: 'defensive' | 'offensive') => {
         const targetPhase = phase || activePhase;
-        setArrows(prev => ({
+        const setArrowsFn = viewTeam === 'home' ? setHomeArrows : setAwayArrows;
+        setArrowsFn(prev => ({
             ...prev,
             [targetPhase]: (prev[targetPhase] || []).filter(a => a.id !== id)
         }));
@@ -421,9 +441,11 @@ function Analysis() {
 
     const handleClearArrows = () => {
         if (window.confirm('Tem certeza que deseja limpar todas as setas desta fase?')) {
-            setArrows(prev => ({
+            const setArrowsFn = viewTeam === 'home' ? setHomeArrows : setAwayArrows;
+            setArrowsFn(prev => ({
                 ...prev,
-                [activePhase]: []
+                defensive: [],
+                offensive: []
             }));
         }
     };
@@ -554,7 +576,7 @@ function Analysis() {
         setHasUnsavedChanges(true);
     }, [
         homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-        homeSubstitutes, awaySubstitutes, arrows, gameNotes,
+        homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes,
         notasCasa, notasVisitante, events
     ]);
 
@@ -699,7 +721,7 @@ function Analysis() {
                                     selectedPlayerId={selectedPlayerId}
                                     playerNotes={playerNotes}
                                     mode={interactionMode}
-                                    arrows={arrows.defensive}
+                                    arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
                                 />
@@ -721,7 +743,7 @@ function Analysis() {
                                     selectedPlayerId={selectedPlayerId}
                                     playerNotes={playerNotes}
                                     mode={interactionMode}
-                                    arrows={arrows.offensive}
+                                    arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
                                 />
