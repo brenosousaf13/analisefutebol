@@ -5,9 +5,10 @@ import { useLocation } from 'react-router-dom';
 interface SidebarProps {
     collapsed: boolean;
     onToggle: () => void;
+    tools?: React.ReactNode;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, tools }) => {
     const location = useLocation();
     const [activePath, setActivePath] = useState(location.pathname);
 
@@ -24,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     return (
         <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-nav-dark text-gray-300 flex flex-col h-screen fixed left-0 top-0 border-r border-gray-700 z-50 transition-all duration-300 ease-in-out`}>
             {/* Logo Area */}
-            <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} h-16 border-b border-gray-700`}>
+            <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} h-16 border-b border-gray-700 relative`}>
                 {!collapsed && (
                     <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
                         <div className="bg-accent-green text-white p-1 rounded font-bold text-lg leading-none shrink-0">
@@ -38,18 +39,16 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         TF
                     </div>
                 )}
+                <button
+                    onClick={onToggle}
+                    className={`absolute ${collapsed ? '-right-3 top-12' : 'right-4 top-1/2 -translate-y-1/2'} bg-panel-dark border border-gray-600 rounded-full p-1 text-gray-400 hover:text-white hover:border-gray-400 transition-colors z-[60]`}
+                >
+                    {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={16} />}
+                </button>
             </div>
 
-            <button
-                onClick={onToggle}
-                className="absolute -right-3 top-20 bg-panel-dark border border-gray-600 rounded-full p-1 text-gray-400 hover:text-white hover:border-gray-400 transition-colors z-50"
-            >
-                {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </button>
-
-
             {/* Navigation */}
-            <nav className="flex-1 py-4 flex flex-col gap-1 px-2">
+            <nav className="py-4 flex flex-col gap-1 px-2 border-b border-gray-700">
                 {mainMenuItems.map((item) => {
                     const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
                     return (
@@ -69,8 +68,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                 })}
             </nav>
 
+            {/* Tools Section */}
+            {tools && (
+                <div className={`flex-1 overflow-y-auto py-4 px-2 flex flex-col gap-2 ${collapsed ? 'items-center' : ''}`}>
+                    {!collapsed && <div className="text-xs font-bold text-gray-500 uppercase px-2 mb-2">Ferramentas</div>}
+                    {tools}
+                </div>
+            )}
+
+            {/* Spacer if no tools, to push user profile down */}
+            {!tools && <div className="flex-1" />}
+
             {/* Footer / User Profile */}
-            <div className="p-4 border-t border-gray-700">
+            <div className="p-4 border-t border-gray-700 mt-auto">
                 <div className={`flex items-center gap-3 mb-4 ${collapsed ? 'justify-center' : ''}`}>
                     <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white shrink-0">
                         <User size={16} />

@@ -8,13 +8,15 @@ interface AnalysisLayoutProps {
     title?: string;
     onOpenNotes?: () => void;
     onOpenEvents?: () => void;
+    tools?: ReactNode;
 }
 
 const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     children,
     rightPanel,
     onOpenNotes,
-    onOpenEvents
+    onOpenEvents,
+    tools
 }) => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
@@ -22,7 +24,11 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     return (
         <div className="min-h-screen bg-nav-dark flex text-gray-100 font-sans">
             {/* Left Sidebar */}
-            <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+            <Sidebar
+                collapsed={sidebarCollapsed}
+                onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+                tools={tools}
+            />
 
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>

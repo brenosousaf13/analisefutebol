@@ -35,7 +35,7 @@ function Analysis() {
     const [loading, setLoading] = useState(false);
 
     // Phase State: 'defensive' | 'offensive' | 'transition'
-    const [activePhase, setActivePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
+    const [activePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
 
     // Team View State: 'home' | 'away' - Toggle to see which team's tactic
     // Default to 'home'
@@ -227,18 +227,15 @@ function Analysis() {
         });
     }, [homeSubstitutes, awaySubstitutes, gameNotes, homeTeamNotes, playerNotes, loading, currentAnalysisId]);
 
-    const getCurrentPlayers = () => {
-        if (viewTeam === 'home') {
-            return activePhase === 'defensive' ? homePlayersDef : homePlayersOff;
-        } else {
-            return activePhase === 'defensive' ? awayPlayersDef : awayPlayersOff;
-        }
-    };
 
-    const handlePlayerMove = (id: number, pos: { x: number, y: number }) => {
+
+    const handlePlayerMove = (id: number, pos: { x: number, y: number }, phase?: 'defensive' | 'offensive') => {
+        // If phase provided, use it. Else fall back to activePhase (though activePhase is less relevant now with dual view)
+        const targetPhase = phase || activePhase;
+
         const updateFn = viewTeam === 'home'
-            ? (activePhase === 'defensive' ? setHomePlayersDef : setHomePlayersOff)
-            : (activePhase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
+            ? (targetPhase === 'defensive' ? setHomePlayersDef : setHomePlayersOff)
+            : (targetPhase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
 
         updateFn(prev => prev.map(p => p.id === id ? { ...p, position: pos } : p));
     };
@@ -398,18 +395,20 @@ function Analysis() {
 
     // UUID import check
 
-    const handleAddArrow = (arrow: Omit<Arrow, 'id'>) => {
+    const handleAddArrow = (arrow: Omit<Arrow, 'id'>, phase?: 'defensive' | 'offensive') => {
+        const targetPhase = phase || activePhase;
         const newArrow: Arrow = { ...arrow, id: uuidv4() };
         setArrows(prev => ({
             ...prev,
-            [activePhase]: [...(prev[activePhase] || []), newArrow]
+            [targetPhase]: [...(prev[targetPhase] || []), newArrow]
         }));
     };
 
-    const handleRemoveArrow = (id: string) => {
+    const handleRemoveArrow = (id: string, phase?: 'defensive' | 'offensive') => {
+        const targetPhase = phase || activePhase;
         setArrows(prev => ({
             ...prev,
-            [activePhase]: (prev[activePhase] || []).filter(a => a.id !== id)
+            [targetPhase]: (prev[targetPhase] || []).filter(a => a.id !== id)
         }));
     };
 
@@ -530,10 +529,84 @@ function Analysis() {
     // const standardPlayerSize = getPlayerSize(fieldDims.width || 800);
     // const reserveSize = Math.max(30, standardPlayerSize * 0.7);
 
+    // --- Tools Content for Sidebar ---
+    const sidebarTools = (
+        <>
+            <button
+                onClick={() => setInteractionMode('move')}
+                className={`w-full flex items-center justify-start gap-3 p-2.5 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                title="Mover Jogadores"
+            >
+                <MousePointer2 size={20} />
+                <span className="text-sm font-medium truncate">Mover</span>
+            </button>
+            <button
+                onClick={() => setInteractionMode('draw')}
+                className={`w-full flex items-center justify-start gap-3 p-2.5 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                title="Desenhar Deslocamento"
+            >
+                <TrendingUp size={20} />
+                <span className="text-sm font-medium truncate">Desenhar</span>
+            </button>
+            <button
+                onClick={() => setIsCreatePlayerModalOpen(true)}
+                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                title="Adicionar Jogador"
+            >
+                <UserPlus size={20} />
+                <span className="text-sm font-medium truncate">Add Jogador</span>
+            </button>
+
+            <div className="h-px bg-gray-700 my-2 mx-1" />
+
+            <button
+                onClick={handleClearArrows}
+                className="w-full flex items-center justify-start gap-3 p-2.5 text-red-500 hover:bg-gray-700 rounded-lg transition-colors hover:text-red-400"
+                title="Limpar Setas"
+            >
+                <Eraser size={20} />
+                <span className="text-sm font-medium truncate">Limpar</span>
+            </button>
+
+            <div className="h-px bg-gray-700 my-2 mx-1" />
+
+            {/* Actions */}
+            <button
+                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                title="Compartilhar"
+            >
+                <Share2 size={20} />
+                <span className="text-sm font-medium truncate">Compartilhar</span>
+            </button>
+            <button
+                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                title="Baixar análise"
+            >
+                <Download size={20} />
+                <span className="text-sm font-medium truncate">Baixar</span>
+            </button>
+            <button
+                onClick={handleSave}
+                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
+                title="Salvar Análise"
+            >
+                {saveStatus === 'loading' ? (
+                    <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
+                ) : saveStatus === 'success' ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                    <Save className="w-5 h-5 text-green-500" />
+                )}
+                <span className="text-sm font-medium truncate text-green-500">Salvar</span>
+            </button>
+        </>
+    );
+
     return (
         <AnalysisLayout
             onOpenNotes={() => setIsNotesModalOpen(true)}
             onOpenEvents={() => setIsEventsExpansionModalOpen(true)}
+            tools={sidebarTools}
             rightPanel={
                 <StatsPanel
                     homeScore={homeScore}
@@ -560,130 +633,67 @@ function Analysis() {
             }
         >
             <div className="flex flex-col h-full bg-nav-dark">
-                {/* Unified Controls Row */}
-                <div className="h-11 px-4 flex items-center justify-between bg-panel-dark/50 shrink-0 border-b border-gray-700/50 mt-2">
-                    {/* Team Toggle */}
-                    <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700">
+                {/* Top Control Bar - Centralized Team Toggle */}
+                <div className="h-14 px-4 flex items-center justify-center bg-panel-dark/50 shrink-0 border-b border-gray-700/50 shadow-sm z-30">
+                    <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700 shadow-lg">
                         <button
                             onClick={() => setViewTeam('home')}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
                         >
                             CASA
                         </button>
                         <button
                             onClick={() => setViewTeam('away')}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
                         >
                             VISITANTE
                         </button>
                     </div>
-
-                    {/* Phase Tabs */}
-                    <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700">
-                        {['defensive', 'offensive', 'transition'].map((phase) => (
-                            <button
-                                key={phase}
-                                onClick={() => setActivePhase(phase as any)}
-                                className={`px-3 py-1 rounded-md text-xs font-bold capitalize transition-all 
-                                    ${activePhase === phase
-                                        ? (phase === 'defensive' ? 'bg-red-600 text-white' : phase === 'offensive' ? 'bg-accent-green text-white' : 'bg-accent-yellow text-gray-900')
-                                        : 'text-gray-400 hover:text-white'
-                                    }
-                                `}
-                            >
-                                {phase === 'defensive' ? 'Def' : phase === 'offensive' ? 'Ofensivo' : 'Trans'}
-                            </button>
-                        ))}
-                    </div>
                 </div>
 
-                {/* Main Content: Toolbar + Field */}
-                <div className="flex-1 relative overflow-hidden flex items-center p-4 gap-4">
-
-                    {/* Left Toolbar */}
-                    <div className="flex flex-col bg-[#242938] rounded-xl p-2 gap-1 z-30 shrink-0 shadow-xl border border-gray-700">
-                        {/* GRUPO 1: Ferramentas de edição */}
-                        <button
-                            onClick={() => setInteractionMode('move')}
-                            className={`p-2.5 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Mover Jogadores"
-                        >
-                            <MousePointer2 size={20} />
-                        </button>
-                        <button
-                            onClick={() => setInteractionMode('draw')}
-                            className={`p-2.5 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Desenhar Deslocamento"
-                        >
-                            <TrendingUp size={20} />
-                        </button>
-                        <button
-                            onClick={() => setIsCreatePlayerModalOpen(true)}
-                            className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                            title="Adicionar Jogador"
-                        >
-                            <UserPlus size={20} />
-                        </button>
-
-                        {/* Separator */}
-                        <div className="h-px bg-gray-700 my-2 mx-1" />
-
-                        <button
-                            onClick={handleClearArrows}
-                            className="p-2.5 text-red-500 hover:bg-gray-700 rounded-lg transition-colors hover:text-red-400"
-                            title="Limpar Setas"
-                        >
-                            <Eraser size={20} />
-                        </button>
-
-                        {/* GRUPO 2: Ações - separado visualmente */}
-                        <div className="my-3" /> {/* Espaço maior */}
-
-                        {/* Compartilhar */}
-                        <button
-                            className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                            title="Compartilhar"
-                        >
-                            <Share2 size={20} />
-                        </button>
-
-                        {/* Download */}
-                        <button
-                            className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                            title="Baixar análise"
-                        >
-                            <Download size={20} />
-                        </button>
-
-                        {/* Salvar - DESTAQUE */}
-                        <button
-                            onClick={handleSave}
-                            className="relative p-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors flex items-center justify-center"
-                            title="Salvar Análise"
-                        >
-                            {saveStatus === 'loading' ? (
-                                <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
-                            ) : saveStatus === 'success' ? (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                            ) : (
-                                <Save className="w-5 h-5 text-green-500" />
-                            )}
-                        </button>
+                {/* Main Content: Dual Fields */}
+                <div className="flex-1 relative overflow-hidden grid grid-cols-2 gap-0 p-0">
+                    {/* Defensive Field */}
+                    <div className="relative border-r border-gray-700/50 h-full flex flex-col">
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                            <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Defensivo</span>
+                        </div>
+                        <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
+                            {/* Overlay for better visibility if needed */}
+                            <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                            <TacticalField
+                                players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                onPlayerClick={handlePlayerClick}
+                                selectedPlayerId={selectedPlayerId}
+                                playerNotes={playerNotes}
+                                mode={interactionMode}
+                                arrows={arrows.defensive}
+                                onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                            />
+                        </div>
                     </div>
 
-                    {/* Field Container */}
-                    <div className="flex-1 h-full relative flex items-center justify-center overflow-hidden rounded-xl bg-field-pattern shadow-2xl border border-white/5 p-4">
-                        <TacticalField
-                            players={getCurrentPlayers()}
-                            onPlayerMove={handlePlayerMove}
-                            onPlayerClick={handlePlayerClick}
-                            selectedPlayerId={selectedPlayerId}
-                            playerNotes={playerNotes}
-                            mode={interactionMode}
-                            arrows={arrows[activePhase]}
-                            onAddArrow={handleAddArrow}
-                            onRemoveArrow={handleRemoveArrow}
-                        />
+                    {/* Offensive Field */}
+                    <div className="relative h-full flex flex-col">
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                            <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
+                        </div>
+                        <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
+                            <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                            <TacticalField
+                                players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                onPlayerClick={handlePlayerClick}
+                                selectedPlayerId={selectedPlayerId}
+                                playerNotes={playerNotes}
+                                mode={interactionMode}
+                                arrows={arrows.offensive}
+                                onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -766,8 +776,8 @@ function Analysis() {
                     onDeleteEvent={handleDeleteEvent}
                 />
 
-            </div >
-        </AnalysisLayout >
+            </div>
+        </AnalysisLayout>
     );
 }
 
