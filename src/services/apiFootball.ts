@@ -90,51 +90,64 @@ export interface Lineup {
     substitutes: { player: LineupPlayer }[];
 }
 
+
 export const getLiveFixtures = async (): Promise<Fixture[]> => {
     try {
         console.log(`[API] Fetching LIVE fixtures...`);
-        const response = await api.get<{ response: Fixture[] }>('/fixtures', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await api.get<any>('/fixtures', {
             params: {
                 live: 'all',
                 timezone: TIMEZONE,
             },
         });
-        console.log(`[API] LIVE Response count: ${response.data.response.length}`);
-        return response.data.response;
+
+        const data = response.data;
+        const fixtures = data?.response || [];
+
+        console.log(`[API] LIVE Response count: ${fixtures.length}`);
+
+        if (data?.errors && Object.keys(data.errors).length > 0) {
+            console.warn('[API] Errors returned:', data.errors);
+        }
+
+        return fixtures;
     } catch (error) {
         console.error('Error fetching live fixtures:', error);
-        throw error;
+        return [];
     }
 };
 
 export const getMatchLineups = async (fixtureId: number): Promise<Lineup[]> => {
     try {
         console.log(`[API Lineups] Fetching lineups for fixture: ${fixtureId}`);
-        const response = await api.get<{ response: Lineup[] }>('/fixtures/lineups', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await api.get<any>('/fixtures/lineups', {
             params: {
                 fixture: fixtureId,
             },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = response.data as any;
+        const data = response.data;
         console.log(`[API Lineups] Response Status: ${response.status}`);
 
-        if (data.errors && Object.keys(data.errors).length > 0) {
-            console.error('[API Lineups] Errors returned:', data.errors);
+        if (data?.errors && Object.keys(data?.errors || {}).length > 0) {
+            console.warn('[API Lineups] Errors returned:', data.errors);
         }
 
-        console.log(`[API Lineups] Response count: ${data.response?.length ?? 0}`);
-        if (data.response && data.response.length > 0) {
-            console.log('[API Lineups] First team startXI count:', data.response[0].startXI?.length);
+        const lineups = data?.response || [];
+        console.log(`[API Lineups] Response count: ${lineups.length}`);
+
+        if (lineups.length > 0) {
+            console.log('[API Lineups] First team startXI count:', lineups[0]?.startXI?.length);
         } else {
             console.warn('[API Lineups] Response is empty or undefined.');
         }
 
-        return response.data.response;
+        return lineups;
     } catch (error) {
         console.error('[API Lineups] Error fetching lineups:', error);
-        throw error;
+        return [];
     }
 };
 
@@ -143,47 +156,52 @@ export const getFixturesByDate = async (date: string): Promise<Fixture[]> => {
         const url = `/fixtures?date=${date}&timezone=${TIMEZONE}`;
         console.log(`[API] Fetching fixtures for date: ${date} (URL: ${BASE_URL}${url})`);
 
-        const response = await api.get<{ response: Fixture[] }>('/fixtures', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await api.get<any>('/fixtures', {
             params: {
                 date,
                 timezone: TIMEZONE
             }
         });
 
-        console.log(`[API] Date Response count: ${response.data.response.length}`);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = response.data as any;
-        if (data.errors && Object.keys(data.errors).length > 0) {
-            console.error('[API] Errors returned:', data.errors);
+        const data = response.data;
+        const fixtures = data?.response || [];
+
+        console.log(`[API] Date Response count: ${fixtures.length}`);
+
+        if (data?.errors && Object.keys(data?.errors || {}).length > 0) {
+            console.warn('[API] Errors returned:', data.errors);
         }
 
-        return response.data.response;
+        return fixtures;
     } catch (error) {
         console.error('Error fetching fixtures by date:', error);
-        throw error;
+        return [];
     }
 };
 
 export const getCountries = async (): Promise<Country[]> => {
     try {
-        const response = await api.get<{ response: Country[] }>('/countries');
-        return response.data.response;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await api.get<any>('/countries');
+        return response?.data?.response || [];
     } catch (error) {
         console.error('Error fetching countries:', error);
-        throw error;
+        return [];
     }
 };
 
 export const getLeagues = async (country: string): Promise<League[]> => {
     try {
-        const response = await api.get<{ response: League[] }>('/leagues', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await api.get<any>('/leagues', {
             params: {
                 country: country
             }
         });
-        return response.data.response;
+        return response?.data?.response || [];
     } catch (error) {
         console.error('Error fetching leagues:', error);
-        throw error;
+        return [];
     }
 };

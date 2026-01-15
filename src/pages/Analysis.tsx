@@ -102,26 +102,43 @@ function Analysis() {
             rows[line].push(item.player);
         });
 
+        const maxLine = Math.max(...Object.keys(rows).map(Number));
+        const step = maxLine > 1 ? (90 - 20) / (maxLine - 1) : 0;
+
         Object.entries(rows).forEach(([lineStr, rowPlayers]) => {
             const line = parseInt(lineStr);
             rowPlayers.sort((a, b) => parseInt(a.grid!.split(':')[1]) - parseInt(b.grid!.split(':')[1]));
             const count = rowPlayers.length;
             rowPlayers.forEach((p, index) => {
                 const x = (100 / (count + 1)) * (index + 1);
+                // Inline Y calculation
                 let y = 90;
-                const maxLine = Math.max(...Object.keys(rows).map(Number));
                 if (maxLine > 1) {
-                    const step = (90 - 20) / (maxLine - 1);
-                    y = 90 - (step * (line - 1));
+                    // If home team (defensive at bottom), line 1 (GK) is 90.
+                    // If activePhase is ... wait, this helper is generic.
+                    // Let's assume standard intuitive visual: GK at bottom (90%), Forwards at top (20%).
+                    y = 90 - (line - 1) * step;
                 }
-                players.push({ id: p.id, name: p.name, number: p.number, position: { x, y } });
+
+                players.push({
+                    id: p.id,
+                    name: p.name,
+                    number: p.number,
+                    position: { x, y }
+                });
             });
         });
         return players;
     };
 
-
-    // --- Effects ---
+    const convertSubsToPlayers = (lineup: Lineup): Player[] => {
+        return (lineup.substitutes || []).map(item => ({
+            id: item.player.id,
+            name: item.player.name,
+            number: item.player.number,
+            position: { x: 50, y: 50 } // Default for bench
+        }));
+    };
 
     // Load Analysis
     useEffect(() => {
@@ -150,17 +167,25 @@ function Analysis() {
                     const homeLineup = data[0];
                     const awayLineup = data[1];
 
-                    if (homeLineup.startXI.length > 0) {
+                    if (homeLineup?.startXI?.length > 0) {
                         const hPlayers = convertLineupToPlayers(homeLineup);
                         setHomePlayersDef(hPlayers);
                         setHomePlayersOff(hPlayers.map(p => ({ ...p, position: { ...p.position } })));
-                        // Subs...
+
+                        if (homeLineup.substitutes?.length > 0) {
+                            const hSubs = convertSubsToPlayers(homeLineup);
+                            setHomeSubstitutes(hSubs);
+                        }
                     }
-                    if (awayLineup.startXI.length > 0) {
+                    if (awayLineup?.startXI?.length > 0) {
                         const aPlayers = convertLineupToPlayers(awayLineup);
                         setAwayPlayersDef(aPlayers);
                         setAwayPlayersOff(aPlayers.map(p => ({ ...p, position: { ...p.position } })));
-                        // Subs...
+
+                        if (awayLineup.substitutes?.length > 0) {
+                            const aSubs = convertSubsToPlayers(awayLineup);
+                            setAwaySubstitutes(aSubs);
+                        }
                     }
                 }
             });
