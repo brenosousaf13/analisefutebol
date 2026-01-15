@@ -60,11 +60,17 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // --- Helpers ---
     const getFieldPercentage = (clientX: number, clientY: number) => {
         if (!containerRef.current) return { x: 0, y: 0 };
-        // Use the containerRef which should point to the field area
         const rect = containerRef.current.getBoundingClientRect();
+        const element = containerRef.current;
+
+        // Account for borders by using clientLeft/Top and clientWidth/Height
+        // rect.left is outer edge; element.clientLeft is border width
+        const xOffset = clientX - (rect.left + element.clientLeft);
+        const yOffset = clientY - (rect.top + element.clientTop);
+
         return {
-            x: Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)),
-            y: Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
+            x: Math.max(0, Math.min(100, (xOffset / element.clientWidth) * 100)),
+            y: Math.max(0, Math.min(100, (yOffset / element.clientHeight) * 100))
         };
     };
 
