@@ -35,7 +35,7 @@ function Analysis() {
     const [loading, setLoading] = useState(false);
 
     // Phase State: 'defensive' | 'offensive' | 'transition'
-    const [activePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
+    const [activePhase, setActivePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
 
     // Team View State: 'home' | 'away' - Toggle to see which team's tactic
     // Default to 'home'
@@ -227,7 +227,13 @@ function Analysis() {
         });
     }, [homeSubstitutes, awaySubstitutes, gameNotes, homeTeamNotes, playerNotes, loading, currentAnalysisId]);
 
-
+    const getCurrentPlayers = () => {
+        if (viewTeam === 'home') {
+            return activePhase === 'defensive' ? homePlayersDef : homePlayersOff;
+        } else {
+            return activePhase === 'defensive' ? awayPlayersDef : awayPlayersOff;
+        }
+    };
 
     const handlePlayerMove = (id: number, pos: { x: number, y: number }, phase?: 'defensive' | 'offensive') => {
         // If phase provided, use it. Else fall back to activePhase (though activePhase is less relevant now with dual view)
@@ -696,88 +702,86 @@ function Analysis() {
                         </div>
                     </div>
                 </div>
+            </div>     {/* Reserves Bar (Bottom) */}
+            <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
+                <div className="flex items-center gap-4 overflow-x-auto w-full mr-4">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reservas</span>
 
-                {/* Reserves Bar (Bottom) */}
-                <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
-                    <div className="flex items-center gap-4 overflow-x-auto w-full mr-4">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reservas</span>
+                    <div className="flex items-center gap-2 pb-1"> {/* pb-1 for scrollbar clearance */}
+                        {/* Real Reserves from State ONLY - Removed Mock Data */}
+                        {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
+                            <div
+                                key={sub.id}
+                                onDoubleClick={() => handleBenchDoubleClick(sub)}
+                                className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border border-gray-500 flex items-center justify-center text-white font-bold cursor-grab hover:border-white transition-colors hover:bg-gray-600 shadow-sm"
+                                title={sub.name}
+                            >
+                                {sub.number}
+                            </div>
+                        ))}
 
-                        <div className="flex items-center gap-2 pb-1"> {/* pb-1 for scrollbar clearance */}
-                            {/* Real Reserves from State ONLY - Removed Mock Data */}
-                            {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(sub => (
-                                <div
-                                    key={sub.id}
-                                    onDoubleClick={() => handleBenchDoubleClick(sub)}
-                                    className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border border-gray-500 flex items-center justify-center text-white font-bold cursor-grab hover:border-white transition-colors hover:bg-gray-600 shadow-sm"
-                                    title={sub.name}
-                                >
-                                    {sub.number}
-                                </div>
-                            ))}
-
-                            {/* Empty state if no reserves */}
-                            {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length === 0 && (
-                                <span className="text-xs text-gray-600 italic">Lista de reservas vazia</span>
-                            )}
-                        </div>
+                        {/* Empty state if no reserves */}
+                        {(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).length === 0 && (
+                            <span className="text-xs text-gray-600 italic">Lista de reservas vazia</span>
+                        )}
                     </div>
-                    <button
-                        onClick={() => setIsCreatePlayerModalOpen(true)}
-                        className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap"
-                    >
-                        <UserPlus size={14} />
-                        <span className="hidden md:inline">Adicionar</span>
-                    </button>
                 </div>
-
-                {/* Modals */}
-                <CreatePlayerModal
-                    isOpen={isCreatePlayerModalOpen}
-                    onClose={() => setIsCreatePlayerModalOpen(false)}
-                    onConfirm={handleCreatePlayer}
-                    existingNumbers={[
-                        ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef).map(p => p.number),
-                        ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(p => p.number)
-                    ]}
-                />
-
-                <NotesModal
-                    isOpen={isNotesModalOpen}
-                    onClose={() => setIsNotesModalOpen(false)}
-                    homeTeamName={matchState?.teams.home.name || 'Casa'}
-                    awayTeamName={matchState?.teams.away.name || 'Visitante'}
-                    homeNotes={notasCasa}
-                    awayNotes={notasVisitante}
-                    homeUpdatedAt={notasCasaUpdatedAt}
-                    awayUpdatedAt={notasVisitanteUpdatedAt}
-                    onSave={handleNoteSave}
-                    saveStatus={autoSaveStatus}
-                />
-
-                <AddEventModal
-                    isOpen={isAddEventModalOpen}
-                    onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
-                    onSave={handleSaveEvent}
-                    homeTeamName={matchState?.teams.home.name || 'Casa'}
-                    awayTeamName={matchState?.teams.away.name || 'Visitante'}
-                    homePlayers={homePlayersDef}
-                    awayPlayers={awayPlayersDef}
-                    homeSubstitutes={homeSubstitutes}
-                    awaySubstitutes={awaySubstitutes}
-                    initialData={eventToEdit}
-                />
-
-                <EventsExpansionModal
-                    isOpen={isEventsExpansionModalOpen}
-                    onClose={() => setIsEventsExpansionModalOpen(false)}
-                    events={events}
-                    onAddEvent={handleAddEventClick}
-                    onEditEvent={handleEditEventRequest}
-                    onDeleteEvent={handleDeleteEvent}
-                />
-
+                <button
+                    onClick={() => setIsCreatePlayerModalOpen(true)}
+                    className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap"
+                >
+                    <UserPlus size={14} />
+                    <span className="hidden md:inline">Adicionar</span>
+                </button>
             </div>
-        </AnalysisLayout>
+
+            {/* Modals */}
+            <CreatePlayerModal
+                isOpen={isCreatePlayerModalOpen}
+                onClose={() => setIsCreatePlayerModalOpen(false)}
+                onConfirm={handleCreatePlayer}
+                existingNumbers={[
+                    ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef).map(p => p.number),
+                    ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(p => p.number)
+                ]}
+            />
+
+            <NotesModal
+                isOpen={isNotesModalOpen}
+                onClose={() => setIsNotesModalOpen(false)}
+                homeTeamName={matchState?.teams.home.name || 'Casa'}
+                awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                homeNotes={notasCasa}
+                awayNotes={notasVisitante}
+                homeUpdatedAt={notasCasaUpdatedAt}
+                awayUpdatedAt={notasVisitanteUpdatedAt}
+                onSave={handleNoteSave}
+                saveStatus={autoSaveStatus}
+            />
+
+            <AddEventModal
+                isOpen={isAddEventModalOpen}
+                onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
+                onSave={handleSaveEvent}
+                homeTeamName={matchState?.teams.home.name || 'Casa'}
+                awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                homePlayers={homePlayersDef}
+                awayPlayers={awayPlayersDef}
+                homeSubstitutes={homeSubstitutes}
+                awaySubstitutes={awaySubstitutes}
+                initialData={eventToEdit}
+            />
+
+            <EventsExpansionModal
+                isOpen={isEventsExpansionModalOpen}
+                onClose={() => setIsEventsExpansionModalOpen(false)}
+                events={events}
+                onAddEvent={handleAddEventClick}
+                onEditEvent={handleEditEventRequest}
+                onDeleteEvent={handleDeleteEvent}
+            />
+
+        </AnalysisLayout >
     );
 }
 
