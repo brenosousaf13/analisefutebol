@@ -515,6 +515,8 @@ function Analysis() {
 
     return (
         <AnalysisLayout
+            onOpenNotes={() => setIsNotesModalOpen(true)}
+            onOpenEvents={() => setIsEventsExpansionModalOpen(true)}
             rightPanel={
                 <StatsPanel
                     homeScore={homeScore}
@@ -619,47 +621,58 @@ function Analysis() {
                 </div>
 
                 <div className="flex flex-col h-full overflow-hidden">
-                    {/* Field Area */}
-                    <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-[#2e5039]/20">
-                        <TacticalField
-                            players={getCurrentPlayers()}
-                            onPlayerMove={handlePlayerMove}
-                            onPlayerClick={handlePlayerClick}
-                            selectedPlayerId={selectedPlayerId}
-                            playerNotes={playerNotes}
-                            mode={interactionMode}
-                            arrows={arrows[activePhase]}
-                            onAddArrow={handleAddArrow}
-                            onRemoveArrow={handleRemoveArrow}
-                        />
+                    {/* Main Content: Toolbar + Field */}
+                    <div className="flex-1 relative overflow-hidden flex items-center p-4 gap-4">
 
-                        {/* Controls Overlay */}
-                        <div className="absolute top-4 right-4 flex flex-col gap-2 z-30">
-                            {/* Mode Switcher */}
-                            <div className="bg-panel-dark/90 p-1.5 rounded-lg border border-gray-700 shadow-xl backdrop-blur-sm flex flex-col gap-1">
-                                <button
-                                    onClick={() => setInteractionMode('move')}
-                                    className={`p-2 rounded transition-colors ${interactionMode === 'move' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                                    title="Mover Jogadores"
-                                >
-                                    <MousePointer2 size={20} />
-                                </button>
-                                <button
-                                    onClick={() => setInteractionMode('draw')}
-                                    className={`p-2 rounded transition-colors ${interactionMode === 'draw' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                                    title="Desenhar Setas"
-                                >
-                                    <TrendingUp size={20} />
-                                </button>
-                            </div>
+                        {/* Left Toolbar */}
+                        <div className="flex flex-col bg-[#242938] rounded-xl p-2 gap-1 z-30 shrink-0 shadow-xl border border-gray-700">
+                            <button
+                                onClick={() => setInteractionMode('move')}
+                                className={`p-2 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                title="Mover Jogadores"
+                            >
+                                <MousePointer2 size={24} />
+                            </button>
+                            <button
+                                onClick={() => setInteractionMode('draw')}
+                                className={`p-2 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-accent-green text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                title="Desenhar Setas"
+                            >
+                                <TrendingUp size={24} />
+                            </button>
+                            <button
+                                onClick={() => setIsCreatePlayerModalOpen(true)}
+                                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                                title="Adicionar Jogador"
+                            >
+                                <UserPlus size={24} />
+                            </button>
+
+                            {/* Separator */}
+                            <div className="h-px bg-gray-700 my-1 mx-1" />
 
                             <button
                                 onClick={handleClearArrows}
-                                className="bg-panel-dark/90 p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg border border-gray-700 shadow-xl backdrop-blur-sm transition-colors"
+                                className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors hover:text-red-400"
                                 title="Limpar Setas"
                             >
-                                <Eraser size={20} />
+                                <Eraser size={24} />
                             </button>
+                        </div>
+
+                        {/* Field Container */}
+                        <div className="flex-1 h-full relative flex items-center justify-center overflow-hidden rounded-xl">
+                            <TacticalField
+                                players={getCurrentPlayers()}
+                                onPlayerMove={handlePlayerMove}
+                                onPlayerClick={handlePlayerClick}
+                                selectedPlayerId={selectedPlayerId}
+                                playerNotes={playerNotes}
+                                mode={interactionMode}
+                                arrows={arrows[activePhase]}
+                                onAddArrow={handleAddArrow}
+                                onRemoveArrow={handleRemoveArrow}
+                            />
                         </div>
                     </div>
 

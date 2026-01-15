@@ -3,13 +3,12 @@ import MatchSelection from './pages/MatchSelection';
 import Analysis from './pages/Analysis';
 import MyAnalyses from './pages/MyAnalyses';
 import { SidebarProvider } from './contexts/SidebarContext';
-import Sidebar from './components/Sidebar';
+
 
 function App() {
   return (
     <SidebarProvider>
       <BrowserRouter>
-        <Sidebar />
         <Routes>
           <Route path="/" element={<MatchSelection />} />
           <Route path="/analise" element={<Analysis />} />

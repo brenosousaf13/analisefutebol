@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, ClipboardList, FolderOpen, LogOut, User } from 'lucide-react';
+import { Calendar, ClipboardList, FolderOpen, LogOut, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+    collapsed: boolean;
+    onToggle: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     const location = useLocation();
     const [activePath, setActivePath] = useState(location.pathname);
 
@@ -17,30 +22,48 @@ const Sidebar: React.FC = () => {
     ];
 
     return (
-        <aside className="w-64 bg-nav-dark text-gray-300 flex flex-col h-screen fixed left-0 top-0 border-r border-gray-700 z-50">
+        <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-nav-dark text-gray-300 flex flex-col h-screen fixed left-0 top-0 border-r border-gray-700 z-50 transition-all duration-300 ease-in-out`}>
             {/* Logo Area */}
-            <div className="p-6 flex items-center gap-3">
-                <div className="bg-accent-green text-white p-1.5 rounded-lg font-bold text-xl leading-none">
-                    TF
-                </div>
-                <h1 className="text-white font-bold text-lg tracking-wide">TáticaFutebol</h1>
+            <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} h-16 border-b border-gray-700`}>
+                {!collapsed && (
+                    <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+                        <div className="bg-accent-green text-white p-1 rounded font-bold text-lg leading-none shrink-0">
+                            TF
+                        </div>
+                        <h1 className="text-white font-bold text-base tracking-wide truncate">TáticaFutebol</h1>
+                    </div>
+                )}
+                {collapsed && (
+                    <div className="bg-accent-green text-white p-1 rounded font-bold text-lg leading-none shrink-0">
+                        TF
+                    </div>
+                )}
             </div>
 
+            <button
+                onClick={onToggle}
+                className="absolute -right-3 top-20 bg-panel-dark border border-gray-600 rounded-full p-1 text-gray-400 hover:text-white hover:border-gray-400 transition-colors z-50"
+            >
+                {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+
+
             {/* Navigation */}
-            <nav className="flex-1 px-4 py-4 space-y-1">
+            <nav className="flex-1 py-4 flex flex-col gap-1 px-2">
                 {mainMenuItems.map((item) => {
                     const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
                     return (
                         <a
                             key={item.label}
                             href={item.path}
-                            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors group ${isActive
-                                ? 'bg-panel-dark text-white border-l-4 border-accent-green'
+                            title={collapsed ? item.label : undefined}
+                            className={`flex items-center gap-3 p-3 rounded-lg transition-colors group ${isActive
+                                ? 'bg-panel-dark text-white'
                                 : 'hover:bg-panel-dark hover:text-white'
-                                }`}
+                                } ${collapsed ? 'justify-center' : ''}`}
                         >
-                            <item.icon className={`w-5 h-5 ${isActive ? 'text-accent-green' : 'text-gray-400 group-hover:text-white'}`} />
-                            <span className="font-medium text-sm">{item.label}</span>
+                            <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-accent-green' : 'text-gray-400 group-hover:text-white'}`} />
+                            {!collapsed && <span className="font-medium text-sm truncate">{item.label}</span>}
                         </a>
                     );
                 })}
@@ -48,18 +71,23 @@ const Sidebar: React.FC = () => {
 
             {/* Footer / User Profile */}
             <div className="p-4 border-t border-gray-700">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white">
-                        <User size={20} />
+                <div className={`flex items-center gap-3 mb-4 ${collapsed ? 'justify-center' : ''}`}>
+                    <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white shrink-0">
+                        <User size={16} />
                     </div>
-                    <div>
-                        <p className="text-white text-sm font-bold">Coach Breno</p>
-                        <p className="text-xs text-gray-500">Treinador</p>
-                    </div>
+                    {!collapsed && (
+                        <div className="overflow-hidden">
+                            <p className="text-white text-sm font-bold truncate">Coach Breno</p>
+                            <p className="text-xs text-gray-500 truncate">Treinador</p>
+                        </div>
+                    )}
                 </div>
-                <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors w-full px-2">
-                    <LogOut size={14} />
-                    <span>Sair</span>
+                <button
+                    className={`flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors w-full px-2 ${collapsed ? 'justify-center' : ''}`}
+                    title={collapsed ? "Sair" : undefined}
+                >
+                    <LogOut size={16} />
+                    {!collapsed && <span>Sair</span>}
                 </button>
             </div>
         </aside>
