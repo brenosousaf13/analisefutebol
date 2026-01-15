@@ -14,7 +14,7 @@ interface BenchAreaProps {
 
 const BenchArea: React.FC<BenchAreaProps> = ({
     players,
-    team,
+    team: _team,
     onPlayerDrop,
     onPlayerDragStart,
     onPlayerDragEnd,

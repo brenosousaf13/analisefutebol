@@ -27,7 +27,7 @@ interface TacticalFieldProps {
 const TacticalField: React.FC<TacticalFieldProps> = ({
     players,
     onPlayerMove,
-    onPlayerClick,
+    onPlayerClick: _onPlayerClick,
     onPlayerDoubleClick,
     selectedPlayerId,
     playerNotes = {},
