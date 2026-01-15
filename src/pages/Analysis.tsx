@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams } from 'react-router-dom';
-import { Share2, Download, Save, Loader2, CheckCircle } from 'lucide-react';
+import { Download, Save, Loader2, CheckCircle } from 'lucide-react';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
 import TacticalField from '../components/TacticalField';
@@ -560,104 +560,96 @@ function Analysis() {
             }
         >
             <div className="flex flex-col h-full bg-nav-dark">
-                {/* Top Control Bar - Centralized Team Toggle + Actions */}
-                <div className="h-14 px-4 flex items-center justify-between bg-panel-dark/50 shrink-0 border-b border-gray-700/50 shadow-sm z-30">
-                    {/* Spacer for balance */}
-                    <div className="w-32" />
-
-                    {/* Team Toggle - Center */}
+                {/* Top Control Bar - Centralized Team Toggle */}
+                <div className="h-12 px-4 flex items-center justify-center bg-panel-dark/50 shrink-0 border-b border-gray-700/50 shadow-sm z-30">
                     <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700 shadow-lg">
                         <button
                             onClick={() => setViewTeam('home')}
-                            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-5 py-1.5 rounded-md text-sm font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
                         >
                             CASA
                         </button>
                         <button
                             onClick={() => setViewTeam('away')}
-                            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-5 py-1.5 rounded-md text-sm font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
                         >
                             VISITANTE
                         </button>
                     </div>
+                </div>
 
-                    {/* Action Buttons - Right */}
-                    <div className="flex items-center gap-2">
+                {/* Main Content: Toolbar + Dual Fields */}
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Left Toolbar - Outside the field */}
+                    <div className="flex flex-col bg-[#242938] rounded-xl m-2 p-1.5 gap-1 shrink-0 border border-gray-700/50 self-center">
+                        {/* Mover */}
                         <button
-                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                            title="Compartilhar"
+                            onClick={() => setInteractionMode('move')}
+                            className={`p-2 rounded-lg transition-all ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                            title="Mover jogadores"
                         >
-                            <Share2 className="w-5 h-5" />
+                            <MousePointer2 className="w-5 h-5" />
                         </button>
+
+                        {/* Desenhar setas */}
+                        <button
+                            onClick={() => setInteractionMode('draw')}
+                            className={`p-2 rounded-lg transition-all ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                            title="Desenhar deslocamento"
+                        >
+                            <TrendingUp className="w-5 h-5" />
+                        </button>
+
+                        {/* Adicionar jogador */}
+                        <button
+                            onClick={() => setIsCreatePlayerModalOpen(true)}
+                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                            title="Adicionar jogador"
+                        >
+                            <UserPlus className="w-5 h-5" />
+                        </button>
+
+                        {/* Separador */}
+                        <div className="h-px bg-gray-600 my-1 mx-1" />
+
+                        {/* Limpar setas */}
+                        <button
+                            onClick={handleClearArrows}
+                            className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                            title="Limpar setas"
+                        >
+                            <Eraser className="w-5 h-5 text-red-500" />
+                        </button>
+
+                        {/* Separador maior */}
+                        <div className="my-2" />
+
+                        {/* Download */}
                         <button
                             className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
                             title="Baixar análise"
                         >
                             <Download className="w-5 h-5" />
                         </button>
+
+                        {/* Salvar */}
                         <button
                             onClick={handleSave}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
+                            className="p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
                             title="Salvar análise"
                         >
                             {saveStatus === 'loading' ? (
-                                <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
+                                <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
                             ) : saveStatus === 'success' ? (
-                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <CheckCircle className="w-5 h-5 text-green-500" />
                             ) : (
-                                <Save className="w-4 h-4 text-green-500" />
+                                <Save className="w-5 h-5 text-green-500" />
                             )}
-                            <span className="text-sm font-medium text-green-500">Salvar</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Main Content: Dual Fields with Floating Toolbar */}
-                <div className="flex-1 relative overflow-hidden">
-                    {/* Floating Toolbar - Positioned over the field */}
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-30 flex flex-col bg-[#242938] rounded-xl p-2 gap-1.5 border border-gray-700/50 shadow-xl">
-                        {/* Mover */}
-                        <button
-                            onClick={() => setInteractionMode('move')}
-                            className={`p-3 rounded-lg transition-all ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Mover jogadores"
-                        >
-                            <MousePointer2 className="w-6 h-6" />
-                        </button>
-
-                        {/* Desenhar setas */}
-                        <button
-                            onClick={() => setInteractionMode('draw')}
-                            className={`p-3 rounded-lg transition-all ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Desenhar deslocamento"
-                        >
-                            <TrendingUp className="w-6 h-6" />
-                        </button>
-
-                        {/* Adicionar jogador */}
-                        <button
-                            onClick={() => setIsCreatePlayerModalOpen(true)}
-                            className="p-3 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                            title="Adicionar jogador"
-                        >
-                            <UserPlus className="w-6 h-6" />
-                        </button>
-
-                        {/* Separador */}
-                        <div className="h-px bg-gray-600 my-1 mx-2" />
-
-                        {/* Limpar setas */}
-                        <button
-                            onClick={handleClearArrows}
-                            className="p-3 rounded-lg hover:bg-gray-700 transition-colors"
-                            title="Limpar setas"
-                        >
-                            <Eraser className="w-6 h-6 text-red-500" />
                         </button>
                     </div>
 
                     {/* Dual Fields Grid */}
-                    <div className="h-full grid grid-cols-2 gap-0">
+                    <div className="flex-1 grid grid-cols-2 gap-0">
                         {/* Defensive Field */}
                         <div className="relative border-r border-gray-700/50 h-full flex flex-col">
                             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
