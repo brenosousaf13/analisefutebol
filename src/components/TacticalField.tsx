@@ -1,7 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import PlayerMarker from './PlayerMarker';
+import { useFieldDimensions } from '../hooks/useFieldDimensions';
+import { getPlayerSize, getFontSize } from '../utils/playerCoordinates';
 
 interface TacticalFieldProps {
     players: Player[];
@@ -28,17 +30,24 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onAddArrow,
     onRemoveArrow
 }) => {
-    const fieldRef = useRef<HTMLDivElement>(null);
+    // Responsive Field Dimensions
+    const { dimensions, containerRef } = useFieldDimensions(1.54);
+    const { width: fieldWidth, height: fieldHeight } = dimensions;
+
+    const playerSize = getPlayerSize(fieldWidth);
+    const fontSize = getFontSize(playerSize);
+
     const [draggingId, setDraggingId] = useState<number | null>(null);
 
     // Drawing State
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentArrow, setCurrentArrow] = useState<Partial<Arrow> | null>(null);
 
+
     // --- Helpers ---
     const getFieldPercentage = (clientX: number, clientY: number) => {
-        if (!fieldRef.current) return { x: 0, y: 0 };
-        const rect = fieldRef.current.getBoundingClientRect();
+        if (!containerRef.current) return { x: 0, y: 0 };
+        const rect = containerRef.current.children[0].getBoundingClientRect(); // Use the inner field div
         return {
             x: ((clientX - rect.left) / rect.width) * 100,
             y: ((clientY - rect.top) / rect.height) * 100
@@ -61,13 +70,15 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // Movement (Player + Drawing)
     const handleMove = (clientX: number, clientY: number) => {
         // Player Dragging
-        if (mode === 'move' && draggingId !== null && fieldRef.current) {
-            const rect = fieldRef.current.getBoundingClientRect();
+        if (mode === 'move' && draggingId !== null && containerRef.current) {
+            const rect = containerRef.current.children[0].getBoundingClientRect(); // Use the inner field div
+            // Calculate percentage directly
             const xPercent = ((clientX - rect.left) / rect.width) * 100;
             const yPercent = ((clientY - rect.top) / rect.height) * 100;
 
-            const newX = Math.max(2, Math.min(98, xPercent));
-            const newY = Math.max(2, Math.min(98, yPercent));
+            // Clamp values (keeping players inside field with small margin)
+            const newX = Math.max(0, Math.min(100, xPercent));
+            const newY = Math.max(0, Math.min(100, yPercent));
 
             onPlayerMove(draggingId, { x: newX, y: newY });
         }
@@ -110,27 +121,26 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
     return (
         <div
-            className="w-full h-full flex items-center justify-center p-4"
+            ref={containerRef}
+            className="w-full h-full flex items-center justify-center p-2 sm:p-4 bg-[#2e5039]/50 rounded-xl" // Added bg for container context
             onMouseUp={handleUp}
             onMouseLeave={handleUp}
             onTouchEnd={handleUp}
         >
             {/* The Field Container */}
-            {/* 
-                Sizing Fix: 
-                - max-h-[calc(100vh-200px)] ensures it fits in viewport minus header/footer 
-                - aspect-[68/105] maintains ratio
-                - h-full allows it to grow if space permits
-                - w-auto ensures it doesn't stretch too wide
-            */}
             <div
-                ref={fieldRef}
                 className={`
-                    relative h-full w-auto aspect-[68/105] max-h-[calc(100vh-280px)] min-h-0
+                    relative box-border
                     bg-gradient-to-b from-field-green to-[#3d6a4d] 
-                    rounded-xl shadow-2xl border-4 border-[#3d6a4d] overflow-hidden select-none
+                    rounded-lg shadow-2xl border-4 border-[#3d6a4d] overflow-hidden select-none
                     ${mode === 'draw' ? 'cursor-crosshair' : 'cursor-default'}
                 `}
+                style={{
+                    width: fieldWidth || '100%',
+                    height: fieldHeight || 'auto',
+                    // Only show field if dimensions are calculated, prevents jump
+                    opacity: fieldWidth ? 1 : 0
+                }}
                 onMouseMove={handleMouseMove}
                 onTouchMove={handleTouchMove}
                 onMouseDown={mode === 'draw' ? handleDrawStart : undefined}
@@ -213,6 +223,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             }}
                             hasNote={!!playerNotes[player.id]}
                             isSelected={selectedPlayerId === player.id}
+                            playerSize={playerSize}
+                            fontSize={fontSize}
                         />
                     ))}
                 </div>

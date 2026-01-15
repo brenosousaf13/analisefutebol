@@ -9,6 +9,9 @@ interface PlayerMarkerProps {
     hasNote?: boolean;
     isSelected?: boolean;
     shortName?: string;
+    // New Props for Responsiveness
+    playerSize?: number;
+    fontSize?: { number: number; name: number };
 }
 
 const PlayerMarker: React.FC<PlayerMarkerProps> = ({
@@ -18,7 +21,9 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
     isDragging,
     hasNote,
     isSelected,
-    shortName
+    shortName,
+    playerSize = 36, // Default fallback
+    fontSize = { number: 14, name: 10 }
 }) => {
 
     // Fallback if shortName is not provided
@@ -32,6 +37,7 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             style={{
                 left: `${player.position.x}%`,
                 top: `${player.position.y}%`,
+                width: playerSize, // Ensure container has width for centering
                 transform: 'translate(-50%, -50%)',
                 touchAction: 'none'
             }}
@@ -41,13 +47,18 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             {/* Player Circle */}
             <div
                 className={`
-                    w-9 h-9 rounded-full flex items-center justify-center shadow-lg border-2
-                    text-xs font-bold select-none transition-colors
+                    rounded-full flex items-center justify-center shadow-lg border-2
+                    font-bold select-none transition-colors
                     ${isSelected
                         ? 'bg-accent-green border-green-300 text-white'
                         : (teamColor === 'red' ? 'bg-red-600 border-white text-white' : 'bg-accent-yellow border-white text-gray-900')
                     }
                 `}
+                style={{
+                    width: playerSize,
+                    height: playerSize,
+                    fontSize: fontSize.number
+                }}
             >
                 {player.number}
             </div>
@@ -55,10 +66,14 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             {/* Player Name */}
             <span
                 className={`
-                    mt-1 text-[10px] bg-black/50 px-1.5 py-0.5 rounded text-white font-medium
-                    whitespace-nowrap truncate max-w-[80px] text-center
+                    mt-1 bg-black/50 px-1.5 py-0.5 rounded text-white font-medium
+                    whitespace-nowrap truncate text-center
                     backdrop-blur-sm
                 `}
+                style={{
+                    fontSize: fontSize.name,
+                    maxWidth: playerSize * 2.5 // proportional max width
+                }}
             >
                 {labelName}
             </span>
