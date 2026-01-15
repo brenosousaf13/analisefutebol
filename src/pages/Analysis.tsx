@@ -578,12 +578,13 @@ function Analysis() {
                     </div>
                 </div>
 
-                {/* Main Content: Single Unified Container */}
+                {/* Main Content: Dark Green Container wrapping everything */}
                 <div className="flex-1 flex overflow-hidden p-3">
-                    {/* Single Container with Toolbar + Fields */}
-                    <div className="flex-1 flex bg-[#242938] rounded-xl border border-gray-700/50 overflow-hidden">
-                        {/* Left Toolbar */}
-                        <div className="flex flex-col p-2 gap-1 shrink-0 self-center">
+                    {/* Main Analysis Container - Dark Green Background */}
+                    <div className="flex-1 flex bg-[#242938] rounded-xl border border-gray-700/50 p-4 gap-4">
+
+                        {/* Left Toolbar - Has its OWN border */}
+                        <div className="flex flex-col bg-[#1a1f2e] rounded-xl p-1.5 gap-1 shrink-0 self-center border border-gray-700/50">
                             {/* Mover */}
                             <button
                                 onClick={() => setInteractionMode('move')}
@@ -650,15 +651,15 @@ function Analysis() {
                             </button>
                         </div>
 
-                        {/* Fields Area */}
-                        <div className="flex-1 grid grid-cols-2 gap-4 p-4">
+                        {/* Fields Area - Directly on dark green background */}
+                        <div className="flex-1 grid grid-cols-2 gap-4">
                             {/* Defensive Field */}
                             <div className="flex flex-col h-full">
                                 {/* Label */}
                                 <div className="text-center mb-2">
                                     <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
                                 </div>
-                                {/* Field */}
+                                {/* Field - No border, just rounded corners */}
                                 <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
                                     <div className="absolute inset-0 bg-black/10 pointer-events-none" />
                                     <TacticalField
@@ -681,7 +682,7 @@ function Analysis() {
                                 <div className="text-center mb-2">
                                     <span className="text-sm font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
                                 </div>
-                                {/* Field */}
+                                {/* Field - No border, just rounded corners */}
                                 <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
                                     <div className="absolute inset-0 bg-black/10 pointer-events-none" />
                                     <TacticalField
