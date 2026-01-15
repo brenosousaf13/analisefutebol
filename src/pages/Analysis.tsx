@@ -35,7 +35,7 @@ function Analysis() {
     const [loading, setLoading] = useState(false);
 
     // Phase State: 'defensive' | 'offensive' | 'transition'
-    const [activePhase, setActivePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
+    const [activePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
 
     // Team View State: 'home' | 'away' - Toggle to see which team's tactic
     // Default to 'home'
@@ -227,13 +227,7 @@ function Analysis() {
         });
     }, [homeSubstitutes, awaySubstitutes, gameNotes, homeTeamNotes, playerNotes, loading, currentAnalysisId]);
 
-    const getCurrentPlayers = () => {
-        if (viewTeam === 'home') {
-            return activePhase === 'defensive' ? homePlayersDef : homePlayersOff;
-        } else {
-            return activePhase === 'defensive' ? awayPlayersDef : awayPlayersOff;
-        }
-    };
+
 
     const handlePlayerMove = (id: number, pos: { x: number, y: number }, phase?: 'defensive' | 'offensive') => {
         // If phase provided, use it. Else fall back to activePhase (though activePhase is less relevant now with dual view)
