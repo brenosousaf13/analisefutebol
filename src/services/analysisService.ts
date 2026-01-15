@@ -2,13 +2,22 @@ import { supabase } from '../lib/supabase';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 
-
 // Mock User ID (since we don't have auth yet)
 const MOCK_USER_ID = '00000000-0000-0000-0000-000000000001';
 
+export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
+export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico';
+
 export interface AnalysisData {
     id?: string;
-    matchId?: number; // Corresponds to fixture_id
+    matchId?: number;
+
+    // New metadata fields
+    titulo?: string;
+    descricao?: string;
+    tipo?: AnalysisType;
+    status?: AnalysisStatus;
+
     homeTeam: string;
     awayTeam: string;
     homeTeamLogo?: string;
@@ -17,13 +26,13 @@ export interface AnalysisData {
     awayScore?: number;
     gameNotes: string;
 
-    // New Detailed Notes
+    // Detailed Notes
     notasCasa: string;
     notasCasaUpdatedAt?: string;
     notasVisitante: string;
     notasVisitanteUpdatedAt?: string;
 
-    // Legacy/Phase notes (kept for backward compat or phased usage)
+    // Legacy/Phase notes
     homeTeamNotes: string;
     homeOffNotes: string;
     awayTeamNotes: string;
@@ -48,6 +57,10 @@ export interface AnalysisData {
 
 export interface SavedAnalysisSummary {
     id: string;
+    titulo: string;
+    descricao?: string;
+    tipo: AnalysisType;
+    status: AnalysisStatus;
     home_team_name: string;
     away_team_name: string;
     home_team_logo: string;
@@ -55,7 +68,15 @@ export interface SavedAnalysisSummary {
     home_score: number;
     away_score: number;
     created_at: string;
-    notes_preview?: string;
+    updated_at: string;
+    thumbnail_url?: string;
+}
+
+export interface AnalysisFilters {
+    status?: AnalysisStatus | 'todas';
+    search?: string;
+    orderBy?: 'created_at' | 'updated_at' | 'titulo';
+    orderDirection?: 'asc' | 'desc';
 }
 
 export const analysisService = {
@@ -65,24 +86,16 @@ export const analysisService = {
 
             let analysisId = data.id;
 
-            // 1. Prepare Payload
+            // Generate titulo if not provided
+            const titulo = data.titulo || `${data.homeTeam} vs ${data.awayTeam}`;
+
             const analysisPayload = {
                 user_id: MOCK_USER_ID,
-                match_id: data.matchId, // Keep strictly to what DB expects if column is match_id or fixture_id. 
-                // Schema says 'fixture_id' or 'match_id'? 
-                // Checking schema from previous steps: It has 'match_id' in some places or 'fixture_id'?
-                // "match_id" was used in previous `replace_file_content` for `saveAnalysis`.
-                // But original code had `fixture_id`.
-                // Let's check `types/apiFootball` or just use `match_id` if that's what I added.
-                // Wait, the schema I saw in `MyAnalyses` return type had `id, home_team_name...`.
-                // I'll stick to `fixture_id` if that's what the column is, OR `match_id`.
-                // In `Analysis.tsx`, I saw `matchState.fixture.id`.
-                // Let's check `supabase_schema.sql` if I could.
-                // PROCEEDING assumption: The table likely has `match_id` or `fixture_id`.
-                // I will use `match_id` as per my plan, but if it fails I'll fix.
-                // Actually, looking at the previous file content (Step 182), line 73 said `fixture_id`.
-                // I will use `fixture_id` to be safe with existing schema, or map `matchId` to `fixture_id`.
                 fixture_id: data.matchId,
+                titulo,
+                descricao: data.descricao,
+                tipo: data.tipo || 'partida',
+                status: data.status || 'em_andamento',
                 home_team_name: data.homeTeam,
                 away_team_name: data.awayTeam,
                 home_team_logo: data.homeTeamLogo,
@@ -90,29 +103,24 @@ export const analysisService = {
                 home_score: data.homeScore,
                 away_score: data.awayScore,
                 game_notes: data.gameNotes,
-
                 notas_casa: data.notasCasa,
                 notas_casa_updated_at: data.notasCasaUpdatedAt,
                 notas_visitante: data.notasVisitante,
                 notas_visitante_updated_at: data.notasVisitanteUpdatedAt,
-
                 home_team_notes: data.homeTeamNotes,
                 home_off_notes: data.homeOffNotes,
                 away_team_notes: data.awayTeamNotes,
                 away_off_notes: data.awayOffNotes,
                 updated_at: new Date().toISOString()
-                // tags are separate
             };
 
             if (analysisId) {
-                // Update
                 const { error } = await supabase
                     .from('analyses')
                     .update(analysisPayload)
                     .eq('id', analysisId);
                 if (error) throw error;
             } else {
-                // Insert
                 const { data: inserted, error } = await supabase
                     .from('analyses')
                     .insert(analysisPayload)
@@ -124,7 +132,7 @@ export const analysisService = {
 
             if (!analysisId) throw new Error("Failed to get analysis ID");
 
-            // 2. Relations (Delete & Re-insert)
+            // Delete & Re-insert relations
             await supabase.from('analysis_players').delete().eq('analysis_id', analysisId);
             await supabase.from('analysis_arrows').delete().eq('analysis_id', analysisId);
             await supabase.from('analysis_tags').delete().eq('analysis_id', analysisId);
@@ -187,19 +195,40 @@ export const analysisService = {
         }
     },
 
-    async getMyAnalyses(): Promise<SavedAnalysisSummary[]> {
-        const { data, error } = await supabase
+    async getMyAnalyses(filters?: AnalysisFilters): Promise<SavedAnalysisSummary[]> {
+        let query = supabase
             .from('analyses')
             .select(`
-                id, home_team_name, away_team_name, home_team_logo, away_team_logo,
-                home_score, away_score, created_at, home_team_notes, away_team_notes
-            `)
-            .order('created_at', { ascending: false });
+                id, titulo, descricao, tipo, status,
+                home_team_name, away_team_name, home_team_logo, away_team_logo,
+                home_score, away_score, created_at, updated_at, thumbnail_url
+            `);
+
+        // Apply status filter
+        if (filters?.status && filters.status !== 'todas') {
+            query = query.eq('status', filters.status);
+        }
+
+        // Apply search filter
+        if (filters?.search) {
+            query = query.or(`titulo.ilike.%${filters.search}%,home_team_name.ilike.%${filters.search}%,away_team_name.ilike.%${filters.search}%`);
+        }
+
+        // Apply ordering
+        const orderBy = filters?.orderBy || 'created_at';
+        const orderDirection = filters?.orderDirection || 'desc';
+        query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
         return (data || []).map(item => ({
             id: item.id,
+            titulo: item.titulo || `${item.home_team_name} vs ${item.away_team_name}`,
+            descricao: item.descricao,
+            tipo: item.tipo || 'partida',
+            status: item.status || 'rascunho',
             home_team_name: item.home_team_name,
             away_team_name: item.away_team_name,
             home_team_logo: item.home_team_logo,
@@ -207,7 +236,8 @@ export const analysisService = {
             home_score: item.home_score,
             away_score: item.away_score,
             created_at: item.created_at,
-            notes_preview: (item.home_team_notes || item.away_team_notes || '').slice(0, 60) + '...'
+            updated_at: item.updated_at,
+            thumbnail_url: item.thumbnail_url
         }));
     },
 
@@ -219,6 +249,12 @@ export const analysisService = {
             .single();
 
         if (error || !analysis) return null;
+
+        // Update ultimo_acesso
+        await supabase
+            .from('analyses')
+            .update({ ultimo_acesso: new Date().toISOString() })
+            .eq('id', id);
 
         const { data: players } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
         const { data: arrows } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
@@ -239,7 +275,7 @@ export const analysisService = {
                 if (p.type === 'field') {
                     if (variant === 'defensive') homePlayersDef.push(playerObj);
                     else homePlayersOff.push(playerObj);
-                } else homeSubstitutes.push(playerObj); // Simple push
+                } else homeSubstitutes.push(playerObj);
             } else {
                 if (p.type === 'field') {
                     if (variant === 'defensive') awayPlayersDef.push(playerObj);
@@ -270,6 +306,10 @@ export const analysisService = {
         return {
             id: analysis.id,
             matchId: analysis.fixture_id,
+            titulo: analysis.titulo,
+            descricao: analysis.descricao,
+            tipo: analysis.tipo,
+            status: analysis.status,
             homeTeam: analysis.home_team_name,
             awayTeam: analysis.away_team_name,
             homeTeamLogo: analysis.home_team_logo,
@@ -277,12 +317,10 @@ export const analysisService = {
             homeScore: analysis.home_score,
             awayScore: analysis.away_score,
             gameNotes: analysis.game_notes || '',
-
             notasCasa: analysis.notas_casa || '',
             notasCasaUpdatedAt: analysis.notas_casa_updated_at,
             notasVisitante: analysis.notas_visitante || '',
             notasVisitanteUpdatedAt: analysis.notas_visitante_updated_at,
-
             homeTeamNotes: analysis.home_team_notes || '',
             homeOffNotes: analysis.home_off_notes || '',
             awayTeamNotes: analysis.away_team_notes || '',
@@ -297,5 +335,59 @@ export const analysisService = {
     async deleteAnalysis(id: string): Promise<void> {
         const { error } = await supabase.from('analyses').delete().eq('id', id);
         if (error) throw error;
+    },
+
+    async duplicateAnalysis(id: string): Promise<string> {
+        const original = await this.getAnalysis(id);
+        if (!original) throw new Error('Analysis not found');
+
+        const duplicated = {
+            ...original,
+            id: undefined,
+            titulo: `${original.titulo || 'Análise'} (Cópia)`,
+            status: 'rascunho' as AnalysisStatus
+        };
+
+        return await this.saveAnalysis(duplicated);
+    },
+
+    async updateStatus(id: string, status: AnalysisStatus): Promise<void> {
+        const { error } = await supabase
+            .from('analyses')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async createBlankAnalysis(tipo: AnalysisType = 'partida'): Promise<string> {
+        const blankData: AnalysisData = {
+            titulo: tipo === 'treino' ? 'Novo Treino Tático' :
+                tipo === 'adversario' ? 'Nova Análise de Adversário' :
+                    tipo === 'modelo_tatico' ? 'Novo Modelo Tático' : 'Nova Análise',
+            tipo,
+            status: 'rascunho',
+            homeTeam: 'Time Casa',
+            awayTeam: 'Time Visitante',
+            gameNotes: '',
+            notasCasa: '',
+            notasVisitante: '',
+            homeTeamNotes: '',
+            homeOffNotes: '',
+            awayTeamNotes: '',
+            awayOffNotes: '',
+            homePlayersDef: [],
+            homePlayersOff: [],
+            awayPlayersDef: [],
+            awayPlayersOff: [],
+            homeSubstitutes: [],
+            awaySubstitutes: [],
+            homeArrowsDef: [],
+            homeArrowsOff: [],
+            awayArrowsDef: [],
+            awayArrowsOff: [],
+            tags: []
+        };
+
+        return await this.saveAnalysis(blankData);
     }
 };
