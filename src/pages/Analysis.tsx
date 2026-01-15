@@ -240,13 +240,12 @@ function Analysis() {
 
 
 
-    const handlePlayerMove = (id: number, pos: { x: number, y: number }, phase?: 'defensive' | 'offensive') => {
-        // If phase provided, use it. Else fall back to activePhase (though activePhase is less relevant now with dual view)
-        const targetPhase = phase || activePhase;
+    const handlePlayerMove = (id: number, pos: { x: number, y: number }, phase: 'defensive' | 'offensive') => {
+        // targetPhase is now explicit from 'phase' argument
 
         const updateFn = viewTeam === 'home'
-            ? (targetPhase === 'defensive' ? setHomePlayersDef : setHomePlayersOff)
-            : (targetPhase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
+            ? (phase === 'defensive' ? setHomePlayersDef : setHomePlayersOff)
+            : (phase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
 
         updateFn(prev => prev.map(p => p.id === id ? { ...p, position: pos } : p));
     };
@@ -323,8 +322,14 @@ function Analysis() {
                 awayArrowsDef: awayArrows.defensive,
                 awayArrowsOff: awayArrows.offensive,
 
+                events: events, // CRITICAL: Save events to JSONB column
                 tags: []
             };
+
+            // DEBUG: Log data being saved
+            console.log('=== SALVANDO ANÁLISE ===');
+            console.log('Events state:', events);
+            console.log('Data to save:', data);
 
             const savedId = await analysisService.saveAnalysis(data);
 
@@ -492,18 +497,47 @@ function Analysis() {
         setEditingPlayerPhase('defensive'); // Use defensive as default for bench players
     };
 
-    // Move player from bench to field (drag and drop or button action)
-    const handleMoveToField = (player: Player) => {
+    // Move player from bench to field (click interaction)
+    const handleMoveToField = (player: Player, targetPos?: { x: number, y: number }) => {
+        const pos = targetPos || { x: 50, y: 50 }; // Default center if click
         if (viewTeam === 'home') {
+            // Add to both phases
             setHomeSubstitutes(prev => prev.filter(p => p.id !== player.id));
-            setHomePlayersDef(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
-            setHomePlayersOff(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
+            setHomePlayersDef(prev => [...prev, { ...player, position: pos }]);
+            setHomePlayersOff(prev => [...prev, { ...player, position: pos }]);
         } else {
             setAwaySubstitutes(prev => prev.filter(p => p.id !== player.id));
-            setAwayPlayersDef(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
-            setAwayPlayersOff(prev => [...prev, { ...player, position: { x: 50, y: 50 } }]);
+            setAwayPlayersDef(prev => [...prev, { ...player, position: pos }]);
+            setAwayPlayersOff(prev => [...prev, { ...player, position: pos }]);
         }
     };
+
+    // Specific handlers to close over the phase
+    const handleDropOnDefensiveField = (player: Player, pos: { x: number, y: number }) => {
+        handleDropOnFieldGeneric(player, pos, 'defensive');
+    };
+
+    const handleDropOnOffensiveField = (player: Player, pos: { x: number, y: number }) => {
+        handleDropOnFieldGeneric(player, pos, 'offensive');
+    };
+
+    const handleDropOnFieldGeneric = (player: Player, pos: { x: number, y: number }, phase: 'defensive' | 'offensive') => {
+        const team = viewTeam;
+        const isHomeSub = homeSubstitutes.some(p => p.id === player.id);
+        const isAwaySub = awaySubstitutes.some(p => p.id === player.id);
+        const isFromBench = (team === 'home' && isHomeSub) || (team === 'away' && isAwaySub);
+
+        if (isFromBench) {
+            // Promote
+            handleMoveToField(player, pos);
+            // Optimization: if we want to set different positions for different phases on promotion, 
+            // we'd need more complex logic. For now, handleMoveToField puts them at 'pos' in both phases.
+        } else {
+            // Reposition
+            handlePlayerMove(player.id, pos, phase);
+        }
+    };
+
 
     // --- Drag and Drop Handlers ---
 
@@ -761,6 +795,7 @@ function Analysis() {
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
                                     onPlayerDragStart={handleFieldDragStart}
+                                    onPlayerDrop={handleDropOnDefensiveField}
                                 />
                             </div>
                         </div>
@@ -785,6 +820,7 @@ function Analysis() {
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
                                     onPlayerDragStart={handleFieldDragStart}
+                                    onPlayerDrop={handleDropOnOffensiveField}
                                 />
                             </div>
                         </div>

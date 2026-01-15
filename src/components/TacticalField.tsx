@@ -19,6 +19,7 @@ interface TacticalFieldProps {
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
     onRemoveArrow?: (id: string) => void;
     onPlayerDragStart?: (e: React.DragEvent, player: Player) => void;
+    onPlayerDrop?: (player: Player, pos: { x: number, y: number }) => void;
 }
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
@@ -32,7 +33,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     arrows = [],
     onAddArrow,
     onRemoveArrow,
-    onPlayerDragStart
+    onPlayerDragStart,
+    onPlayerDrop
 }) => {
     // Responsive Field Dimensions
     const { dimensions, containerRef } = useFieldDimensions(1.54);
@@ -51,11 +53,36 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // --- Helpers ---
     const getFieldPercentage = (clientX: number, clientY: number) => {
         if (!containerRef.current) return { x: 0, y: 0 };
-        const rect = containerRef.current.children[0].getBoundingClientRect(); // Use the inner field div
+        // Use the containerRef which should point to the field area
+        const rect = containerRef.current.getBoundingClientRect();
         return {
-            x: ((clientX - rect.left) / rect.width) * 100,
-            y: ((clientY - rect.top) / rect.height) * 100
+            x: Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)),
+            y: Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
         };
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault(); // allow drop
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const playerData = e.dataTransfer.getData('player');
+        if (!playerData) return;
+
+        const player = JSON.parse(playerData);
+        const { x, y } = getFieldPercentage(e.clientX, e.clientY);
+
+        if (onPlayerDrop) {
+            onPlayerDrop(player, { x, y });
+        } else if (onPlayerMove) {
+            // Fallback to legacy move if no distinct drop handler,
+            // but strictly we should use onPlayerDrop for reliable DnD
+            onPlayerMove(player.id, { x, y });
+        }
     };
 
     // --- Handlers ---
@@ -149,6 +176,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 onTouchMove={handleTouchMove}
                 onMouseDown={mode === 'draw' ? handleDrawStart : undefined}
                 onTouchStart={mode === 'draw' ? handleDrawStart : undefined}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
             >
                 {/* Field Markings MSG */}
                 <svg
