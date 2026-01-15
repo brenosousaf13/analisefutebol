@@ -529,84 +529,11 @@ function Analysis() {
     // const standardPlayerSize = getPlayerSize(fieldDims.width || 800);
     // const reserveSize = Math.max(30, standardPlayerSize * 0.7);
 
-    // --- Tools Content for Sidebar ---
-    const sidebarTools = (
-        <>
-            <button
-                onClick={() => setInteractionMode('move')}
-                className={`w-full flex items-center justify-start gap-3 p-2.5 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                title="Mover Jogadores"
-            >
-                <MousePointer2 size={20} />
-                <span className="text-sm font-medium truncate">Mover</span>
-            </button>
-            <button
-                onClick={() => setInteractionMode('draw')}
-                className={`w-full flex items-center justify-start gap-3 p-2.5 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                title="Desenhar Deslocamento"
-            >
-                <TrendingUp size={20} />
-                <span className="text-sm font-medium truncate">Desenhar</span>
-            </button>
-            <button
-                onClick={() => setIsCreatePlayerModalOpen(true)}
-                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                title="Adicionar Jogador"
-            >
-                <UserPlus size={20} />
-                <span className="text-sm font-medium truncate">Add Jogador</span>
-            </button>
-
-            <div className="h-px bg-gray-700 my-2 mx-1" />
-
-            <button
-                onClick={handleClearArrows}
-                className="w-full flex items-center justify-start gap-3 p-2.5 text-red-500 hover:bg-gray-700 rounded-lg transition-colors hover:text-red-400"
-                title="Limpar Setas"
-            >
-                <Eraser size={20} />
-                <span className="text-sm font-medium truncate">Limpar</span>
-            </button>
-
-            <div className="h-px bg-gray-700 my-2 mx-1" />
-
-            {/* Actions */}
-            <button
-                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                title="Compartilhar"
-            >
-                <Share2 size={20} />
-                <span className="text-sm font-medium truncate">Compartilhar</span>
-            </button>
-            <button
-                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                title="Baixar análise"
-            >
-                <Download size={20} />
-                <span className="text-sm font-medium truncate">Baixar</span>
-            </button>
-            <button
-                onClick={handleSave}
-                className="w-full flex items-center justify-start gap-3 p-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
-                title="Salvar Análise"
-            >
-                {saveStatus === 'loading' ? (
-                    <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
-                ) : saveStatus === 'success' ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
-                    <Save className="w-5 h-5 text-green-500" />
-                )}
-                <span className="text-sm font-medium truncate text-green-500">Salvar</span>
-            </button>
-        </>
-    );
 
     return (
         <AnalysisLayout
             onOpenNotes={() => setIsNotesModalOpen(true)}
             onOpenEvents={() => setIsEventsExpansionModalOpen(true)}
-            tools={sidebarTools}
             rightPanel={
                 <StatsPanel
                     homeScore={homeScore}
@@ -651,48 +578,129 @@ function Analysis() {
                     </div>
                 </div>
 
-                {/* Main Content: Dual Fields */}
-                <div className="flex-1 relative overflow-hidden grid grid-cols-2 gap-0 p-0">
-                    {/* Defensive Field */}
-                    <div className="relative border-r border-gray-700/50 h-full flex flex-col">
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
-                            <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Defensivo</span>
-                        </div>
-                        <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
-                            {/* Overlay for better visibility if needed */}
-                            <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                            <TacticalField
-                                players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
-                                onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
-                                onPlayerClick={handlePlayerClick}
-                                selectedPlayerId={selectedPlayerId}
-                                playerNotes={playerNotes}
-                                mode={interactionMode}
-                                arrows={arrows.defensive}
-                                onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
-                                onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                            />
-                        </div>
+                {/* Main Content: Toolbar + Dual Fields */}
+                <div className="flex-1 relative overflow-hidden flex">
+                    {/* Left Toolbar */}
+                    <div className="flex flex-col bg-[#242938] p-2 gap-1 shrink-0">
+                        {/* GRUPO 1: Ferramentas de edição */}
+
+                        {/* Mover */}
+                        <button
+                            onClick={() => setInteractionMode('move')}
+                            className={`p-2.5 rounded-lg transition-colors ${interactionMode === 'move' ? 'bg-green-500 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                            title="Mover jogadores"
+                        >
+                            <MousePointer2 className="w-5 h-5" />
+                        </button>
+
+                        {/* Desenhar setas */}
+                        <button
+                            onClick={() => setInteractionMode('draw')}
+                            className={`p-2.5 rounded-lg transition-colors ${interactionMode === 'draw' ? 'bg-green-500 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                            title="Desenhar deslocamento"
+                        >
+                            <TrendingUp className="w-5 h-5" />
+                        </button>
+
+                        {/* Adicionar jogador */}
+                        <button
+                            onClick={() => setIsCreatePlayerModalOpen(true)}
+                            className="p-2.5 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                            title="Adicionar jogador"
+                        >
+                            <UserPlus className="w-5 h-5" />
+                        </button>
+
+                        {/* Separador */}
+                        <div className="h-px bg-gray-700 my-2 mx-1" />
+
+                        {/* Limpar setas */}
+                        <button
+                            onClick={handleClearArrows}
+                            className="p-2.5 rounded-lg hover:bg-gray-700 transition-colors"
+                            title="Limpar setas"
+                        >
+                            <Eraser className="w-5 h-5 text-red-500" />
+                        </button>
+
+                        {/* GRUPO 2: Ações - separado visualmente */}
+                        <div className="my-3" />
+
+                        {/* Compartilhar */}
+                        <button
+                            className="p-2.5 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                            title="Compartilhar"
+                        >
+                            <Share2 className="w-5 h-5" />
+                        </button>
+
+                        {/* Download */}
+                        <button
+                            className="p-2.5 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                            title="Baixar análise"
+                        >
+                            <Download className="w-5 h-5" />
+                        </button>
+
+                        {/* Salvar - DESTAQUE */}
+                        <button
+                            onClick={handleSave}
+                            className="relative p-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
+                            title="Salvar análise"
+                        >
+                            {saveStatus === 'loading' ? (
+                                <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
+                            ) : saveStatus === 'success' ? (
+                                <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                                <Save className="w-5 h-5 text-green-500" />
+                            )}
+                        </button>
                     </div>
 
-                    {/* Offensive Field */}
-                    <div className="relative h-full flex flex-col">
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
-                            <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
+                    {/* Dual Fields Grid */}
+                    <div className="flex-1 grid grid-cols-2 gap-0">
+                        {/* Defensive Field */}
+                        <div className="relative border-r border-gray-700/50 h-full flex flex-col">
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                                <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Defensivo</span>
+                            </div>
+                            <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
+                                {/* Overlay for better visibility if needed */}
+                                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                                <TacticalField
+                                    players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                    onPlayerClick={handlePlayerClick}
+                                    selectedPlayerId={selectedPlayerId}
+                                    playerNotes={playerNotes}
+                                    mode={interactionMode}
+                                    arrows={arrows.defensive}
+                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
-                            <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                            <TacticalField
-                                players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
-                                onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
-                                onPlayerClick={handlePlayerClick}
-                                selectedPlayerId={selectedPlayerId}
-                                playerNotes={playerNotes}
-                                mode={interactionMode}
-                                arrows={arrows.offensive}
-                                onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
-                                onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                            />
+
+                        {/* Offensive Field */}
+                        <div className="relative h-full flex flex-col">
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                                <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
+                            </div>
+                            <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
+                                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                                <TacticalField
+                                    players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                    onPlayerClick={handlePlayerClick}
+                                    selectedPlayerId={selectedPlayerId}
+                                    playerNotes={playerNotes}
+                                    mode={interactionMode}
+                                    arrows={arrows.offensive}
+                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -775,7 +783,8 @@ function Analysis() {
                 onDeleteEvent={handleDeleteEvent}
             />
 
-        </AnalysisLayout >
+
+        </AnalysisLayout>
     );
 }
 
