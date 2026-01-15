@@ -578,10 +578,10 @@ function Analysis() {
                     </div>
                 </div>
 
-                {/* Main Content: Toolbar + Dual Fields */}
-                <div className="flex-1 flex overflow-hidden">
-                    {/* Left Toolbar - Outside the field */}
-                    <div className="flex flex-col bg-[#242938] rounded-xl m-2 p-1.5 gap-1 shrink-0 border border-gray-700/50 self-center">
+                {/* Main Content: Toolbar + Dual Fields - Unified Background */}
+                <div className="flex-1 flex overflow-hidden bg-[#1e2433] p-3 gap-3">
+                    {/* Left Toolbar */}
+                    <div className="flex flex-col bg-[#242938] rounded-xl p-1.5 gap-1 shrink-0 border border-gray-700/50 self-center">
                         {/* Mover */}
                         <button
                             onClick={() => setInteractionMode('move')}
@@ -649,14 +649,15 @@ function Analysis() {
                     </div>
 
                     {/* Dual Fields Grid */}
-                    <div className="flex-1 grid grid-cols-2 gap-0">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
                         {/* Defensive Field */}
-                        <div className="relative border-r border-gray-700/50 h-full flex flex-col">
-                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
-                                <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Defensivo</span>
+                        <div className="flex flex-col h-full rounded-lg overflow-hidden border border-gray-700/50">
+                            {/* Label - Outside the field */}
+                            <div className="bg-[#242938] py-2 px-4 text-center border-b border-gray-700/50">
+                                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
                             </div>
+                            {/* Field */}
                             <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
-                                {/* Overlay for better visibility if needed */}
                                 <div className="absolute inset-0 bg-black/20 pointer-events-none" />
                                 <TacticalField
                                     players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
@@ -673,10 +674,12 @@ function Analysis() {
                         </div>
 
                         {/* Offensive Field */}
-                        <div className="relative h-full flex flex-col">
-                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                        <div className="flex flex-col h-full rounded-lg overflow-hidden border border-gray-700/50">
+                            {/* Label - Outside the field */}
+                            <div className="bg-[#242938] py-2 px-4 text-center border-b border-gray-700/50">
                                 <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
                             </div>
+                            {/* Field */}
                             <div className="flex-1 relative bg-field-pattern bg-center bg-cover">
                                 <div className="absolute inset-0 bg-black/20 pointer-events-none" />
                                 <TacticalField
