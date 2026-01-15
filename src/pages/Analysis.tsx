@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams } from 'react-router-dom';
 import { Download, Save, Loader2, CheckCircle } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
 import TacticalField from '../components/TacticalField';
@@ -33,6 +34,7 @@ function Analysis() {
     const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>(routeAnalysisId);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const [loading, setLoading] = useState(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Phase State: 'defensive' | 'offensive' | 'transition'
     const [activePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
@@ -274,18 +276,18 @@ function Analysis() {
         }
     };
 
-    const handleSave = async () => {
-        if (!matchState) return;
+    const handleSave = useCallback(async () => {
+        // Allow save even without matchState for blank analyses
         setSaveStatus('loading');
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const data: any = {
                 id: currentAnalysisId,
-                matchId: matchState.fixture.id,
-                homeTeam: matchState.teams.home.name,
-                awayTeam: matchState.teams.away.name,
-                homeTeamLogo: matchState.teams.home.logo,
-                awayTeamLogo: matchState.teams.away.logo,
+                matchId: matchState?.fixture?.id,
+                homeTeam: matchState?.teams?.home?.name || 'Time Casa',
+                awayTeam: matchState?.teams?.away?.name || 'Time Visitante',
+                homeTeamLogo: matchState?.teams?.home?.logo,
+                awayTeamLogo: matchState?.teams?.away?.logo,
                 homeScore,
                 awayScore,
                 gameNotes,
@@ -354,13 +356,18 @@ function Analysis() {
 
             setCurrentAnalysisId(savedId);
             setSaveStatus('success');
+            setHasUnsavedChanges(false);
+            toast.success('Análise salva com sucesso!');
             setTimeout(() => setSaveStatus('idle'), 2000);
         } catch (error) {
             console.error(error);
             setSaveStatus('idle');
-            alert('Erro ao salvar análise/eventos');
+            toast.error('Erro ao salvar análise');
         }
-    };
+    }, [currentAnalysisId, homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+        homeSubstitutes, awaySubstitutes, arrows, gameNotes, notasCasa, notasVisitante,
+        homeScore, awayScore, events, deletedEventIds, matchState, homeTeamNotes,
+        notasCasaUpdatedAt, notasVisitanteUpdatedAt]);
 
     // Load existing analysis if available
     useEffect(() => {
@@ -529,6 +536,28 @@ function Analysis() {
     // const standardPlayerSize = getPlayerSize(fieldDims.width || 800);
     // const reserveSize = Math.max(30, standardPlayerSize * 0.7);
 
+    // Keyboard shortcut Ctrl+S / Cmd+S for save
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleSave]);
+
+    // Detect unsaved changes
+    useEffect(() => {
+        if (loading) return; // Don't mark as changed during initial load
+        setHasUnsavedChanges(true);
+    }, [
+        homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+        homeSubstitutes, awaySubstitutes, arrows, gameNotes,
+        notasCasa, notasVisitante, events
+    ]);
+
 
     return (
         <AnalysisLayout
@@ -636,8 +665,8 @@ function Analysis() {
                         {/* Salvar */}
                         <button
                             onClick={handleSave}
-                            className="p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
-                            title="Salvar análise"
+                            className="relative p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
+                            title={saveStatus === 'loading' ? 'Salvando...' : 'Salvar análise (Ctrl+S)'}
                         >
                             {saveStatus === 'loading' ? (
                                 <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
@@ -645,6 +674,10 @@ function Analysis() {
                                 <CheckCircle className="w-5 h-5 text-green-500" />
                             ) : (
                                 <Save className="w-5 h-5 text-green-500" />
+                            )}
+                            {/* Unsaved changes indicator */}
+                            {hasUnsavedChanges && saveStatus === 'idle' && (
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full" />
                             )}
                         </button>
                     </div>
@@ -775,6 +808,29 @@ function Analysis() {
                 onDeleteEvent={handleDeleteEvent}
             />
 
+            {/* Toast Notifications */}
+            <Toaster
+                position="bottom-right"
+                toastOptions={{
+                    style: {
+                        background: '#1a1f2e',
+                        color: '#fff',
+                        border: '1px solid #374151',
+                    },
+                    success: {
+                        iconTheme: {
+                            primary: '#22c55e',
+                            secondary: '#fff',
+                        },
+                    },
+                    error: {
+                        iconTheme: {
+                            primary: '#ef4444',
+                            secondary: '#fff',
+                        },
+                    },
+                }}
+            />
 
         </AnalysisLayout>
     );
