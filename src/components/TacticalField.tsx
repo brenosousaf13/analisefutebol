@@ -122,7 +122,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     return (
         <div
             ref={containerRef}
-            className="w-full h-full flex items-center justify-center p-2 sm:p-4 bg-[#2e5039]/50 rounded-xl" // Added bg for container context
+            className="w-full h-full flex items-center justify-center p-2 sm:p-4"
             onMouseUp={handleUp}
             onMouseLeave={handleUp}
             onTouchEnd={handleUp}
