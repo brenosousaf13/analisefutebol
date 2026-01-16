@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
-import PlayerMarker from './PlayerMarker';
-import { useFieldDimensions } from '../hooks/useFieldDimensions';
 import { getPlayerSize, getFontSize } from '../utils/playerCoordinates';
 
 interface TacticalFieldProps {
@@ -12,13 +10,109 @@ interface TacticalFieldProps {
     onPlayerDoubleClick?: (player: Player) => void;
     selectedPlayerId?: number | null;
     playerNotes?: { [key: number]: string };
-
-    // New Props
     mode?: 'move' | 'draw';
     arrows?: Arrow[];
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
     onRemoveArrow?: (id: string) => void;
 }
+
+// Field Lines Component - Using CSS for reliability
+const FieldLines: React.FC = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        {/* Outer Border */}
+        <div className="absolute inset-[3%] border-2 border-white/40 rounded-sm" />
+
+        {/* Center Line */}
+        <div className="absolute left-[3%] right-[3%] top-1/2 h-0.5 bg-white/40 -translate-y-1/2" />
+
+        {/* Center Circle */}
+        <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-white/40 rounded-full"
+            style={{ width: '20%', height: '13%' }}
+        />
+
+        {/* Center Dot */}
+        <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+
+        {/* Top Penalty Area */}
+        <div
+            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
+            style={{ top: '3%', width: '60%', height: '15%' }}
+        />
+
+        {/* Top Goal Area */}
+        <div
+            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
+            style={{ top: '3%', width: '30%', height: '6%' }}
+        />
+
+        {/* Bottom Penalty Area */}
+        <div
+            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
+            style={{ bottom: '3%', width: '60%', height: '15%' }}
+        />
+
+        {/* Bottom Goal Area */}
+        <div
+            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
+            style={{ bottom: '3%', width: '30%', height: '6%' }}
+        />
+    </div>
+);
+
+// Arrow Component - Using CSS for exact rendering
+const ArrowLine: React.FC<{
+    arrow: Arrow;
+    isTemp?: boolean;
+    onRemove?: () => void;
+    isDrawMode?: boolean;
+}> = ({ arrow, isTemp = false, onRemove, isDrawMode }) => {
+    const { startX, startY, endX, endY } = arrow;
+
+    // Calculate length and angle
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    if (length < 1) return null;
+
+    return (
+        <div
+            className={`absolute origin-left ${isDrawMode && !isTemp ? 'cursor-pointer hover:opacity-70' : ''}`}
+            style={{
+                left: `${startX}%`,
+                top: `${startY}%`,
+                width: `${length}%`,
+                height: '2px',
+                transform: `rotate(${angle}deg)`,
+                transformOrigin: '0 50%',
+                opacity: isTemp ? 0.6 : 0.9,
+                zIndex: isTemp ? 15 : 10
+            }}
+            onClick={isDrawMode && !isTemp ? (e) => { e.stopPropagation(); onRemove?.(); } : undefined}
+        >
+            {/* Dashed Line */}
+            <div
+                className="absolute inset-0"
+                style={{
+                    background: 'repeating-linear-gradient(90deg, white 0px, white 6px, transparent 6px, transparent 10px)'
+                }}
+            />
+            {/* Arrow Head */}
+            <div
+                className="absolute right-0 top-1/2 -translate-y-1/2"
+                style={{
+                    width: 0,
+                    height: 0,
+                    borderTop: '5px solid transparent',
+                    borderBottom: '5px solid transparent',
+                    borderLeft: '8px solid white'
+                }}
+            />
+        </div>
+    );
+};
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
     players,
@@ -32,14 +126,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onAddArrow,
     onRemoveArrow,
 }) => {
-    // Responsive Field Dimensions
-    const { dimensions, containerRef } = useFieldDimensions(1.54);
-    const { width: fieldWidth, height: fieldHeight } = dimensions;
-
-    const playerSize = getPlayerSize(fieldWidth);
-    const fontSize = getFontSize(playerSize);
-
-    // Manual Drag State
+    const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
     const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -47,87 +134,62 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentArrow, setCurrentArrow] = useState<Partial<Arrow> | null>(null);
 
-
-    // --- Helpers ---
-    const getFieldPercentage = (clientX: number, clientY: number) => {
-        if (!containerRef.current) return { x: 0, y: 0 };
+    // Get field position as percentage
+    const getFieldPosition = (clientX: number, clientY: number) => {
+        if (!containerRef.current) return null;
         const rect = containerRef.current.getBoundingClientRect();
-
-        // Calculation DIRECT - no offsets
-        const x = ((clientX - rect.left) / rect.width) * 100;
-        const y = ((clientY - rect.top) / rect.height) * 100;
-
-        return { x, y };
+        return {
+            x: ((clientX - rect.left) / rect.width) * 100,
+            y: ((clientY - rect.top) / rect.height) * 100
+        };
     };
 
-    // --- Manual Mouse Drag Handlers ---
-
+    // Player Mouse Down
     const handlePlayerMouseDown = (e: React.MouseEvent | React.TouchEvent, player: Player) => {
-        // Only left click
+        if (mode === 'draw') return;
         if ('button' in e && e.button !== 0) return;
 
         e.preventDefault();
         e.stopPropagation();
-
         setDraggingPlayer(player);
-        // NO dragOffset - cursor stays at center/where clicked (if we want center, we render transform translate)
-        // User requested: "cursor = centro do jogador" (cursor is center)
-
-        // No need for setDragOffset
     };
 
-    // Global Mouse Listeners
-    React.useEffect(() => {
+    // Global listeners for player dragging
+    useEffect(() => {
         if (!draggingPlayer) return;
 
         const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-            e.preventDefault();
-            const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-            const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-
-            const pos = getFieldPercentage(clientX, clientY);
-
-            // For dragging players, update direct position
-            // But we don't have local state for player position in the recommended snippet, 
-            // it calls onPlayerPositionChange directly? 
-            // Our TacticalField uses tempPosition for render override.
-
-            // Clamp for visual feedback within bounds?
-            const clampedX = Math.max(0, Math.min(100, pos.x));
-            const clampedY = Math.max(0, Math.min(100, pos.y));
-
-            setTempPosition({ x: clampedX, y: clampedY });
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            const pos = getFieldPosition(clientX, clientY);
+            if (pos) {
+                // Clamp within 3-97% to keep player visible
+                setTempPosition({
+                    x: Math.max(3, Math.min(97, pos.x)),
+                    y: Math.max(3, Math.min(97, pos.y))
+                });
+            }
         };
 
         const handleMouseUp = (e: MouseEvent | TouchEvent) => {
-            if (!draggingPlayer) return;
-
-            // Check if inside field
             const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
             const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
+            const pos = getFieldPosition(clientX, clientY);
 
-            if (containerRef.current) {
-                // Just pass the raw pos, no logic to check isInside needed for movement, 
-                // but we might want to clamp for players? 
-                // User said "Limits artificial" on ARROWS. For players, typically we want them inside.
-                // But let's use the direct calculation first.
-
-                const pos = getFieldPercentage(clientX, clientY);
-                // Clamp for players
-                const clampedX = Math.max(0, Math.min(100, pos.x));
-                const clampedY = Math.max(0, Math.min(100, pos.y));
-
-                if (onPlayerMove) onPlayerMove(draggingPlayer.id, { x: clampedX, y: clampedY });
+            if (pos && draggingPlayer) {
+                onPlayerMove(draggingPlayer.id, {
+                    x: Math.max(3, Math.min(97, pos.x)),
+                    y: Math.max(3, Math.min(97, pos.y))
+                });
             }
 
             setDraggingPlayer(null);
             setTempPosition(null);
-
         };
 
-        document.addEventListener('mousemove', handleMouseMove, { passive: false });
+        document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('touchmove', handleMouseMove, { passive: false });
+        document.addEventListener('touchmove', handleMouseMove);
         document.addEventListener('touchend', handleMouseUp);
 
         return () => {
@@ -136,187 +198,168 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             document.removeEventListener('touchmove', handleMouseMove);
             document.removeEventListener('touchend', handleMouseUp);
         };
-    }, [draggingPlayer, onPlayerMove, containerRef]);
+    }, [draggingPlayer, onPlayerMove]);
 
-
-    // --- External Drop Handler (Removed / Deprecated) ---
-    // The previous external drop handler is removed as part of the refactor 
-    // to use modals for substitutions instead of DnD.
-
-
-    // --- Handlers ---
-
-    // Drawing
-    const handleDrawStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Drawing Handlers
+    const handleFieldMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
         if (mode !== 'draw') return;
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-        const { x, y } = getFieldPercentage(clientX, clientY);
-        setIsDrawing(true);
-        setCurrentArrow({ startX: x, startY: y, endX: x, endY: y });
-    };
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const pos = getFieldPosition(clientX, clientY);
 
-    // Movement (Player + Drawing)
-    const handleMove = (clientX: number, clientY: number) => {
-        // Drawing Arrow
-        if (mode === 'draw' && isDrawing && currentArrow) {
-            const { x, y } = getFieldPercentage(clientX, clientY);
-            setCurrentArrow(prev => ({ ...prev, endX: x, endY: y }));
+        if (pos) {
+            setIsDrawing(true);
+            setCurrentArrow({ startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y });
         }
     };
 
-    const handleMouseMove = (e: React.MouseEvent) => handleMove(e.clientX, e.clientY);
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches.length > 0) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    const handleFieldMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+        if (mode !== 'draw' || !isDrawing || !currentArrow) return;
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const pos = getFieldPosition(clientX, clientY);
+
+        if (pos) {
+            setCurrentArrow(prev => prev ? { ...prev, endX: pos.x, endY: pos.y } : null);
+        }
     };
 
-    const handleUp = () => {
-        // Finish Drawing
-        if (mode === 'draw' && isDrawing && currentArrow && onAddArrow) {
-            const dist = Math.sqrt(
-                Math.pow((currentArrow.endX || 0) - (currentArrow.startX || 0), 2) +
-                Math.pow((currentArrow.endY || 0) - (currentArrow.startY || 0), 2)
-            );
+    const handleFieldMouseUp = () => {
+        if (mode !== 'draw' || !isDrawing || !currentArrow) return;
 
-            if (dist > 1) { // Min length check
-                onAddArrow({
-                    startX: currentArrow.startX!,
-                    startY: currentArrow.startY!,
-                    endX: currentArrow.endX!,
-                    endY: currentArrow.endY!,
-                    color: 'white' // default color
-                });
+        const dx = (currentArrow.endX ?? 0) - (currentArrow.startX ?? 0);
+        const dy = (currentArrow.endY ?? 0) - (currentArrow.startY ?? 0);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 2 && onAddArrow) {
+            onAddArrow({
+                startX: currentArrow.startX!,
+                startY: currentArrow.startY!,
+                endX: currentArrow.endX!,
+                endY: currentArrow.endY!,
+                color: 'white'
+            });
+        }
+
+        setIsDrawing(false);
+        setCurrentArrow(null);
+    };
+
+    // Calculate player size based on field width (responsive)
+    const [fieldWidth, setFieldWidth] = useState(0);
+    useEffect(() => {
+        const updateSize = () => {
+            if (containerRef.current) {
+                setFieldWidth(containerRef.current.offsetWidth);
             }
-            setIsDrawing(false);
-            setCurrentArrow(null);
-        }
-    };
+        };
+        updateSize();
+        window.addEventListener('resize', updateSize);
+        return () => window.removeEventListener('resize', updateSize);
+    }, []);
+
+    const playerSize = getPlayerSize(fieldWidth);
+    const fontSizes = getFontSize(playerSize);
 
     return (
-        <div
-            ref={containerRef}
-            className="w-full h-full flex items-center justify-center p-2 sm:p-4"
-            onMouseUp={handleUp}
-            onMouseLeave={handleUp}
-            onTouchEnd={handleUp}
-        >
-            {/* The Field Container */}
+        <div className="w-full h-full flex items-center justify-center p-2">
             <div
+                ref={containerRef}
                 className={`
-                    relative box-border
+                    relative 
                     bg-gradient-to-b from-field-green to-[#3d6a4d] 
-                    rounded-lg shadow-2xl border-4 border-[#3d6a4d] overflow-hidden select-none
+                    rounded-lg shadow-2xl overflow-hidden select-none
                     ${mode === 'draw' ? 'cursor-crosshair' : 'cursor-default'}
                 `}
                 style={{
-                    width: fieldWidth || '100%',
-                    height: fieldHeight || 'auto',
-                    // Only show field if dimensions are calculated, prevents jump
-                    opacity: fieldWidth ? 1 : 0
+                    aspectRatio: '68 / 105',
+                    width: '100%',
+                    maxWidth: '450px'
                 }}
-                onMouseMove={handleMouseMove}
-                onTouchMove={handleTouchMove}
-                onMouseDown={mode === 'draw' ? handleDrawStart : undefined}
-                onTouchStart={mode === 'draw' ? handleDrawStart : undefined}
+                onMouseDown={handleFieldMouseDown}
+                onMouseMove={handleFieldMouseMove}
+                onMouseUp={handleFieldMouseUp}
+                onMouseLeave={handleFieldMouseUp}
+                onTouchStart={handleFieldMouseDown}
+                onTouchMove={handleFieldMouseMove}
+                onTouchEnd={handleFieldMouseUp}
             >
-                {/* Field Markings MSG */}
-                <svg
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    className="absolute inset-0 w-full h-full pointer-events-none opacity-40 z-0"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <rect x="0" y="0" width="100" height="100" fill="none" stroke="white" strokeWidth="0.5" />
-                    {/* Simplified markings for 0-100 space, can reuse existing or adjust? 
-                       Existing used 68x105 viewBox. 
-                       Let's keep the markings SVG separate or adjust it? 
-                       The user wants ARROWS LAYER to use 0-100. The markings can stay if they look OK, 
-                       but standardizing everything to 0-100 is safer.
-                       Let's leave markings as is (`viewBox="0 0 68 105"`) but ensure ARROWS uses `0 0 100 100`.
-                    */}
-                    <rect x="0" y="0" width="68" height="105" fill="none" stroke="white" strokeWidth="0.5" />
-                    <line x1="0" y1="52.5" x2="68" y2="52.5" stroke="white" strokeWidth="0.5" />
-                    <circle cx="34" cy="52.5" r="9.15" fill="none" stroke="white" strokeWidth="0.5" />
-                    <circle cx="34" cy="52.5" r="0.5" fill="white" />
-                    <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.5" />
-                    <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.5" />
-                    <circle cx="34" cy="11" r="0.5" fill="white" />
-                    <path d="M 26.5 16.5 A 9.15 9.15 0 0 0 41.5 16.5" fill="none" stroke="white" strokeWidth="0.5" />
-                    <rect x="13.84" y="88.5" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.5" />
-                    <rect x="24.84" y="99.5" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.5" />
-                    <circle cx="34" cy="94" r="0.5" fill="white" />
-                    <path d="M 26.5 88.5 A 9.15 9.15 0 0 1 41.5 88.5" fill="none" stroke="white" strokeWidth="0.5" />
-                    <path d="M 0 2 A 2 2 0 0 0 2 0" fill="none" stroke="white" strokeWidth="0.5" />
-                    <path d="M 66 0 A 2 2 0 0 0 68 2" fill="none" stroke="white" strokeWidth="0.5" />
-                    <path d="M 68 103 A 2 2 0 0 0 66 105" fill="none" stroke="white" strokeWidth="0.5" />
-                    <path d="M 2 105 A 2 2 0 0 0 0 103" fill="none" stroke="white" strokeWidth="0.5" />
-                </svg>
+                {/* Field Lines */}
+                <FieldLines />
 
-                {/* Arrows Layer - Corrected to 0-100 coordinate system */}
-                <svg
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    className="absolute inset-0 w-full h-full z-10 pointer-events-none"
-                >
-                    <defs>
-                        <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-                            <polygon points="0 0, 6 2, 0 4" fill="white" fillOpacity="0.9" />
-                        </marker>
-                    </defs>
+                {/* Arrows Layer */}
+                <div className="absolute inset-0 z-10 pointer-events-none">
                     {arrows.map(arrow => (
-                        <g
+                        <ArrowLine
                             key={arrow.id}
-                            onClick={mode === 'draw' ? (e) => { e.stopPropagation(); onRemoveArrow?.(arrow.id); } : undefined}
-                            className={mode === 'draw' ? 'cursor-pointer pointer-events-auto hover:opacity-75' : ''}
-                        >
-                            {/* Hit Target for easier clicking */}
-                            {mode === 'draw' && (<line x1={`${arrow.startX}%`} y1={`${arrow.startY}%`} x2={`${arrow.endX}%`} y2={`${arrow.endY}%`} stroke="transparent" strokeWidth="15" />)}
-                            {/* Dashed line for movement arrows */}
-                            <line
-                                x1={`${arrow.startX}%`} y1={`${arrow.startY}%`}
-                                x2={`${arrow.endX}%`} y2={`${arrow.endY}%`}
-                                stroke="white" strokeWidth="3" strokeOpacity="0.9"
-                                strokeDasharray="5,5"
-                                markerEnd="url(#arrowhead)" strokeLinecap="round"
-                            />
-                        </g>
+                            arrow={arrow}
+                            onRemove={() => onRemoveArrow?.(arrow.id)}
+                            isDrawMode={mode === 'draw'}
+                        />
                     ))}
-                    {/* Preview Arrow */}
                     {isDrawing && currentArrow && currentArrow.startX !== undefined && (
-                        <line
-                            x1={`${currentArrow.startX}%`} y1={`${currentArrow.startY}%`}
-                            x2={`${currentArrow.endX}%`} y2={`${currentArrow.endY}%`}
-                            stroke="white" strokeWidth="3" strokeOpacity="0.6"
-                            strokeDasharray="5,5"
-                            markerEnd="url(#arrowhead)"
+                        <ArrowLine
+                            arrow={currentArrow as Arrow}
+                            isTemp
                         />
                     )}
-                </svg>
+                </div>
 
                 {/* Players Layer */}
                 <div className={`absolute inset-0 z-20 ${mode === 'draw' ? 'pointer-events-none' : ''}`}>
                     {players.map(player => {
                         const isDragging = draggingPlayer?.id === player.id;
-                        const position = isDragging && tempPosition
-                            ? tempPosition // Use temp position while dragging
-                            : player.position;
+                        const position = isDragging && tempPosition ? tempPosition : player.position;
 
                         return (
-                            <PlayerMarker
+                            <div
                                 key={player.id}
-                                player={{ ...player, position }}
-                                teamColor="yellow"
-                                isDragging={isDragging}
-                                isSelected={selectedPlayerId === player.id}
-                                hasNote={!!playerNotes[player.id]}
-                                playerSize={playerSize}
-                                fontSize={fontSize}
-                                onDoubleClick={() => onPlayerDoubleClick && onPlayerDoubleClick(player)}
+                                className={`
+                                    absolute select-none
+                                    ${isDragging ? 'z-50' : 'z-10'}
+                                    ${mode === 'draw' ? '' : 'cursor-grab active:cursor-grabbing'}
+                                `}
+                                style={{
+                                    left: `${position.x}%`,
+                                    top: `${position.y}%`,
+                                    transform: 'translate(-50%, -50%)'
+                                }}
                                 onMouseDown={(e) => handlePlayerMouseDown(e, player)}
-                            />
+                                onTouchStart={(e) => handlePlayerMouseDown(e, player)}
+                                onDoubleClick={() => onPlayerDoubleClick?.(player)}
+                            >
+                                <div
+                                    className={`
+                                        rounded-full bg-accent-yellow 
+                                        flex items-center justify-center text-gray-900 font-bold
+                                        shadow-lg transition-transform duration-75
+                                        ${isDragging ? 'scale-110 ring-2 ring-white' : 'hover:scale-105'}
+                                        ${selectedPlayerId === player.id ? 'ring-2 ring-green-400' : ''}
+                                    `}
+                                    style={{
+                                        width: playerSize,
+                                        height: playerSize,
+                                        fontSize: fontSizes.number
+                                    }}
+                                >
+                                    {player.number}
+                                </div>
+                                <div
+                                    className="text-white text-center mt-0.5 whitespace-nowrap font-medium drop-shadow-md pointer-events-none"
+                                    style={{ fontSize: Math.max(8, fontSizes.name) }}
+                                >
+                                    {player.name}
+                                </div>
+                                {/* Note Indicator */}
+                                {playerNotes[player.id] && (
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-white" />
+                                )}
+                            </div>
                         );
-                    })}</div>
+                    })}
+                </div>
             </div>
         </div>
     );
