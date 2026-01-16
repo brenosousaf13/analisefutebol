@@ -267,49 +267,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const playerSize = getPlayerSize(fieldWidth);
     const fontSizes = getFontSize(playerSize);
 
-    // Render arrow using SVG with percentage coordinates
-    const renderArrow = (arrow: { startX: number; startY: number; endX: number; endY: number; id?: string }, isTemp = false) => {
-        const { startX, startY, endX, endY } = arrow;
 
-        // Calculate angle for arrow head
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const angle = Math.atan2(dy, dx);
-
-        // Arrow head size (in percentage units)
-        const headLength = 3;
-
-        // Arrow head points
-        const tipX = endX;
-        const tipY = endY;
-        const leftX = endX - headLength * Math.cos(angle - Math.PI / 7);
-        const leftY = endY - headLength * Math.sin(angle - Math.PI / 7);
-        const rightX = endX - headLength * Math.cos(angle + Math.PI / 7);
-        const rightY = endY - headLength * Math.sin(angle + Math.PI / 7);
-
-        const key = arrow.id || 'current';
-
-        return (
-            <g key={key} opacity={isTemp ? 0.6 : 0.85}>
-                {/* Dashed line */}
-                <line
-                    x1={`${startX}%`}
-                    y1={`${startY}%`}
-                    x2={`${endX}%`}
-                    y2={`${endY}%`}
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeDasharray="8,5"
-                    strokeLinecap="round"
-                />
-                {/* Arrow head */}
-                <polygon
-                    points={`${tipX}%,${tipY}% ${leftX}%,${leftY}% ${rightX}%,${rightY}%`}
-                    fill="white"
-                />
-            </g>
-        );
-    };
 
     // Double tap detection for touch
     const lastTapRef = useRef<{ time: number; playerId: number | null }>({ time: 0, playerId: null });
@@ -353,23 +311,71 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 {/* Field Lines */}
                 <FieldLines />
 
-                {/* Arrows Layer - Using SVG with percentage coordinates */}
+                {/* Arrows Layer - Using SVG with markers for arrow heads */}
                 <svg
                     className="absolute inset-0 w-full h-full z-10 overflow-visible"
                     style={{ pointerEvents: mode === 'draw' ? 'none' : 'none' }}
                     preserveAspectRatio="none"
                 >
+                    {/* Arrow head marker definitions */}
+                    <defs>
+                        <marker
+                            id="arrowhead"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="9"
+                            refY="5"
+                            orient="auto"
+                            markerUnits="userSpaceOnUse"
+                        >
+                            <polygon points="0,0 10,5 0,10 2,5" fill="white" />
+                        </marker>
+                        <marker
+                            id="arrowhead-temp"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="9"
+                            refY="5"
+                            orient="auto"
+                            markerUnits="userSpaceOnUse"
+                        >
+                            <polygon points="0,0 10,5 0,10 2,5" fill="rgba(255,255,255,0.6)" />
+                        </marker>
+                    </defs>
+
+                    {/* Saved arrows */}
                     {arrows.map(arrow => (
-                        <g
+                        <line
                             key={arrow.id}
+                            x1={`${arrow.startX}%`}
+                            y1={`${arrow.startY}%`}
+                            x2={`${arrow.endX}%`}
+                            y2={`${arrow.endY}%`}
+                            stroke="white"
+                            strokeWidth="2"
+                            strokeDasharray="8,5"
+                            strokeLinecap="round"
+                            markerEnd="url(#arrowhead)"
+                            opacity="0.85"
                             onClick={mode === 'draw' ? () => onRemoveArrow?.(arrow.id) : undefined}
                             style={{ cursor: mode === 'draw' ? 'pointer' : 'default', pointerEvents: mode === 'draw' ? 'auto' : 'none' }}
-                        >
-                            {renderArrow(arrow)}
-                        </g>
+                        />
                     ))}
+
+                    {/* Arrow being drawn */}
                     {isDrawing && currentArrow && currentArrow.startX !== undefined && (
-                        renderArrow(currentArrow as Arrow, true)
+                        <line
+                            x1={`${currentArrow.startX}%`}
+                            y1={`${currentArrow.startY}%`}
+                            x2={`${currentArrow.endX}%`}
+                            y2={`${currentArrow.endY}%`}
+                            stroke="white"
+                            strokeWidth="2"
+                            strokeDasharray="8,5"
+                            strokeLinecap="round"
+                            markerEnd="url(#arrowhead-temp)"
+                            opacity="0.6"
+                        />
                     )}
                 </svg>
 
