@@ -851,21 +851,15 @@ function Analysis() {
                 </div>
             </div>     {/* Reserves Bar (Bottom) */}
             <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
-                <div className="flex items-center gap-4 overflow-x-auto w-full mr-4">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reservas</span>
-
-                    <div className="flex items-center gap-3 pb-1 w-full"> {/* pb-1 for scrollbar clearance */}
-                        <BenchArea
-                            players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
-                            team={viewTeam}
-                            onPromotePlayer={handleMoveToField}
-                            onPlayerDoubleClick={handleBenchDoubleClick}
-                        />
-                    </div>
-                </div>
+                <BenchArea
+                    players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
+                    team={viewTeam}
+                    onPromotePlayer={handleMoveToField}
+                    onPlayerDoubleClick={handleBenchDoubleClick}
+                />
                 <button
                     onClick={() => setIsCreatePlayerModalOpen(true)}
-                    className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap"
+                    className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap shrink-0"
                 >
                     <UserPlus size={14} />
                     <span className="hidden md:inline">Adicionar</span>
@@ -954,7 +948,7 @@ function Analysis() {
                 }}
             />
 
-        </AnalysisLayout>
+        </AnalysisLayout >
     );
 }
 

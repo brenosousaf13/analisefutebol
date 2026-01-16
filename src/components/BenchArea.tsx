@@ -14,57 +14,39 @@ const BenchArea: React.FC<BenchAreaProps> = ({
     onPromotePlayer,
     onPlayerDoubleClick
 }) => {
-    // DnD Logic Removed
-    // No drag handlers or effects needed
-
-
     return (
-        <div
-            // ref={benchRef} // Not needed
-            className="flex items-center gap-3 p-4 rounded-lg bg-gray-800/50 min-h-[60px] flex-1"
-        >
-            <span className="text-gray-400 text-sm font-medium mr-2">RESERVAS</span>
+        <div className="flex items-center gap-4 flex-1 overflow-x-auto">
+            {/* Single RESERVAS label */}
+            <span className="text-gray-400 text-sm font-medium uppercase tracking-wide whitespace-nowrap">
+                Reservas
+            </span>
 
-            {/* Reserves List */}
-            <div className="flex items-center gap-3 pb-1 overflow-x-auto w-full">
-                {players.map(player => (
-                    <div
-                        key={player.id}
-                        className="group relative"
-                    >
-                        {/* Player Circle */}
+            {/* Players list */}
+            <div className="flex items-center gap-3">
+                {players.length > 0 ? (
+                    players.map(player => (
                         <div
+                            key={player.id}
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
                                 onPlayerDoubleClick(player);
                             }}
-                            title={`${player.name} - Duplo clique para editar`}
-                            className="flex flex-col items-center cursor-pointer"
+                            onClick={() => onPromotePlayer(player)}
+                            title={`${player.name} - Clique para promover, duplo clique para editar`}
+                            className="flex flex-col items-center cursor-pointer group"
                         >
-                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-700 border-2 border-gray-500 flex items-center justify-center text-white font-bold group-hover:border-green-500 group-hover:bg-gray-600 transition-all shadow-sm">
+                            {/* Player circle - proportional to field players (w-9 instead of w-10) */}
+                            <div className="w-9 h-9 rounded-full bg-gray-600 border-2 border-gray-500 flex items-center justify-center text-white font-bold text-sm group-hover:border-green-500 group-hover:bg-gray-500 group-hover:scale-105 transition-all shadow-sm">
                                 {player.number}
                             </div>
-                            <span className="text-[10px] text-gray-400 mt-0.5 max-w-[50px] truncate text-center group-hover:text-white transition-colors">
+                            {/* Player name */}
+                            <span className="text-[10px] text-gray-400 mt-0.5 max-w-[40px] truncate text-center group-hover:text-white transition-colors">
                                 {player.name.split(' ').pop()}
                             </span>
                         </div>
-
-                        {/* Promote Button (Hover) */}
-                        <button
-                            onClick={() => onPromotePlayer(player)}
-                            className="absolute -top-2 -right-2 w-5 h-5 bg-green-600 rounded-full text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-green-500 shadow-sm z-10"
-                            title="Colocar em campo"
-                        >
-                            ↑
-                        </button>
-                    </div>
-                ))}
-
-                {/* Empty State */}
-                {players.length === 0 && (
-                    <span className="text-xs text-gray-600 italic whitespace-nowrap">
-                        Banco vazio
-                    </span>
+                    ))
+                ) : (
+                    <span className="text-gray-500 text-sm italic">Banco vazio</span>
                 )}
             </div>
         </div>

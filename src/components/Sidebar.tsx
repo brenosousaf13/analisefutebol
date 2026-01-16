@@ -79,26 +79,25 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, tools }) => {
             {/* Spacer if no tools, to push user profile down */}
             {!tools && <div className="flex-1" />}
 
-            {/* Footer / User Profile */}
+            {/* Footer / User Profile - Avatar and Logout aligned */}
             <div className="p-4 border-t border-gray-700 mt-auto">
-                <div className={`flex items-center gap-3 mb-4 ${collapsed ? 'justify-center' : ''}`}>
+                <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
                     <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white shrink-0">
                         <User size={16} />
                     </div>
                     {!collapsed && (
-                        <div className="overflow-hidden">
+                        <div className="flex-1 min-w-0 overflow-hidden">
                             <p className="text-white text-sm font-bold truncate">Coach Breno</p>
                             <p className="text-xs text-gray-500 truncate">Treinador</p>
                         </div>
                     )}
+                    <button
+                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
+                        title="Sair"
+                    >
+                        <LogOut size={16} />
+                    </button>
                 </div>
-                <button
-                    className={`flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors w-full px-2 ${collapsed ? 'justify-center' : ''}`}
-                    title={collapsed ? "Sair" : undefined}
-                >
-                    <LogOut size={16} />
-                    {!collapsed && <span>Sair</span>}
-                </button>
             </div>
         </aside>
     );
