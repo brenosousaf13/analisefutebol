@@ -18,7 +18,6 @@ interface TacticalFieldProps {
     arrows?: Arrow[];
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
     onRemoveArrow?: (id: string) => void;
-    onPlayerDragStart?: (player: Player) => void;
 }
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
@@ -32,7 +31,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     arrows = [],
     onAddArrow,
     onRemoveArrow,
-    onPlayerDragStart,
 }) => {
     // Responsive Field Dimensions
     const { dimensions, containerRef } = useFieldDimensions(1.54);
