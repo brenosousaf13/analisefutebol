@@ -19,9 +19,6 @@ interface TacticalFieldProps {
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
     onRemoveArrow?: (id: string) => void;
     onPlayerDragStart?: (player: Player) => void;
-    onPlayerDragEnd?: () => void;
-    onPlayerDrop?: (player: Player, pos: { x: number, y: number }) => void;
-    externalDraggingPlayer?: Player | null; // For handling drops from bench
 }
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
@@ -36,9 +33,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onAddArrow,
     onRemoveArrow,
     onPlayerDragStart,
-    onPlayerDragEnd,
-    onPlayerDrop,
-    externalDraggingPlayer
 }) => {
     // Responsive Field Dimensions
     const { dimensions, containerRef } = useFieldDimensions(1.54);
@@ -49,7 +43,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
     // Manual Drag State
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
 
     // Drawing State
@@ -61,17 +54,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const getFieldPercentage = (clientX: number, clientY: number) => {
         if (!containerRef.current) return { x: 0, y: 0 };
         const rect = containerRef.current.getBoundingClientRect();
-        const element = containerRef.current;
 
-        // Account for borders by using clientLeft/Top and clientWidth/Height
-        // rect.left is outer edge; element.clientLeft is border width
-        const xOffset = clientX - (rect.left + element.clientLeft);
-        const yOffset = clientY - (rect.top + element.clientTop);
+        // Calculation DIRECT - no offsets
+        const x = ((clientX - rect.left) / rect.width) * 100;
+        const y = ((clientY - rect.top) / rect.height) * 100;
 
-        return {
-            x: Math.max(0, Math.min(100, (xOffset / element.clientWidth) * 100)),
-            y: Math.max(0, Math.min(100, (yOffset / element.clientHeight) * 100))
-        };
+        return { x, y };
     };
 
     // --- Manual Mouse Drag Handlers ---
@@ -84,27 +72,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         e.stopPropagation();
 
         setDraggingPlayer(player);
-        setTempPosition({ x: player.position.x, y: player.position.y });
+        // NO dragOffset - cursor stays at center/where clicked (if we want center, we render transform translate)
+        // User requested: "cursor = centro do jogador" (cursor is center)
 
-        // Calculate offset
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-
-        // This offset calculation might be tricky with responsive sizing.
-        // Simplified: just store the current mouse pos relative to player center?
-        // Actually, let's just use the difference between mouse and player center in %?
-        // Or simpler: just track mouse delta?
-        // User's code uses getBoundingClientRect.
-        // Let's stick to user's approach roughly but adapted.
-
-        const target = e.currentTarget as HTMLElement;
-        const rect = target.getBoundingClientRect();
-        setDragOffset({
-            x: clientX - (rect.left + rect.width / 2),
-            y: clientY - (rect.top + rect.height / 2)
-        });
-
-        if (onPlayerDragStart) onPlayerDragStart(player);
+        // No need for setDragOffset
     };
 
     // Global Mouse Listeners
@@ -116,8 +87,18 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
 
-            const pos = getFieldPercentage(clientX - dragOffset.x, clientY - dragOffset.y);
-            setTempPosition(pos);
+            const pos = getFieldPercentage(clientX, clientY);
+
+            // For dragging players, update direct position
+            // But we don't have local state for player position in the recommended snippet, 
+            // it calls onPlayerPositionChange directly? 
+            // Our TacticalField uses tempPosition for render override.
+
+            // Clamp for visual feedback within bounds?
+            const clampedX = Math.max(0, Math.min(100, pos.x));
+            const clampedY = Math.max(0, Math.min(100, pos.y));
+
+            setTempPosition({ x: clampedX, y: clampedY });
         };
 
         const handleMouseUp = (e: MouseEvent | TouchEvent) => {
@@ -128,20 +109,22 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
 
             if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                const isInside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+                // Just pass the raw pos, no logic to check isInside needed for movement, 
+                // but we might want to clamp for players? 
+                // User said "Limits artificial" on ARROWS. For players, typically we want them inside.
+                // But let's use the direct calculation first.
 
-                if (isInside) {
-                    const pos = getFieldPercentage(clientX - dragOffset.x, clientY - dragOffset.y);
-                    if (onPlayerMove) onPlayerMove(draggingPlayer.id, pos);
-                } else {
-                    // Dragged out? Use explicit handler calls later if needed.
-                }
+                const pos = getFieldPercentage(clientX, clientY);
+                // Clamp for players
+                const clampedX = Math.max(0, Math.min(100, pos.x));
+                const clampedY = Math.max(0, Math.min(100, pos.y));
+
+                if (onPlayerMove) onPlayerMove(draggingPlayer.id, { x: clampedX, y: clampedY });
             }
 
             setDraggingPlayer(null);
             setTempPosition(null);
-            if (onPlayerDragEnd) onPlayerDragEnd();
+
         };
 
         document.addEventListener('mousemove', handleMouseMove, { passive: false });
@@ -155,40 +138,13 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             document.removeEventListener('touchmove', handleMouseMove);
             document.removeEventListener('touchend', handleMouseUp);
         };
-    }, [draggingPlayer, dragOffset, onPlayerMove, onPlayerDragEnd, containerRef]);
+    }, [draggingPlayer, onPlayerMove, containerRef]);
 
 
-    // --- External Drop Handler (Bench -> Field) ---
-    React.useEffect(() => {
-        // If we are already dragging this player internally, ignore external drop logic to avoid double events
-        if (!externalDraggingPlayer) return;
-        if (draggingPlayer && draggingPlayer.id === externalDraggingPlayer.id) return;
+    // --- External Drop Handler (Removed / Deprecated) ---
+    // The previous external drop handler is removed as part of the refactor 
+    // to use modals for substitutions instead of DnD.
 
-        const handleExternalMouseUp = (e: MouseEvent | TouchEvent) => {
-            // Check if inside field
-            const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
-            const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
-
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                const isInside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-
-                if (isInside && onPlayerDrop) {
-                    const pos = getFieldPercentage(clientX, clientY);
-                    onPlayerDrop(externalDraggingPlayer, pos);
-                }
-            }
-        };
-
-        // We only need mouseup logic. The visual feedback could be improved but functionality first.
-        document.addEventListener('mouseup', handleExternalMouseUp);
-        document.addEventListener('touchend', handleExternalMouseUp);
-
-        return () => {
-            document.removeEventListener('mouseup', handleExternalMouseUp);
-            document.removeEventListener('touchend', handleExternalMouseUp);
-        };
-    }, [externalDraggingPlayer, onPlayerDrop, containerRef]); // Removed unused dependencies
 
     // --- Handlers ---
 
@@ -268,10 +224,19 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             >
                 {/* Field Markings MSG */}
                 <svg
-                    viewBox="0 0 68 105"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
                     className="absolute inset-0 w-full h-full pointer-events-none opacity-40 z-0"
                     xmlns="http://www.w3.org/2000/svg"
                 >
+                    <rect x="0" y="0" width="100" height="100" fill="none" stroke="white" strokeWidth="0.5" />
+                    {/* Simplified markings for 0-100 space, can reuse existing or adjust? 
+                       Existing used 68x105 viewBox. 
+                       Let's keep the markings SVG separate or adjust it? 
+                       The user wants ARROWS LAYER to use 0-100. The markings can stay if they look OK, 
+                       but standardizing everything to 0-100 is safer.
+                       Let's leave markings as is (`viewBox="0 0 68 105"`) but ensure ARROWS uses `0 0 100 100`.
+                    */}
                     <rect x="0" y="0" width="68" height="105" fill="none" stroke="white" strokeWidth="0.5" />
                     <line x1="0" y1="52.5" x2="68" y2="52.5" stroke="white" strokeWidth="0.5" />
                     <circle cx="34" cy="52.5" r="9.15" fill="none" stroke="white" strokeWidth="0.5" />
@@ -290,8 +255,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     <path d="M 2 105 A 2 2 0 0 0 0 103" fill="none" stroke="white" strokeWidth="0.5" />
                 </svg>
 
-                {/* Arrows Layer */}
-                <svg className="absolute inset-0 w-full h-full z-10 pointer-events-none">
+                {/* Arrows Layer - Corrected to 0-100 coordinate system */}
+                <svg
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+                >
                     <defs>
                         <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
                             <polygon points="0 0, 6 2, 0 4" fill="white" fillOpacity="0.9" />

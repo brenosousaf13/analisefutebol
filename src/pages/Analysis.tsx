@@ -103,7 +103,7 @@ function Analysis() {
     const [editingPlayerPhase, setEditingPlayerPhase] = useState<'defensive' | 'offensive' | null>(null);
 
     // Global Drag State (Manual Mouse Tracking)
-    const [globalDraggingPlayer, setGlobalDraggingPlayer] = useState<Player | null>(null);
+    // const [globalDraggingPlayer, setGlobalDraggingPlayer] = useState<Player | null>(null);
 
     // Responsive State
     // const [isMobile, setIsMobile] = useState(false);
@@ -516,34 +516,25 @@ function Analysis() {
     };
 
     // Specific handlers to close over the phase
-    const handleDropOnDefensiveField = (player: Player, pos: { x: number, y: number }) => {
-        handleDropOnFieldGeneric(player, pos, 'defensive');
-    };
+    // Handlers removed as part of DnD refactor
+    // const handleDropOnDefensiveField = ...
+    // const handleDropOnOffensiveField = ...
 
-    const handleDropOnOffensiveField = (player: Player, pos: { x: number, y: number }) => {
-        handleDropOnFieldGeneric(player, pos, 'offensive');
-    };
-
-    const handleDropOnFieldGeneric = (player: Player, pos: { x: number, y: number }, phase: 'defensive' | 'offensive') => {
-        const team = viewTeam;
-        const isHomeSub = homeSubstitutes.some(p => p.id === player.id);
-        const isAwaySub = awaySubstitutes.some(p => p.id === player.id);
-        const isFromBench = (team === 'home' && isHomeSub) || (team === 'away' && isAwaySub);
-
-        if (isFromBench) {
-            // Promote
-            handleMoveToField(player, pos);
-            // Optimization: if we want to set different positions for different phases on promotion, 
-            // we'd need more complex logic. For now, handleMoveToField puts them at 'pos' in both phases.
-        } else {
-            // Reposition
-            handlePlayerMove(player.id, pos, phase);
-        }
-    };
+    // const handleDropOnFieldGeneric = ...
+    // const isFromBench = (team === 'home' && isHomeSub) || (team === 'away' && isAwaySub);
+    //
+    // if (isFromBench) {
+    //     // Promote
+    //     handleMoveToField(player, pos);
+    // } else {
+    //     // Reposition
+    //     handlePlayerMove(player.id, pos, phase);
+    // }
 
 
     // --- Drag and Drop Handlers (Manual Mouse) ---
-
+    // Removed/Commented out as part of refactor
+    /*
     const handleDragStart = (player: Player) => {
         setGlobalDraggingPlayer(player);
     };
@@ -554,32 +545,10 @@ function Analysis() {
 
     // When dropping ON Bench (from Field)
     const handleDropToBench = (player: Player) => {
-        console.log('Drop to bench:', player.name);
-
-        // Ensure we clear global drag state
+       // ... existing implementation
         setGlobalDraggingPlayer(null);
-
-        // Move from field to bench
-        if (viewTeam === 'home') {
-            setHomePlayersDef(prev => prev.filter(p => p.id !== player.id));
-            setHomePlayersOff(prev => prev.filter(p => p.id !== player.id));
-            // Add to bench if not already there (safety check)
-            setHomeSubstitutes(prev => {
-                if (prev.some(p => p.id === player.id)) return prev;
-                return [...prev, { ...player, position: { x: 50, y: 50 }, isStarter: false }];
-            });
-        } else {
-            setAwayPlayersDef(prev => prev.filter(p => p.id !== player.id));
-            setAwayPlayersOff(prev => prev.filter(p => p.id !== player.id));
-            setAwaySubstitutes(prev => {
-                if (prev.some(p => p.id === player.id)) return prev;
-                return [...prev, { ...player, position: { x: 50, y: 50 }, isStarter: false }];
-            });
-        }
     };
-
-    // When dropping ON Bench
-    /* handleDropToBench is defined above, removing duplicate/legacy placeholder if any */
+    */
 
     // --- Render ---
 
@@ -590,6 +559,59 @@ function Analysis() {
     const handlePlayerDoubleClick = (player: Player, phase: 'defensive' | 'offensive') => {
         setEditingPlayer(player);
         setEditingPlayerPhase(phase);
+    };
+
+    const handleSendToBench = (player: Player) => {
+        if (!editingPlayerPhase) return;
+
+        if (viewTeam === 'home') {
+            setHomePlayersDef(prev => prev.filter(p => p.id !== player.id));
+            setHomePlayersOff(prev => prev.filter(p => p.id !== player.id));
+            setHomeSubstitutes(prev => {
+                if (prev.some(p => p.id === player.id)) return prev;
+                return [...prev, { ...player, isStarter: false, position: { x: 50, y: 50 } }];
+            });
+        } else {
+            setAwayPlayersDef(prev => prev.filter(p => p.id !== player.id));
+            setAwayPlayersOff(prev => prev.filter(p => p.id !== player.id));
+            setAwaySubstitutes(prev => {
+                if (prev.some(p => p.id === player.id)) return prev;
+                return [...prev, { ...player, isStarter: false, position: { x: 50, y: 50 } }];
+            });
+        }
+    };
+
+    const handleSubstitute = (starter: Player, benchPlayer: Player) => {
+        if (!editingPlayerPhase) return;
+
+        if (viewTeam === 'home') {
+            // 1. Starter -> Bench
+            setHomeSubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
+
+            // 2. Bench -> Field (Replace Starter position)
+            const updateField = (prev: Player[]) => prev.map(p => {
+                if (p.id === starter.id) {
+                    return { ...benchPlayer, position: p.position, isStarter: true };
+                }
+                return p;
+            });
+
+            setHomePlayersDef(updateField);
+            setHomePlayersOff(updateField);
+        } else {
+            // Away Team
+            setAwaySubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
+
+            const updateField = (prev: Player[]) => prev.map(p => {
+                if (p.id === starter.id) {
+                    return { ...benchPlayer, position: p.position, isStarter: true };
+                }
+                return p;
+            });
+
+            setAwayPlayersDef(updateField);
+            setAwayPlayersOff(updateField);
+        }
     };
 
     const handleSaveEditedPlayer = (updatedPlayer: Player) => {
@@ -799,10 +821,6 @@ function Analysis() {
                                     arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                    onPlayerDragStart={handleDragStart}
-                                    onPlayerDragEnd={handleDragEnd}
-                                    onPlayerDrop={handleDropOnDefensiveField}
-                                    externalDraggingPlayer={globalDraggingPlayer}
                                 />
                             </div>
                         </div>
@@ -826,10 +844,6 @@ function Analysis() {
                                     arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                    onPlayerDragStart={handleDragStart}
-                                    onPlayerDragEnd={handleDragEnd}
-                                    onPlayerDrop={handleDropOnOffensiveField}
-                                    externalDraggingPlayer={globalDraggingPlayer}
                                 />
                             </div>
                         </div>
@@ -844,12 +858,8 @@ function Analysis() {
                         <BenchArea
                             players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
                             team={viewTeam}
-                            onPlayerDrop={handleDropToBench}
-                            onPlayerDragStart={handleDragStart}
-                            onPlayerDragEnd={handleDragEnd}
+                            onPromotePlayer={handleMoveToField}
                             onPlayerDoubleClick={handleBenchDoubleClick}
-                            onMoveToField={handleMoveToField}
-                            externalDraggingPlayer={globalDraggingPlayer}
                         />
                     </div>
                 </div>
@@ -917,6 +927,9 @@ function Analysis() {
                     setEditingPlayerPhase(null);
                 }}
                 onSave={handleSaveEditedPlayer}
+                benchPlayers={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
+                onSubstitute={handleSubstitute}
+                onSendToBench={handleSendToBench}
             />
             <Toaster
                 position="bottom-right"
