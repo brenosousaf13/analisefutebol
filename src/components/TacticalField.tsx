@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import { getPlayerSize, getFontSize } from '../utils/playerCoordinates';
@@ -28,91 +28,37 @@ const FieldLines: React.FC = () => (
         {/* Center Circle */}
         <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-white/40 rounded-full"
-            style={{ width: '20%', height: '13%' }}
+            style={{ width: '22%', height: '14%' }}
         />
 
         {/* Center Dot */}
-        <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
 
         {/* Top Penalty Area */}
         <div
             className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
-            style={{ top: '3%', width: '60%', height: '15%' }}
+            style={{ top: '3%', width: '58%', height: '16%' }}
         />
 
         {/* Top Goal Area */}
         <div
             className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
-            style={{ top: '3%', width: '30%', height: '6%' }}
+            style={{ top: '3%', width: '28%', height: '6%' }}
         />
 
         {/* Bottom Penalty Area */}
         <div
             className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
-            style={{ bottom: '3%', width: '60%', height: '15%' }}
+            style={{ bottom: '3%', width: '58%', height: '16%' }}
         />
 
         {/* Bottom Goal Area */}
         <div
             className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
-            style={{ bottom: '3%', width: '30%', height: '6%' }}
+            style={{ bottom: '3%', width: '28%', height: '6%' }}
         />
     </div>
 );
-
-// Arrow Component - Using CSS for exact rendering
-const ArrowLine: React.FC<{
-    arrow: Arrow;
-    isTemp?: boolean;
-    onRemove?: () => void;
-    isDrawMode?: boolean;
-}> = ({ arrow, isTemp = false, onRemove, isDrawMode }) => {
-    const { startX, startY, endX, endY } = arrow;
-
-    // Calculate length and angle
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-    if (length < 1) return null;
-
-    return (
-        <div
-            className={`absolute origin-left ${isDrawMode && !isTemp ? 'cursor-pointer hover:opacity-70' : ''}`}
-            style={{
-                left: `${startX}%`,
-                top: `${startY}%`,
-                width: `${length}%`,
-                height: '2px',
-                transform: `rotate(${angle}deg)`,
-                transformOrigin: '0 50%',
-                opacity: isTemp ? 0.6 : 0.9,
-                zIndex: isTemp ? 15 : 10
-            }}
-            onClick={isDrawMode && !isTemp ? (e) => { e.stopPropagation(); onRemove?.(); } : undefined}
-        >
-            {/* Dashed Line */}
-            <div
-                className="absolute inset-0"
-                style={{
-                    background: 'repeating-linear-gradient(90deg, white 0px, white 6px, transparent 6px, transparent 10px)'
-                }}
-            />
-            {/* Arrow Head */}
-            <div
-                className="absolute right-0 top-1/2 -translate-y-1/2"
-                style={{
-                    width: 0,
-                    height: 0,
-                    borderTop: '5px solid transparent',
-                    borderBottom: '5px solid transparent',
-                    borderLeft: '8px solid white'
-                }}
-            />
-        </div>
-    );
-};
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
     players,
@@ -134,17 +80,33 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentArrow, setCurrentArrow] = useState<Partial<Arrow> | null>(null);
 
-    // Get field position as percentage
-    const getFieldPosition = (clientX: number, clientY: number) => {
+    // Get field position as percentage - CORRECT: X uses width, Y uses height
+    const getFieldPosition = useCallback((clientX: number, clientY: number) => {
         if (!containerRef.current) return null;
         const rect = containerRef.current.getBoundingClientRect();
-        return {
-            x: ((clientX - rect.left) / rect.width) * 100,
-            y: ((clientY - rect.top) / rect.height) * 100
-        };
+
+        // CRITICAL: Each axis uses its OWN dimension
+        const x = ((clientX - rect.left) / rect.width) * 100;
+        const y = ((clientY - rect.top) / rect.height) * 100;
+
+        return { x, y };
+    }, []);
+
+    // Extract coordinates from mouse or touch event
+    const getEventCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
+        if ('touches' in e && e.touches.length > 0) {
+            return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+        }
+        if ('changedTouches' in e && e.changedTouches.length > 0) {
+            return { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY };
+        }
+        if ('clientX' in e) {
+            return { clientX: e.clientX, clientY: e.clientY };
+        }
+        return null;
     };
 
-    // Player Mouse Down
+    // === PLAYER DRAGGING ===
     const handlePlayerMouseDown = (e: React.MouseEvent | React.TouchEvent, player: Player) => {
         if (mode === 'draw') return;
         if ('button' in e && e.button !== 0) return;
@@ -158,10 +120,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     useEffect(() => {
         if (!draggingPlayer) return;
 
-        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            const pos = getFieldPosition(clientX, clientY);
+        const handleMove = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const coords = getEventCoords(e);
+            if (!coords) return;
+
+            const pos = getFieldPosition(coords.clientX, coords.clientY);
             if (pos) {
                 // Clamp within 3-97% to keep player visible
                 setTempPosition({
@@ -171,69 +135,68 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             }
         };
 
-        const handleMouseUp = (e: MouseEvent | TouchEvent) => {
-            const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
-            const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
-            const pos = getFieldPosition(clientX, clientY);
-
-            if (pos && draggingPlayer) {
-                onPlayerMove(draggingPlayer.id, {
-                    x: Math.max(3, Math.min(97, pos.x)),
-                    y: Math.max(3, Math.min(97, pos.y))
-                });
+        const handleEnd = (e: MouseEvent | TouchEvent) => {
+            const coords = getEventCoords(e);
+            if (coords && draggingPlayer) {
+                const pos = getFieldPosition(coords.clientX, coords.clientY);
+                if (pos) {
+                    onPlayerMove(draggingPlayer.id, {
+                        x: Math.max(3, Math.min(97, pos.x)),
+                        y: Math.max(3, Math.min(97, pos.y))
+                    });
+                }
             }
 
             setDraggingPlayer(null);
             setTempPosition(null);
         };
 
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('touchmove', handleMouseMove);
-        document.addEventListener('touchend', handleMouseUp);
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
 
         return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.removeEventListener('touchmove', handleMouseMove);
-            document.removeEventListener('touchend', handleMouseUp);
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
+            document.removeEventListener('touchcancel', handleEnd);
         };
-    }, [draggingPlayer, onPlayerMove]);
+    }, [draggingPlayer, onPlayerMove, getFieldPosition]);
 
-    // Drawing Handlers
-    const handleFieldMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    // === ARROW DRAWING ===
+    const handleDrawStart = useCallback((clientX: number, clientY: number) => {
         if (mode !== 'draw') return;
 
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
         const pos = getFieldPosition(clientX, clientY);
-
         if (pos) {
             setIsDrawing(true);
             setCurrentArrow({ startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y });
         }
-    };
+    }, [mode, getFieldPosition]);
 
-    const handleFieldMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-        if (mode !== 'draw' || !isDrawing || !currentArrow) return;
+    const handleDrawMove = useCallback((clientX: number, clientY: number) => {
+        if (!isDrawing || !currentArrow) return;
 
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
         const pos = getFieldPosition(clientX, clientY);
-
         if (pos) {
             setCurrentArrow(prev => prev ? { ...prev, endX: pos.x, endY: pos.y } : null);
         }
-    };
+    }, [isDrawing, currentArrow, getFieldPosition]);
 
-    const handleFieldMouseUp = () => {
-        if (mode !== 'draw' || !isDrawing || !currentArrow) return;
+    const handleDrawEnd = useCallback(() => {
+        if (!isDrawing || !currentArrow) {
+            setIsDrawing(false);
+            setCurrentArrow(null);
+            return;
+        }
 
-        const dx = (currentArrow.endX ?? 0) - (currentArrow.startX ?? 0);
-        const dy = (currentArrow.endY ?? 0) - (currentArrow.startY ?? 0);
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dx = Math.abs((currentArrow.endX ?? 0) - (currentArrow.startX ?? 0));
+        const dy = Math.abs((currentArrow.endY ?? 0) - (currentArrow.startY ?? 0));
 
-        if (dist > 2 && onAddArrow) {
+        if ((dx > 2 || dy > 2) && onAddArrow) {
             onAddArrow({
                 startX: currentArrow.startX!,
                 startY: currentArrow.startY!,
@@ -245,6 +208,47 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
         setIsDrawing(false);
         setCurrentArrow(null);
+    }, [isDrawing, currentArrow, onAddArrow]);
+
+    // Global listeners for arrow drawing (to capture movement outside element)
+    useEffect(() => {
+        if (!isDrawing) return;
+
+        const handleMove = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const coords = getEventCoords(e);
+            if (coords) handleDrawMove(coords.clientX, coords.clientY);
+        };
+
+        const handleEnd = () => {
+            handleDrawEnd();
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
+        };
+    }, [isDrawing, handleDrawMove, handleDrawEnd]);
+
+    // Field event handlers
+    const handleFieldMouseDown = (e: React.MouseEvent) => {
+        if (mode !== 'draw') return;
+        e.preventDefault();
+        handleDrawStart(e.clientX, e.clientY);
+    };
+
+    const handleFieldTouchStart = (e: React.TouchEvent) => {
+        if (mode !== 'draw') return;
+        e.preventDefault();
+        const coords = getEventCoords(e);
+        if (coords) handleDrawStart(coords.clientX, coords.clientY);
     };
 
     // Calculate player size based on field width (responsive)
@@ -263,6 +267,70 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const playerSize = getPlayerSize(fieldWidth);
     const fontSizes = getFontSize(playerSize);
 
+    // Render arrow using SVG with percentage coordinates
+    const renderArrow = (arrow: { startX: number; startY: number; endX: number; endY: number; id?: string }, isTemp = false) => {
+        const { startX, startY, endX, endY } = arrow;
+
+        // Calculate angle for arrow head
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const angle = Math.atan2(dy, dx);
+
+        // Arrow head size (in percentage units)
+        const headLength = 3;
+
+        // Arrow head points
+        const tipX = endX;
+        const tipY = endY;
+        const leftX = endX - headLength * Math.cos(angle - Math.PI / 7);
+        const leftY = endY - headLength * Math.sin(angle - Math.PI / 7);
+        const rightX = endX - headLength * Math.cos(angle + Math.PI / 7);
+        const rightY = endY - headLength * Math.sin(angle + Math.PI / 7);
+
+        const key = arrow.id || 'current';
+
+        return (
+            <g key={key} opacity={isTemp ? 0.6 : 0.85}>
+                {/* Dashed line */}
+                <line
+                    x1={`${startX}%`}
+                    y1={`${startY}%`}
+                    x2={`${endX}%`}
+                    y2={`${endY}%`}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeDasharray="8,5"
+                    strokeLinecap="round"
+                />
+                {/* Arrow head */}
+                <polygon
+                    points={`${tipX}%,${tipY}% ${leftX}%,${leftY}% ${rightX}%,${rightY}%`}
+                    fill="white"
+                />
+            </g>
+        );
+    };
+
+    // Double tap detection for touch
+    const lastTapRef = useRef<{ time: number; playerId: number | null }>({ time: 0, playerId: null });
+
+    const handlePlayerTouchEnd = (e: React.TouchEvent, player: Player) => {
+        // Only handle tap if not dragging
+        if (draggingPlayer) return;
+
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+
+        if (lastTapRef.current.playerId === player.id && now - lastTapRef.current.time < DOUBLE_TAP_DELAY) {
+            // Double tap detected
+            e.preventDefault();
+            onPlayerDoubleClick?.(player);
+            lastTapRef.current = { time: 0, playerId: null };
+        } else {
+            lastTapRef.current = { time: now, playerId: player.id };
+        }
+    };
+
     return (
         <div className="w-full h-full flex items-center justify-center p-2">
             <div
@@ -276,36 +344,34 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 style={{
                     aspectRatio: '68 / 105',
                     width: '100%',
-                    maxWidth: '450px'
+                    maxWidth: '450px',
+                    touchAction: 'none' // CRITICAL: Prevents browser gestures during interaction
                 }}
                 onMouseDown={handleFieldMouseDown}
-                onMouseMove={handleFieldMouseMove}
-                onMouseUp={handleFieldMouseUp}
-                onMouseLeave={handleFieldMouseUp}
-                onTouchStart={handleFieldMouseDown}
-                onTouchMove={handleFieldMouseMove}
-                onTouchEnd={handleFieldMouseUp}
+                onTouchStart={handleFieldTouchStart}
             >
                 {/* Field Lines */}
                 <FieldLines />
 
-                {/* Arrows Layer */}
-                <div className="absolute inset-0 z-10 pointer-events-none">
+                {/* Arrows Layer - Using SVG with percentage coordinates */}
+                <svg
+                    className="absolute inset-0 w-full h-full z-10 overflow-visible"
+                    style={{ pointerEvents: mode === 'draw' ? 'none' : 'none' }}
+                    preserveAspectRatio="none"
+                >
                     {arrows.map(arrow => (
-                        <ArrowLine
+                        <g
                             key={arrow.id}
-                            arrow={arrow}
-                            onRemove={() => onRemoveArrow?.(arrow.id)}
-                            isDrawMode={mode === 'draw'}
-                        />
+                            onClick={mode === 'draw' ? () => onRemoveArrow?.(arrow.id) : undefined}
+                            style={{ cursor: mode === 'draw' ? 'pointer' : 'default', pointerEvents: mode === 'draw' ? 'auto' : 'none' }}
+                        >
+                            {renderArrow(arrow)}
+                        </g>
                     ))}
                     {isDrawing && currentArrow && currentArrow.startX !== undefined && (
-                        <ArrowLine
-                            arrow={currentArrow as Arrow}
-                            isTemp
-                        />
+                        renderArrow(currentArrow as Arrow, true)
                     )}
-                </div>
+                </svg>
 
                 {/* Players Layer */}
                 <div className={`absolute inset-0 z-20 ${mode === 'draw' ? 'pointer-events-none' : ''}`}>
@@ -324,10 +390,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 style={{
                                     left: `${position.x}%`,
                                     top: `${position.y}%`,
-                                    transform: 'translate(-50%, -50%)'
+                                    transform: 'translate(-50%, -50%)',
+                                    touchAction: 'none'
                                 }}
                                 onMouseDown={(e) => handlePlayerMouseDown(e, player)}
                                 onTouchStart={(e) => handlePlayerMouseDown(e, player)}
+                                onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
                                 onDoubleClick={() => onPlayerDoubleClick?.(player)}
                             >
                                 <div
