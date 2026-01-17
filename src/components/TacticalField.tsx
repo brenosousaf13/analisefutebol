@@ -24,6 +24,8 @@ interface TacticalFieldProps {
     // Eraser mode
     isEraserMode?: boolean;
     rectangleColor?: string;
+    // Player color
+    playerColor?: string;
 }
 
 // Field Lines Component - Using CSS for reliability
@@ -87,7 +89,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onRemoveRectangle,
     onMoveRectangle,
     isEraserMode = false,
-    rectangleColor = 'rgba(255, 200, 50, 0.3)'
+    rectangleColor = 'rgba(255, 200, 50, 0.3)',
+    playerColor = '#EAB308' // Default yellow
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
@@ -479,10 +482,11 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 <FieldLines />
 
                 {/* Arrows and Rectangles Layer - Using SVG */}
-                {/* z-30 in eraser or move mode to be above players (z-20), otherwise z-10 */}
+                {/* SVG itself has pointer-events: none to allow clicks to pass through to players */}
+                {/* Individual elements (arrows/rectangles) have pointer-events: auto when interactive */}
                 <svg
                     className={`absolute inset-0 w-full h-full overflow-visible ${(isEraserMode || mode === 'move') ? 'z-30' : 'z-10'}`}
-                    style={{ pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none' }}
+                    style={{ pointerEvents: 'none' }}
                     preserveAspectRatio="none"
                 >
                     {/* Arrow head marker definitions */}
@@ -624,7 +628,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             >
                                 <div
                                     className={`
-                                        rounded-full bg-accent-yellow 
+                                        rounded-full 
                                         flex items-center justify-center text-gray-900 font-bold
                                         shadow-lg transition-transform duration-75
                                         ${isDragging ? 'scale-110 ring-2 ring-white' : 'hover:scale-105'}
@@ -633,7 +637,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                     style={{
                                         width: playerSize,
                                         height: playerSize,
-                                        fontSize: fontSizes.number
+                                        fontSize: fontSizes.number,
+                                        backgroundColor: playerColor
                                     }}
                                 >
                                     {player.number}

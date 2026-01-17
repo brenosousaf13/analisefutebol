@@ -836,6 +836,7 @@ function Analysis() {
                                     onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
                                     isEraserMode={activeTool === 'eraser'}
                                     rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                 />
                             </div>
                         </div>
@@ -866,6 +867,7 @@ function Analysis() {
                                     onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
                                     isEraserMode={activeTool === 'eraser'}
                                     rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                 />
                             </div>
                         </div>
