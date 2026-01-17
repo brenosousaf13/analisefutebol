@@ -107,8 +107,8 @@ const NotesModal: React.FC<NotesModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
-            {/* Modal Container */}
-            <div className="bg-[#1a1f2e] w-[90%] max-w-[900px] h-[85vh] max-h-[700px] rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200">
+            {/* Modal Container - Full width */}
+            <div className="bg-[#1a1f2e] w-[98%] h-[90vh] max-h-[850px] rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200">
 
                 {/* Confirmation Overlay */}
                 {showCloseConfirmation && (

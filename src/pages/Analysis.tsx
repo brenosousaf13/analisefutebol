@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams } from 'react-router-dom';
-import { Download, Save, Loader2, CheckCircle } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
 import TacticalField from '../components/TacticalField';
 import StatsPanel from '../components/StatsPanel';
+import MatchHeader from '../components/MatchHeader';
+import Toolbar, { type ToolType } from '../components/Toolbar';
+import ColorPickerModal from '../components/ColorPickerModal';
 
 import { homeTeamPlayers as initialHomePlayers, awayTeamPlayers as initialAwayPlayers } from '../data/mockData';
 import { getMatchLineups, type Lineup, type LineupPlayer, type Fixture } from '../services/apiFootball';
@@ -19,13 +22,11 @@ import AddEventModal from '../components/AddEventModal';
 import MatchTimeline, { type MatchEvent } from '../components/MatchTimeline';
 import EventsExpansionModal from '../components/EventsExpansionModal';
 
-import { MousePointer2, TrendingUp, Eraser, UserPlus } from 'lucide-react';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
 import BenchArea from '../components/BenchArea';
-// import { useFieldDimensions } from '../hooks/useFieldDimensions';
-// import { getPlayerSize } from '../utils/playerCoordinates';
+
 
 function Analysis() {
     const location = useLocation();
@@ -93,7 +94,44 @@ function Analysis() {
         'transition': []
     });
 
-    const [interactionMode, setInteractionMode] = useState<'move' | 'draw'>('move');
+    // New tool state (maps to Toolbar component)
+    const [activeTool, setActiveTool] = useState<ToolType>('select');
+
+    // Team colors
+    const [homeTeamColor, setHomeTeamColor] = useState('#EF4444');
+    const [awayTeamColor, setAwayTeamColor] = useState('#3B82F6');
+
+    // Modal states
+    const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+
+    // Rectangle state - separated by team and phase
+    const [homeRectangles, setHomeRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
+        'defensive': [],
+        'offensive': []
+    });
+    const [awayRectangles, setAwayRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
+        'defensive': [],
+        'offensive': []
+    });
+
+    // Tool change handler - simply updates activeTool
+    const handleToolChange = (tool: ToolType) => {
+        setActiveTool(tool);
+    };
+
+    // Get current mode for TacticalField based on activeTool
+    const getTacticalFieldMode = (): 'move' | 'draw' | 'rectangle' => {
+        if (activeTool === 'rectangle') return 'rectangle';
+        if (activeTool === 'arrow' || activeTool === 'line') return 'draw';
+        return 'move';
+    };
+
+    // Export handler (placeholder)
+    const handleExport = () => {
+        toast.success('Funcionalidade de exportação em desenvolvimento');
+    };
+
+
 
     const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
     const [isCreatePlayerModalOpen, setIsCreatePlayerModalOpen] = useState(false);
@@ -421,17 +459,52 @@ function Analysis() {
         }));
     };
 
-    const handleClearArrows = () => {
-        if (window.confirm('Tem certeza que deseja limpar todas as setas desta fase?')) {
-            const setArrowsFn = viewTeam === 'home' ? setHomeArrows : setAwayArrows;
-            setArrowsFn(prev => ({
-                ...prev,
-                defensive: [],
-                offensive: []
-            }));
-        }
+    // Rectangle handlers
+    const handleAddRectangle = (rect: Omit<import('../types/Rectangle').Rectangle, 'id'>, phase?: 'defensive' | 'offensive') => {
+        const targetPhase = phase || activePhase;
+        const newRect = { ...rect, id: uuidv4() };
+        const setRectsFn = viewTeam === 'home' ? setHomeRectangles : setAwayRectangles;
+        setRectsFn(prev => ({
+            ...prev,
+            [targetPhase]: [...(prev[targetPhase] || []), newRect]
+        }));
     };
 
+    const handleRemoveRectangle = (id: string, phase?: 'defensive' | 'offensive') => {
+        const targetPhase = phase || activePhase;
+        const setRectsFn = viewTeam === 'home' ? setHomeRectangles : setAwayRectangles;
+        setRectsFn(prev => ({
+            ...prev,
+            [targetPhase]: (prev[targetPhase] || []).filter(r => r.id !== id)
+        }));
+    };
+
+    // Move handlers for arrows and rectangles
+    const handleMoveArrow = (id: string, deltaX: number, deltaY: number, phase?: 'defensive' | 'offensive') => {
+        const targetPhase = phase || activePhase;
+        const setArrowsFn = viewTeam === 'home' ? setHomeArrows : setAwayArrows;
+        setArrowsFn(prev => ({
+            ...prev,
+            [targetPhase]: (prev[targetPhase] || []).map(arrow =>
+                arrow.id === id
+                    ? { ...arrow, startX: arrow.startX + deltaX, startY: arrow.startY + deltaY, endX: arrow.endX + deltaX, endY: arrow.endY + deltaY }
+                    : arrow
+            )
+        }));
+    };
+
+    const handleMoveRectangle = (id: string, deltaX: number, deltaY: number, phase?: 'defensive' | 'offensive') => {
+        const targetPhase = phase || activePhase;
+        const setRectsFn = viewTeam === 'home' ? setHomeRectangles : setAwayRectangles;
+        setRectsFn(prev => ({
+            ...prev,
+            [targetPhase]: (prev[targetPhase] || []).map(rect =>
+                rect.id === id
+                    ? { ...rect, startX: rect.startX + deltaX, startY: rect.startY + deltaY, endX: rect.endX + deltaX, endY: rect.endY + deltaY }
+                    : rect
+            )
+        }));
+    };
 
 
     const handleCreatePlayer = (data: { name: string; number: number; position: string; target: 'field' | 'bench' }) => {
@@ -707,100 +780,35 @@ function Analysis() {
             }
         >
             <div className="flex flex-col h-full bg-nav-dark">
-                {/* Top Control Bar - Centralized Team Toggle */}
-                <div className="h-12 px-4 flex items-center justify-center bg-panel-dark/50 shrink-0 border-b border-gray-700/50 shadow-sm z-30">
-                    <div className="flex bg-[#1a1f2e] rounded-lg p-1 border border-gray-700 shadow-lg">
-                        <button
-                            onClick={() => setViewTeam('home')}
-                            className={`px-5 py-1.5 rounded-md text-sm font-bold transition-all ${viewTeam === 'home' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            CASA
-                        </button>
-                        <button
-                            onClick={() => setViewTeam('away')}
-                            className={`px-5 py-1.5 rounded-md text-sm font-bold transition-all ${viewTeam === 'away' ? 'bg-gray-600 text-white shadow ring-1 ring-white/10' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            VISITANTE
-                        </button>
-                    </div>
-                </div>
+                {/* New Match Header */}
+                <MatchHeader
+                    homeTeam={matchState?.teams.home.name || 'Casa'}
+                    awayTeam={matchState?.teams.away.name || 'Visitante'}
+                    homeTeamLogo={matchState?.teams.home.logo}
+                    awayTeamLogo={matchState?.teams.away.logo}
+                    competition={matchState?.league?.name}
+                    date={matchState?.fixture.date ? new Date(matchState.fixture.date).toLocaleDateString('pt-BR') : undefined}
+                    activeTeam={viewTeam}
+                    onTeamChange={setViewTeam}
+                />
 
-                {/* Main Content: Single Green Background - NO borders, NO rounded corners */}
-                <div className="flex-1 flex bg-[#242938] overflow-hidden p-4 gap-4">
+                {/* Floating Toolbar */}
+                <Toolbar
+                    activeTool={activeTool}
+                    onToolChange={handleToolChange}
+                    onOpenColorPicker={() => setIsColorPickerOpen(true)}
+                    onOpenAnalysis={() => setIsNotesModalOpen(true)}
+                    onOpenEvents={() => setIsEventsExpansionModalOpen(true)}
+                    onSave={handleSave}
+                    onExport={handleExport}
+                    isSaving={saveStatus === 'loading'}
+                    hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
+                />
 
-                    {/* Toolbar - Keeps its OWN style with border */}
-                    <div className="flex flex-col bg-[#1a1f2e] rounded-xl p-1.5 gap-1 shrink-0 self-center border border-gray-700/50">
-                        {/* Mover */}
-                        <button
-                            onClick={() => setInteractionMode('move')}
-                            className={`p-2 rounded-lg transition-all ${interactionMode === 'move' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Mover jogadores"
-                        >
-                            <MousePointer2 className="w-5 h-5" />
-                        </button>
+                {/* Main Content Area */}
+                <div className="flex-1 flex bg-[#242938] overflow-hidden p-4 gap-4 ml-14">
 
-                        {/* Desenhar setas */}
-                        <button
-                            onClick={() => setInteractionMode('draw')}
-                            className={`p-2 rounded-lg transition-all ${interactionMode === 'draw' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-                            title="Desenhar deslocamento"
-                        >
-                            <TrendingUp className="w-5 h-5" />
-                        </button>
-
-                        {/* Adicionar jogador */}
-                        <button
-                            onClick={() => setIsCreatePlayerModalOpen(true)}
-                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                            title="Adicionar jogador"
-                        >
-                            <UserPlus className="w-5 h-5" />
-                        </button>
-
-                        {/* Separador */}
-                        <div className="h-px bg-gray-600 my-1 mx-1" />
-
-                        {/* Limpar setas */}
-                        <button
-                            onClick={handleClearArrows}
-                            className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                            title="Limpar setas"
-                        >
-                            <Eraser className="w-5 h-5 text-red-500" />
-                        </button>
-
-                        {/* Separador maior */}
-                        <div className="my-2" />
-
-                        {/* Download */}
-                        <button
-                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                            title="Baixar análise"
-                        >
-                            <Download className="w-5 h-5" />
-                        </button>
-
-                        {/* Salvar */}
-                        <button
-                            onClick={handleSave}
-                            className="relative p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 transition-colors"
-                            title={saveStatus === 'loading' ? 'Salvando...' : 'Salvar análise (Ctrl+S)'}
-                        >
-                            {saveStatus === 'loading' ? (
-                                <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
-                            ) : saveStatus === 'success' ? (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                            ) : (
-                                <Save className="w-5 h-5 text-green-500" />
-                            )}
-                            {/* Unsaved changes indicator */}
-                            {hasUnsavedChanges && saveStatus === 'idle' && (
-                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full" />
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Fields Area - Directly on green background, NO containers */}
+                    {/* Fields Area */}
                     <div className="flex-1 grid grid-cols-2 gap-6">
                         {/* Defensive Field */}
                         <div className="flex flex-col h-full">
@@ -817,10 +825,17 @@ function Analysis() {
                                     onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
                                     selectedPlayerId={selectedPlayerId}
                                     playerNotes={playerNotes}
-                                    mode={interactionMode}
+                                    mode={getTacticalFieldMode()}
                                     arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
+                                    rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
+                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
+                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
+                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
+                                    isEraserMode={activeTool === 'eraser'}
+                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                 />
                             </div>
                         </div>
@@ -840,10 +855,17 @@ function Analysis() {
                                     onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
                                     selectedPlayerId={selectedPlayerId}
                                     playerNotes={playerNotes}
-                                    mode={interactionMode}
+                                    mode={getTacticalFieldMode()}
                                     arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
                                     onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
                                     onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
+                                    rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
+                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
+                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
+                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
+                                    isEraserMode={activeTool === 'eraser'}
+                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                 />
                             </div>
                         </div>
@@ -946,6 +968,17 @@ function Analysis() {
                         },
                     },
                 }}
+            />
+            {/* Color Picker Modal */}
+            <ColorPickerModal
+                isOpen={isColorPickerOpen}
+                onClose={() => setIsColorPickerOpen(false)}
+                homeTeamName={matchState?.teams.home.name || 'Casa'}
+                awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                homeTeamColor={homeTeamColor}
+                awayTeamColor={awayTeamColor}
+                onHomeColorChange={setHomeTeamColor}
+                onAwayColorChange={setAwayTeamColor}
             />
 
         </AnalysisLayout >

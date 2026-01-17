@@ -18,7 +18,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     onOpenEvents,
     tools
 }) => {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
     return (

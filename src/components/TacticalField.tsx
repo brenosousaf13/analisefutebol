@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
+import type { Rectangle } from '../types/Rectangle';
 import { getPlayerSize, getFontSize } from '../utils/playerCoordinates';
 
 interface TacticalFieldProps {
@@ -10,10 +11,19 @@ interface TacticalFieldProps {
     onPlayerDoubleClick?: (player: Player) => void;
     selectedPlayerId?: number | null;
     playerNotes?: { [key: number]: string };
-    mode?: 'move' | 'draw';
+    mode?: 'move' | 'draw' | 'rectangle';
     arrows?: Arrow[];
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
     onRemoveArrow?: (id: string) => void;
+    onMoveArrow?: (id: string, deltaX: number, deltaY: number) => void;
+    // Rectangle support
+    rectangles?: Rectangle[];
+    onAddRectangle?: (rect: Omit<Rectangle, 'id'>) => void;
+    onRemoveRectangle?: (id: string) => void;
+    onMoveRectangle?: (id: string, deltaX: number, deltaY: number) => void;
+    // Eraser mode
+    isEraserMode?: boolean;
+    rectangleColor?: string;
 }
 
 // Field Lines Component - Using CSS for reliability
@@ -71,14 +81,28 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     arrows = [],
     onAddArrow,
     onRemoveArrow,
+    onMoveArrow,
+    rectangles = [],
+    onAddRectangle,
+    onRemoveRectangle,
+    onMoveRectangle,
+    isEraserMode = false,
+    rectangleColor = 'rgba(255, 200, 50, 0.3)'
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
     const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
 
-    // Drawing State
+    // Arrow Drawing State
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentArrow, setCurrentArrow] = useState<Partial<Arrow> | null>(null);
+
+    // Rectangle Drawing State
+    const [isDrawingRect, setIsDrawingRect] = useState(false);
+    const [currentRect, setCurrentRect] = useState<Partial<Rectangle> | null>(null);
+
+    // Element Dragging State (for arrows and rectangles in move mode)
+    const [draggingElement, setDraggingElement] = useState<{ type: 'arrow' | 'rectangle'; id: string; startX: number; startY: number } | null>(null);
 
     // Get field position as percentage - CORRECT: X uses width, Y uses height
     const getFieldPosition = useCallback((clientX: number, clientY: number) => {
@@ -210,6 +234,137 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         setCurrentArrow(null);
     }, [isDrawing, currentArrow, onAddArrow]);
 
+    // === RECTANGLE DRAWING ===
+    const handleRectStart = useCallback((clientX: number, clientY: number) => {
+        if (mode !== 'rectangle') return;
+
+        const pos = getFieldPosition(clientX, clientY);
+        if (pos) {
+            setIsDrawingRect(true);
+            setCurrentRect({ startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y });
+        }
+    }, [mode, getFieldPosition]);
+
+    const handleRectMove = useCallback((clientX: number, clientY: number) => {
+        if (!isDrawingRect || !currentRect) return;
+
+        const pos = getFieldPosition(clientX, clientY);
+        if (pos) {
+            setCurrentRect(prev => prev ? { ...prev, endX: pos.x, endY: pos.y } : null);
+        }
+    }, [isDrawingRect, currentRect, getFieldPosition]);
+
+    const handleRectEnd = useCallback(() => {
+        if (!isDrawingRect || !currentRect) {
+            setIsDrawingRect(false);
+            setCurrentRect(null);
+            return;
+        }
+
+        const width = Math.abs((currentRect.endX ?? 0) - (currentRect.startX ?? 0));
+        const height = Math.abs((currentRect.endY ?? 0) - (currentRect.startY ?? 0));
+
+        // Only create rectangle if it has sufficient size
+        if ((width > 3 || height > 3) && onAddRectangle) {
+            onAddRectangle({
+                startX: Math.min(currentRect.startX!, currentRect.endX!),
+                startY: Math.min(currentRect.startY!, currentRect.endY!),
+                endX: Math.max(currentRect.startX!, currentRect.endX!),
+                endY: Math.max(currentRect.startY!, currentRect.endY!),
+                color: rectangleColor,
+                opacity: 0.3
+            });
+        }
+
+        setIsDrawingRect(false);
+        setCurrentRect(null);
+    }, [isDrawingRect, currentRect, onAddRectangle, rectangleColor]);
+
+    // Global listeners for rectangle drawing
+    useEffect(() => {
+        if (!isDrawingRect) return;
+
+        const handleMove = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const coords = getEventCoords(e);
+            if (coords) handleRectMove(coords.clientX, coords.clientY);
+        };
+
+        const handleEnd = () => {
+            handleRectEnd();
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
+        };
+    }, [isDrawingRect, handleRectMove, handleRectEnd]);
+
+    // === ELEMENT DRAGGING (arrows and rectangles in move mode) ===
+    const handleElementDragStart = useCallback((type: 'arrow' | 'rectangle', id: string, clientX: number, clientY: number) => {
+        if (mode !== 'move' || isEraserMode) return;
+        const pos = getFieldPosition(clientX, clientY);
+        if (pos) {
+            setDraggingElement({ type, id, startX: pos.x, startY: pos.y });
+        }
+    }, [mode, isEraserMode, getFieldPosition]);
+
+    const handleElementDragMove = useCallback((clientX: number, clientY: number) => {
+        if (!draggingElement) return;
+        const pos = getFieldPosition(clientX, clientY);
+        if (!pos) return;
+
+        const deltaX = pos.x - draggingElement.startX;
+        const deltaY = pos.y - draggingElement.startY;
+
+        if (draggingElement.type === 'arrow' && onMoveArrow) {
+            onMoveArrow(draggingElement.id, deltaX, deltaY);
+        } else if (draggingElement.type === 'rectangle' && onMoveRectangle) {
+            onMoveRectangle(draggingElement.id, deltaX, deltaY);
+        }
+
+        // Update start position for next delta calculation
+        setDraggingElement({ ...draggingElement, startX: pos.x, startY: pos.y });
+    }, [draggingElement, getFieldPosition, onMoveArrow, onMoveRectangle]);
+
+    const handleElementDragEnd = useCallback(() => {
+        setDraggingElement(null);
+    }, []);
+
+    // Global listeners for element dragging
+    useEffect(() => {
+        if (!draggingElement) return;
+
+        const handleMove = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const coords = getEventCoords(e);
+            if (coords) handleElementDragMove(coords.clientX, coords.clientY);
+        };
+
+        const handleEnd = () => {
+            handleElementDragEnd();
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
+        };
+    }, [draggingElement, handleElementDragMove, handleElementDragEnd]);
+
     // Global listeners for arrow drawing (to capture movement outside element)
     useEffect(() => {
         if (!isDrawing) return;
@@ -239,16 +394,26 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
     // Field event handlers
     const handleFieldMouseDown = (e: React.MouseEvent) => {
-        if (mode !== 'draw') return;
-        e.preventDefault();
-        handleDrawStart(e.clientX, e.clientY);
+        if (mode === 'draw') {
+            e.preventDefault();
+            handleDrawStart(e.clientX, e.clientY);
+        } else if (mode === 'rectangle') {
+            e.preventDefault();
+            handleRectStart(e.clientX, e.clientY);
+        }
     };
 
     const handleFieldTouchStart = (e: React.TouchEvent) => {
-        if (mode !== 'draw') return;
-        e.preventDefault();
         const coords = getEventCoords(e);
-        if (coords) handleDrawStart(coords.clientX, coords.clientY);
+        if (!coords) return;
+
+        if (mode === 'draw') {
+            e.preventDefault();
+            handleDrawStart(coords.clientX, coords.clientY);
+        } else if (mode === 'rectangle') {
+            e.preventDefault();
+            handleRectStart(coords.clientX, coords.clientY);
+        }
     };
 
     // Calculate player size based on field width (responsive)
@@ -297,7 +462,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     relative 
                     bg-gradient-to-b from-field-green to-[#3d6a4d] 
                     rounded-lg shadow-2xl overflow-hidden select-none
-                    ${mode === 'draw' ? 'cursor-crosshair' : 'cursor-default'}
+                    ${mode === 'draw' || mode === 'rectangle' ? 'cursor-crosshair' : ''}
+                    ${isEraserMode ? 'cursor-pointer' : ''}
+                    ${mode === 'move' && !isEraserMode ? 'cursor-default' : ''}
                 `}
                 style={{
                     aspectRatio: '68 / 105',
@@ -311,10 +478,11 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 {/* Field Lines */}
                 <FieldLines />
 
-                {/* Arrows Layer - Using SVG with markers for arrow heads */}
+                {/* Arrows and Rectangles Layer - Using SVG */}
+                {/* z-30 in eraser or move mode to be above players (z-20), otherwise z-10 */}
                 <svg
-                    className="absolute inset-0 w-full h-full z-10 overflow-visible"
-                    style={{ pointerEvents: mode === 'draw' ? 'none' : 'none' }}
+                    className={`absolute inset-0 w-full h-full overflow-visible ${(isEraserMode || mode === 'move') ? 'z-30' : 'z-10'}`}
+                    style={{ pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none' }}
                     preserveAspectRatio="none"
                 >
                     {/* Arrow head marker definitions */}
@@ -352,13 +520,47 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             x2={`${arrow.endX}%`}
                             y2={`${arrow.endY}%`}
                             stroke="white"
-                            strokeWidth="2"
+                            strokeWidth={isEraserMode ? "8" : (mode === 'move' ? "6" : "2")}
                             strokeDasharray="8,5"
                             strokeLinecap="round"
                             markerEnd="url(#arrowhead)"
-                            opacity="0.85"
-                            onClick={mode === 'draw' ? () => onRemoveArrow?.(arrow.id) : undefined}
-                            style={{ cursor: mode === 'draw' ? 'pointer' : 'default', pointerEvents: mode === 'draw' ? 'auto' : 'none' }}
+                            opacity={isEraserMode ? "1" : "0.85"}
+                            onClick={isEraserMode ? () => onRemoveArrow?.(arrow.id) : undefined}
+                            onMouseDown={mode === 'move' && !isEraserMode ? (e) => {
+                                e.stopPropagation();
+                                handleElementDragStart('arrow', arrow.id, e.clientX, e.clientY);
+                            } : undefined}
+                            style={{
+                                cursor: isEraserMode ? 'pointer' : (mode === 'move' ? 'grab' : 'default'),
+                                pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none'
+                            }}
+                            className={isEraserMode ? 'hover:stroke-red-400 transition-colors' : (mode === 'move' ? 'hover:stroke-yellow-300 transition-colors' : '')}
+                        />
+                    ))}
+
+                    {/* Saved rectangles */}
+                    {rectangles.map(rect => (
+                        <rect
+                            key={rect.id}
+                            x={`${rect.startX}%`}
+                            y={`${rect.startY}%`}
+                            width={`${rect.endX - rect.startX}%`}
+                            height={`${rect.endY - rect.startY}%`}
+                            fill={rect.color}
+                            opacity={rect.opacity}
+                            stroke={isEraserMode ? 'rgba(255,100,100,0.8)' : (mode === 'move' ? 'rgba(255,255,100,0.8)' : 'rgba(255,255,255,0.5)')}
+                            strokeWidth={isEraserMode ? "3" : (mode === 'move' ? "2" : "1")}
+                            rx="2"
+                            onClick={isEraserMode ? () => onRemoveRectangle?.(rect.id) : undefined}
+                            onMouseDown={mode === 'move' && !isEraserMode ? (e) => {
+                                e.stopPropagation();
+                                handleElementDragStart('rectangle', rect.id, e.clientX, e.clientY);
+                            } : undefined}
+                            style={{
+                                cursor: isEraserMode ? 'pointer' : (mode === 'move' ? 'grab' : 'default'),
+                                pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none'
+                            }}
+                            className={isEraserMode ? 'hover:opacity-60 transition-opacity' : ''}
                         />
                     ))}
 
@@ -377,10 +579,26 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             opacity="0.6"
                         />
                     )}
+
+                    {/* Rectangle being drawn */}
+                    {isDrawingRect && currentRect && currentRect.startX !== undefined && (
+                        <rect
+                            x={`${Math.min(currentRect.startX, currentRect.endX ?? 0)}%`}
+                            y={`${Math.min(currentRect.startY!, currentRect.endY ?? 0)}%`}
+                            width={`${Math.abs((currentRect.endX ?? 0) - (currentRect.startX ?? 0))}%`}
+                            height={`${Math.abs((currentRect.endY ?? 0) - (currentRect.startY ?? 0))}%`}
+                            fill={rectangleColor}
+                            opacity="0.4"
+                            stroke="rgba(255,255,255,0.7)"
+                            strokeWidth="2"
+                            strokeDasharray="5,5"
+                            rx="2"
+                        />
+                    )}
                 </svg>
 
                 {/* Players Layer */}
-                <div className={`absolute inset-0 z-20 ${mode === 'draw' ? 'pointer-events-none' : ''}`}>
+                <div className={`absolute inset-0 z-20 ${mode === 'draw' || mode === 'rectangle' ? 'pointer-events-none' : ''}`}>
                     {players.map(player => {
                         const isDragging = draggingPlayer?.id === player.id;
                         const position = isDragging && tempPosition ? tempPosition : player.position;
