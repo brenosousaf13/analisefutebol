@@ -447,7 +447,8 @@ function Analysis() {
         notasCasaUpdatedAt, notasVisitanteUpdatedAt,
         homeDefensiveNotes, homeOffensiveNotes, homeBenchNotes,
         awayDefensiveNotes, awayOffensiveNotes, awayBenchNotes,
-        homeTeamColor, awayTeamColor, navigate]);
+        homeTeamColor, awayTeamColor, navigate,
+        homeRectangles, awayRectangles]);
 
     // Load existing analysis if available
     useEffect(() => {
