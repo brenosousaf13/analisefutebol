@@ -1,22 +1,53 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MatchSelection from './pages/MatchSelection';
 import Analysis from './pages/Analysis';
 import MyAnalyses from './pages/MyAnalyses';
-
-
+import Login from './pages/Login';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MatchSelection />} />
-        <Route path="/analise" element={<Analysis />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        <Route path="/analise/:id" element={<Analysis />} />
-        <Route path="/analysis/saved/:id" element={<Analysis />} />
-        <Route path="/minhas-analises" element={<MyAnalyses />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <MatchSelection />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/analise" element={
+            <ProtectedRoute>
+              <Analysis />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/analise/:id" element={
+            <ProtectedRoute>
+              <Analysis />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/analysis/saved/:id" element={
+            <ProtectedRoute>
+              <Analysis />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/minhas-analises" element={
+            <ProtectedRoute>
+              <MyAnalyses />
+            </ProtectedRoute>
+          } />
+
+          {/* Catch all redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
