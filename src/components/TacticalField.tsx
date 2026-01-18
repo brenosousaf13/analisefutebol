@@ -598,7 +598,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 </svg>
 
                 {/* Players Layer */}
-                <div className={`absolute inset-0 z-20 ${mode === 'draw' || mode === 'rectangle' ? 'pointer-events-none' : ''}`}>
+                <div className="absolute inset-0 z-40 pointer-events-none">
                     {players.map(player => {
                         const isDragging = draggingPlayer?.id === player.id;
                         const position = isDragging && tempPosition ? tempPosition : player.position;
@@ -609,7 +609,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 className={`
                                     absolute select-none
                                     ${isDragging ? 'z-50' : 'z-10'}
-                                    ${mode === 'draw' ? '' : 'cursor-grab active:cursor-grabbing'}
+                                    ${mode === 'draw' || mode === 'rectangle' ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto'}
                                 `}
                                 style={{
                                     left: `${position.x}%`,
