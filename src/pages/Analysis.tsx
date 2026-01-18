@@ -415,6 +415,10 @@ function Analysis() {
                 homeArrowsOff: homeArrows.offensive,
                 awayArrowsDef: awayArrows.defensive,
                 awayArrowsOff: awayArrows.offensive,
+                homeRectanglesDef: homeRectangles.defensive,
+                homeRectanglesOff: homeRectangles.offensive,
+                awayRectanglesDef: awayRectangles.defensive,
+                awayRectanglesOff: awayRectangles.offensive,
                 events: events,
                 tags: []
             };
@@ -485,6 +489,15 @@ function Analysis() {
                         defensive: data.awayArrowsDef || [],
                         offensive: data.awayArrowsOff || [],
                         transition: []
+                    });
+
+                    setHomeRectangles({
+                        defensive: data.homeRectanglesDef || [],
+                        offensive: data.homeRectanglesOff || []
+                    });
+                    setAwayRectangles({
+                        defensive: data.awayRectanglesDef || [],
+                        offensive: data.awayRectanglesOff || []
                     });
 
                     setHasUnsavedChanges(false);

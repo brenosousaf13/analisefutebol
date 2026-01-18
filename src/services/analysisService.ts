@@ -1,9 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
-
-// Mock User ID (since we don't have auth yet)
-
+import type { Rectangle } from '../types/Rectangle';
 
 export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
 export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico';
@@ -40,7 +38,7 @@ export interface AnalysisData {
     awayOffensiveNotes: string;
     awayBenchNotes: string;
 
-    // Deprecated Global Notes (keeping for type safety until fully removed if needed)
+    // Deprecated Global Notes
     defensiveNotes?: string;
     offensiveNotes?: string;
 
@@ -48,7 +46,7 @@ export interface AnalysisData {
     homeTeamColor: string;
     awayTeamColor: string;
 
-    // Legacy/Phase notes (Keeping for backward compatibility or removal)
+    // Legacy/Phase notes
     homeTeamNotes: string;
     homeOffNotes: string;
     awayTeamNotes: string;
@@ -68,8 +66,13 @@ export interface AnalysisData {
     awayArrowsDef: Arrow[];
     awayArrowsOff: Arrow[];
 
+    // Rectangles
+    homeRectanglesDef: Rectangle[];
+    homeRectanglesOff: Rectangle[];
+    awayRectanglesDef: Rectangle[];
+    awayRectanglesOff: Rectangle[];
+
     // Events (stored as JSONB)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     events?: any[];
 
     tags: string[];
@@ -147,14 +150,14 @@ export const analysisService = {
                 away_offensive_notes: data.awayOffensiveNotes,
                 away_bench_notes: data.awayBenchNotes,
 
-                // Legacy global fields (saving empty or legacy if needed)
+                // Legacy global fields
                 defensive_notes: data.defensiveNotes || '',
                 offensive_notes: data.offensiveNotes || '',
 
                 home_team_color: data.homeTeamColor,
                 away_team_color: data.awayTeamColor,
 
-                // Legacy mapping (optional, or just save empty)
+                // Legacy mapping
                 home_team_notes: data.homeTeamNotes,
                 home_off_notes: data.homeOffNotes,
                 away_team_notes: data.awayTeamNotes,
@@ -186,6 +189,7 @@ export const analysisService = {
             await supabase.from('analysis_players').delete().eq('analysis_id', analysisId);
             await supabase.from('analysis_arrows').delete().eq('analysis_id', analysisId);
             await supabase.from('analysis_tags').delete().eq('analysis_id', analysisId);
+            await supabase.from('analysis_rectangles').delete().eq('analysis_id', analysisId);
 
             // Players
             const playersToInsert = [
@@ -237,6 +241,29 @@ export const analysisService = {
                 if (error) throw error;
             }
 
+            // Rectangles
+            const rectanglesToInsert = [
+                ...data.homeRectanglesDef.map(r => ({ ...r, team: 'home', variant: 'defensive' })),
+                ...data.homeRectanglesOff.map(r => ({ ...r, team: 'home', variant: 'offensive' })),
+                ...data.awayRectanglesDef.map(r => ({ ...r, team: 'away', variant: 'defensive' })),
+                ...data.awayRectanglesOff.map(r => ({ ...r, team: 'away', variant: 'offensive' }))
+            ].map((r: any) => ({
+                analysis_id: analysisId,
+                team: r.team,
+                variant: r.variant,
+                start_x: r.startX,
+                start_y: r.startY,
+                end_x: r.endX,
+                end_y: r.endY,
+                color: r.color,
+                opacity: r.opacity
+            }));
+
+            if (rectanglesToInsert.length > 0) {
+                const { error } = await supabase.from('analysis_rectangles').insert(rectanglesToInsert);
+                if (error) throw error;
+            }
+
             return analysisId;
 
         } catch (error) {
@@ -255,22 +282,18 @@ export const analysisService = {
                 home_score, away_score, created_at, updated_at, thumbnail_url
             `);
 
-        // Apply status filter
         if (filters?.status && filters.status !== 'todas') {
             query = query.eq('status', filters.status);
         }
 
-        // Apply fixtureId filter
         if (filters?.fixtureId) {
             query = query.eq('fixture_id', filters.fixtureId);
         }
 
-        // Apply search filter
         if (filters?.search) {
             query = query.or(`titulo.ilike.%${filters.search}%,home_team_name.ilike.%${filters.search}%,away_team_name.ilike.%${filters.search}%`);
         }
 
-        // Apply ordering
         const orderBy = filters?.orderBy || 'created_at';
         const orderDirection = filters?.orderDirection || 'desc';
         query = query.order(orderBy, { ascending: orderDirection === 'asc' });
@@ -308,7 +331,6 @@ export const analysisService = {
 
         if (error || !analysis) return null;
 
-        // Update ultimo_acesso
         await supabase
             .from('analyses')
             .update({ ultimo_acesso: new Date().toISOString() })
@@ -316,6 +338,7 @@ export const analysisService = {
 
         const { data: players } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
         const { data: arrows } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
+        const { data: rectangles } = await supabase.from('analysis_rectangles').select('*').eq('analysis_id', id);
 
         const homePlayersDef: Player[] = [];
         const homePlayersOff: Player[] = [];
@@ -361,6 +384,25 @@ export const analysisService = {
             }
         });
 
+        const homeRectanglesDef: Rectangle[] = [];
+        const homeRectanglesOff: Rectangle[] = [];
+        const awayRectanglesDef: Rectangle[] = [];
+        const awayRectanglesOff: Rectangle[] = [];
+
+        rectangles?.forEach(r => {
+            const rectObj: Rectangle = {
+                id: r.id, startX: r.start_x, startY: r.start_y, endX: r.end_x, endY: r.end_y, color: r.color, opacity: r.opacity
+            };
+            const variant = r.variant || 'defensive';
+            if (r.team === 'home') {
+                if (variant === 'defensive') homeRectanglesDef.push(rectObj);
+                else homeRectanglesOff.push(rectObj);
+            } else {
+                if (variant === 'defensive') awayRectanglesDef.push(rectObj);
+                else awayRectanglesOff.push(rectObj);
+            }
+        });
+
         return {
             id: analysis.id,
             matchId: analysis.fixture_id,
@@ -376,13 +418,11 @@ export const analysisService = {
             awayScore: analysis.away_score,
             gameNotes: analysis.game_notes || '',
 
-            // Notes
             notasCasa: analysis.notas_casa || '',
             notasCasaUpdatedAt: analysis.notas_casa_updated_at,
             notasVisitante: analysis.notas_visitante || '',
             notasVisitanteUpdatedAt: analysis.notas_visitante_updated_at,
 
-            // New Layout Fields
             homeDefensiveNotes: analysis.home_defensive_notes || '',
             homeOffensiveNotes: analysis.home_offensive_notes || '',
             homeBenchNotes: analysis.home_bench_notes || '',
@@ -403,6 +443,7 @@ export const analysisService = {
             homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
             homeSubstitutes, awaySubstitutes,
             homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
+            homeRectanglesDef, homeRectanglesOff, awayRectanglesDef, awayRectanglesOff,
             events: analysis.events || [],
             tags: []
         };
@@ -436,7 +477,6 @@ export const analysisService = {
     },
 
     async createBlankAnalysis(tipo: AnalysisType = 'partida'): Promise<string> {
-        // Generate default players for 4-3-3 formation
         const generateDefaultPlayers = (isHome: boolean): Player[] => {
             const baseId = isHome ? 1000 : 2000;
             const positions = [
@@ -485,7 +525,6 @@ export const analysisService = {
             awayTeamNotes: '',
             awayOffNotes: '',
 
-            // New defaults
             homeDefensiveNotes: '',
             homeOffensiveNotes: '',
             homeBenchNotes: '',
@@ -499,15 +538,19 @@ export const analysisService = {
             awayTeamColor: '#3B82F6',
 
             homePlayersDef: homePlayers,
-            homePlayersOff: homePlayers.map(p => ({ ...p })), // Clone for offensive phase
+            homePlayersOff: homePlayers.map(p => ({ ...p })),
             awayPlayersDef: awayPlayers,
-            awayPlayersOff: awayPlayers.map(p => ({ ...p })), // Clone for offensive phase
+            awayPlayersOff: awayPlayers.map(p => ({ ...p })),
             homeSubstitutes: homeSubs,
             awaySubstitutes: awaySubs,
             homeArrowsDef: [],
             homeArrowsOff: [],
             awayArrowsDef: [],
             awayArrowsOff: [],
+            homeRectanglesDef: [],
+            homeRectanglesOff: [],
+            awayRectanglesDef: [],
+            awayRectanglesOff: [],
             tags: []
         };
 
