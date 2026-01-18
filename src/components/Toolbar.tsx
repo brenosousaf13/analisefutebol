@@ -9,7 +9,8 @@ import {
     Zap,
     Download,
     Save,
-    Loader2
+    Loader2,
+    UserPlus
 } from 'lucide-react';
 
 export type ToolType = 'select' | 'arrow' | 'rectangle' | 'line' | 'eraser';
@@ -22,6 +23,7 @@ interface ToolbarProps {
     onOpenEvents: () => void;
     onSave: () => void;
     onExport: () => void;
+    onAddPlayer: () => void;
     isSaving?: boolean;
     hasUnsavedChanges?: boolean;
 }
@@ -73,6 +75,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     onOpenEvents,
     onSave,
     onExport,
+    onAddPlayer,
     isSaving = false,
     hasUnsavedChanges = false
 }) => {
@@ -122,6 +125,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
             {/* Analysis & Events */}
             <div className="flex flex-col gap-1">
+                <ToolButton
+                    icon={<UserPlus className="w-5 h-5" />}
+                    label="Adicionar Jogador"
+                    onClick={onAddPlayer}
+                />
                 <ToolButton
                     icon={<FileText className="w-5 h-5" />}
                     label="Análise Tática"

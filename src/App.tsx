@@ -12,6 +12,7 @@ function App() {
         <Routes>
           <Route path="/" element={<MatchSelection />} />
           <Route path="/analise" element={<Analysis />} />
+
           <Route path="/analise/:id" element={<Analysis />} />
           <Route path="/analysis/saved/:id" element={<Analysis />} />
           <Route path="/minhas-analises" element={<MyAnalyses />} />

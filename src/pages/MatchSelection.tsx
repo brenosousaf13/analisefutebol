@@ -1,352 +1,271 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    getLiveFixtures,
-    getFixturesByDate,
-    getCountries,
-    getLeagues,
-    type Fixture,
-    type Country,
-    type League
-} from '../services/apiFootball';
-import { Calendar, Search, Globe, Trophy } from 'lucide-react';
-import AnalysisLayout from '../layouts/AnalysisLayout';
+import { getLiveFixtures, getFixturesByDate, type Fixture } from '../services/apiFootball';
+import { Calendar, PlayCircle, Trophy, Layers, Edit3, PlusCircle } from 'lucide-react';
+import MatchDetailsModal from '../components/MatchDetailsModal';
 
-type Tab = 'live' | 'finished' | 'scheduled';
-
-function MatchSelection() {
+const MatchesPage: React.FC = () => {
     const navigate = useNavigate();
-    const [fixtures, setFixtures] = useState<Fixture[]>([]);
+
+    // Tabs state
+    const [activeTab, setActiveTab] = useState<'api' | 'custom'>('api');
+
+    // API Matches State
+    const [matches, setMatches] = useState<Fixture[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState<'live' | 'today'>('live');
+    const [selectedMatch, setSelectedMatch] = useState<Fixture | null>(null);
 
-    const [activeTab, setActiveTab] = useState<Tab>('live');
+    // Custom Match State
+    const [customHome, setCustomHome] = useState('');
+    const [customAway, setCustomAway] = useState('');
+    const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // Date State
-    const getYesterday = () => {
-        const date = new Date();
-        date.setDate(date.getDate() - 1);
-        return date.toISOString().split('T')[0];
-    };
-    const getToday = () => new Date().toISOString().split('T')[0];
-    const [selectedDate, setSelectedDate] = useState<string>(getToday());
+    // Get today's date in YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
 
-    // Filters State
-    const [countries, setCountries] = useState<Country[]>([]);
-    const [leagues, setLeagues] = useState<League[]>([]);
-    const [selectedCountry, setSelectedCountry] = useState<string>(''); // Country Name using simple string
-    const [selectedLeague, setSelectedLeague] = useState<string>(''); // League ID as string
-    const [searchTerm, setSearchTerm] = useState('');
-
-    // Pagination
-    const PAGE_SIZE = 50;
-    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-    // Initial Data Fetch (Countries)
     useEffect(() => {
-        getCountries().then(setCountries).catch(console.error);
-    }, []);
-
-    // Fetch Leagues when Country changes
-    useEffect(() => {
-        if (selectedCountry) {
-            getLeagues(selectedCountry).then(setLeagues).catch(console.error);
-        } else {
-            setLeagues([]);
+        if (activeTab === 'api') {
+            fetchMatches();
         }
-        setSelectedLeague('');
-    }, [selectedCountry]);
+    }, [activeFilter, activeTab]);
 
-    const fetchGames = async () => {
+    const fetchMatches = async () => {
+        setLoading(true);
         try {
-            setLoading(true);
-            setError(null);
-            setFixtures([]);
-
-            // Reset pagination
-            setVisibleCount(PAGE_SIZE);
-
             let data: Fixture[] = [];
-
-            if (activeTab === 'live') {
+            if (activeFilter === 'live') {
                 data = await getLiveFixtures();
             } else {
-                const allGames = await getFixturesByDate(selectedDate);
-
-                if (activeTab === 'finished') {
-                    const finishedStatuses = ['FT', 'AET', 'PEN'];
-                    data = allGames.filter((f) => finishedStatuses.includes(f.fixture.status.short));
-                } else if (activeTab === 'scheduled') {
-                    const scheduledStatuses = ['NS', 'TBD', 'Time']; // 'Time' added as it often appears for scheduled
-                    // If status is undefined, assume scheduled? Or filter strictly.
-                    // Let's stick to known scheduled statuses.
-                    data = allGames.filter((f) => scheduledStatuses.includes(f.fixture.status.short));
-                }
+                data = await getFixturesByDate(today);
             }
-
-            // Sort
-            data.sort((a, b) => a.fixture.date.localeCompare(b.fixture.date));
-
-            setFixtures(data);
-        } catch (err) {
-            setError('Falha ao carregar jogos. Verifique sua conexão ou a chave de API.');
-            console.error(err);
+            // Sort by date/time
+            data.sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
+            setMatches(data);
+        } catch (error) {
+            console.error('Error fetching matches:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    // Tab/Date Effects
-    useEffect(() => {
-        if (activeTab === 'finished') setSelectedDate(getYesterday());
-        else if (activeTab === 'scheduled') setSelectedDate(getToday());
-        // For live, date doesn't strictly matter for fetch, but good to keep state clean
-    }, [activeTab]);
+    const formatTime = (dateString: string) => {
+        return new Date(dateString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    };
 
-    // Fetch on mount or when key dependencies change
-    useEffect(() => {
-        if (activeTab !== 'live' && !selectedDate) return;
-        fetchGames();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab, selectedDate]);
+    const handleStartCustomAnalysis = (e: React.FormEvent) => {
+        e.preventDefault();
 
-    // Auto-refresh for live games
-    useEffect(() => {
-        if (activeTab !== 'live') return;
-        const interval = setInterval(fetchGames, 60000); // 1 min
-        return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab]);
+        if (!customHome.trim() || !customAway.trim()) {
+            alert('Por favor, preencha os nomes dos times.');
+            return;
+        }
 
-    // Filter Logic
-    const filteredFixtures = useMemo(() => {
-        return fixtures.filter((f) => {
-            const matchesCountry = selectedCountry ? f.league.country === selectedCountry : true;
-            const matchesLeague = selectedLeague ? f.league.id.toString() === selectedLeague : true;
-
-            const matchesSearch = searchTerm
-                ? f.teams.home.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                f.teams.away.name.toLowerCase().includes(searchTerm.toLowerCase())
-                : true;
-
-            return matchesCountry && matchesLeague && matchesSearch;
+        navigate('/analise', {
+            state: {
+                matchId: null, // Custom match
+                homeTeam: { name: customHome, logo: null },
+                awayTeam: { name: customAway, logo: null },
+                competition: { name: 'Partida Personalizada' },
+                date: customDate,
+                score: { home: 0, away: 0 }
+            }
         });
-    }, [fixtures, selectedCountry, selectedLeague, searchTerm]);
-
-    const visibleFixtures = filteredFixtures.slice(0, visibleCount);
-    const hasMore = visibleCount < filteredFixtures.length;
-
-    const handleMatchClick = (fixture: Fixture) => {
-        navigate(`/analise`, { state: { fixture } });
     };
 
     return (
-        <AnalysisLayout>
-            <div className="min-h-screen bg-gray-900 text-white">
-                <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 h-screen overflow-y-auto bg-gray-900 text-white">
+            <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold flex items-center gap-3">
+                        <Trophy className="text-accent-green w-8 h-8" />
+                        Partidas
+                    </h1>
+                    <p className="text-gray-400 mt-1">Selecione uma partida ou crie uma personalizada</p>
+                </div>
 
-                    {/* Header */}
-                    <div className="text-center space-y-2">
-                        <h1 className="text-3xl font-bold text-white tracking-tight">TODAS AS PARTIDAS</h1>
-                        <p className="text-gray-400">Selecione uma partida para analisar</p>
+                {/* Tab Switcher */}
+                <div className="flex bg-gray-800 p-1 rounded-lg self-start">
+                    <button
+                        onClick={() => setActiveTab('api')}
+                        className={`px-4 py-2 rounded-md font-medium text-sm flex items-center gap-2 transition ${activeTab === 'api'
+                            ? 'bg-panel-dark text-white shadow shadow-black/50'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                            }`}
+                    >
+                        <Trophy className="w-4 h-4" />
+                        Partidas Reais
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('custom')}
+                        className={`px-4 py-2 rounded-md font-medium text-sm flex items-center gap-2 transition ${activeTab === 'custom'
+                            ? 'bg-panel-dark text-white shadow shadow-black/50'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                            }`}
+                    >
+                        <Edit3 className="w-4 h-4" />
+                        Partida Personalizada
+                    </button>
+                </div>
+            </header>
+
+            {/* Content Area */}
+            {activeTab === 'api' ? (
+                <>
+                    {/* Filter (Live vs Today) */}
+                    <div className="mb-6 flex gap-2">
+                        <button
+                            onClick={() => setActiveFilter('live')}
+                            className={`px-4 py-2 rounded-full font-medium text-sm border flex items-center gap-2 transition ${activeFilter === 'live'
+                                ? 'bg-accent-green border-accent-green text-white shadow-lg shadow-green-900/20'
+                                : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-400 hover:text-white'
+                                }`}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${activeFilter === 'live' ? 'bg-white animate-pulse' : 'bg-gray-500'}`}></span>
+                            Ao Vivo
+                        </button>
+                        <button
+                            onClick={() => setActiveFilter('today')}
+                            className={`px-4 py-2 rounded-full font-medium text-sm border flex items-center gap-2 transition ${activeFilter === 'today'
+                                ? 'bg-accent-green border-accent-green text-white shadow-lg shadow-green-900/20'
+                                : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-400 hover:text-white'
+                                }`}
+                        >
+                            <Calendar className="w-4 h-4" />
+                            Hoje
+                        </button>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="flex justify-center">
-                        <div className="bg-panel-dark p-1.5 rounded-xl flex items-center gap-1 border border-gray-700">
-                            {(['live', 'scheduled', 'finished'] as Tab[]).map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`
-                                        relative px-8 py-3 rounded-lg text-sm font-semibold transition-all
-                                        ${activeTab === tab
-                                            ? 'bg-accent-green text-white shadow-lg'
-                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }
-                                    `}
-                                >
-                                    <span className="flex items-center gap-2">
-                                        {tab === 'live' && activeTab === 'live' && (
-                                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                        )}
-                                        {tab === 'live' ? 'Ao Vivo' : tab === 'scheduled' ? 'Agendados' : 'Encerrados'}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="flex flex-wrap items-center gap-4 bg-panel-dark p-4 rounded-xl border border-gray-700 shadow-sm">
-                        {/* Country Filter */}
-                        <div className="relative min-w-[200px]">
-                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                            <select
-                                value={selectedCountry}
-                                onChange={(e) => setSelectedCountry(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white focus:ring-1 focus:ring-accent-green focus:border-accent-green outline-none appearance-none cursor-pointer hover:border-gray-600 transition-colors"
-                            >
-                                <option value="">Todos os países</option>
-                                {countries.map(c => (
-                                    <option key={c.name} value={c.name}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* League Filter */}
-                        <div className="relative min-w-[200px]">
-                            <Trophy className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                            <select
-                                value={selectedLeague}
-                                onChange={(e) => setSelectedLeague(e.target.value)}
-                                disabled={!selectedCountry}
-                                className={`w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white focus:ring-1 focus:ring-accent-green focus:border-accent-green outline-none appearance-none cursor-pointer hover:border-gray-600 transition-colors ${!selectedCountry ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                <option value="">Todas as ligas</option>
-                                {leagues.map(l => (
-                                    <option key={l.league.id} value={l.league.id}>{l.league.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Search */}
-                        <div className="relative flex-1 min-w-[200px]">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder="Buscar time..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white focus:ring-1 focus:ring-accent-green focus:border-accent-green outline-none placeholder:text-gray-600 transition-colors"
-                            />
-                        </div>
-
-                        {/* Date Picker for Scheduled/Finished */}
-                        {activeTab !== 'live' && (
-                            <div className="relative min-w-[150px]">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                                <input
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white focus:ring-1 focus:ring-accent-green focus:border-accent-green outline-none cursor-pointer hover:border-gray-600 transition-colors"
-                                />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Result Count */}
-                    <div className="text-gray-500 text-sm font-medium pl-1">
-                        Exibindo {filteredFixtures.length} partidas
-                    </div>
-
-                    {/* Content */}
                     {loading ? (
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="h-32 bg-panel-dark rounded-xl border border-gray-700 animate-pulse" />
-                            ))}
+                        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                            <div className="w-10 h-10 border-4 border-accent-green border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p>Carregando partidas...</p>
                         </div>
-                    ) : error ? (
-                        <div className="text-center py-20 text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
-                            {error}
-                        </div>
-                    ) : visibleFixtures.length === 0 ? (
-                        <div className="text-center py-32 bg-panel-dark rounded-xl border border-gray-700 flex flex-col items-center gap-4">
-                            <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center">
-                                <Calendar className="w-8 h-8 text-gray-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-white font-bold text-lg">Nenhuma partida encontrada</h3>
-                                <p className="text-gray-500 text-sm mt-1">Tente ajustar os filtros, buscar por outra data ou termo.</p>
-                            </div>
+                    ) : matches.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 bg-gray-800/30 rounded-2xl border border-gray-700 border-dashed">
+                            <Layers className="w-12 h-12 text-gray-600 mb-4" />
+                            <p className="text-gray-400 text-lg">Nenhuma partida encontrada</p>
+                            <p className="text-gray-500 text-sm">Tente mudar o filtro ou volte mais tarde</p>
                         </div>
                     ) : (
-                        <div className="space-y-3 pb-20">
-                            {visibleFixtures.map((fixture) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {matches.map(match => (
                                 <div
-                                    key={fixture.fixture.id}
-                                    onClick={() => handleMatchClick(fixture)}
-                                    className="group bg-panel-dark border border-gray-700 rounded-xl p-5 hover:border-accent-green cursor-pointer transition-all duration-300 relative overflow-hidden"
+                                    key={match.fixture.id}
+                                    onClick={() => setSelectedMatch(match)}
+                                    className="bg-panel-dark border border-gray-700 rounded-xl p-6 hover:border-accent-green hover:shadow-lg hover:shadow-green-900/10 cursor-pointer transition group relative overflow-hidden"
                                 >
-                                    {/* Hover Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-accent-green/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                    {/* Live Badge */}
+                                    {match.fixture.status.short !== 'NS' && match.fixture.status.short !== 'FT' && (
+                                        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg animate-pulse">
+                                            LIVE • {match.fixture.status.elapsed}'
+                                        </div>
+                                    )}
 
-                                    {/* Header: Status & League */}
-                                    <div className="flex justify-between items-center mb-6 relative z-10">
-                                        <div className="flex items-center gap-2">
-                                            {fixture.fixture.status.short === 'Live' || fixture.fixture.status.short === '1H' || fixture.fixture.status.short === '2H' || fixture.fixture.status.short === 'HT' ? (
-                                                <span className="flex items-center gap-2 text-red-500 font-bold text-xs uppercase tracking-wider bg-red-500/10 px-2 py-1 rounded">
-                                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                                    AO VIVO · {fixture.fixture.status.elapsed ?? 0}'
-                                                </span>
-                                            ) : activeTab === 'scheduled' ? (
-                                                <span className="text-yellow-500 font-bold text-xs uppercase tracking-wider bg-yellow-500/10 px-2 py-1 rounded">
-                                                    ⏰ {new Date(fixture.fixture.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 font-bold text-xs uppercase tracking-wider bg-gray-700/50 px-2 py-1 rounded">
-                                                    ✓ Encerrado
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="text-gray-400 text-xs font-medium uppercase tracking-wider flex items-center gap-2">
-                                            <img src={fixture.league.flag || ''} alt="" className="w-4 h-4 object-contain opacity-50" />
-                                            {fixture.league.name}
-                                        </div>
+                                    {/* League */}
+                                    <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <span className="truncate">{match.league.name}</span>
                                     </div>
 
-                                    {/* Teams & Score */}
-                                    <div className="flex items-center justify-between px-4 sm:px-12 relative z-10">
-                                        {/* Home */}
-                                        <div className="flex items-center gap-4 flex-1 justify-end">
-                                            <span className="text-white font-bold text-lg text-right hidden sm:block">{fixture.teams.home.name}</span>
-                                            <img src={fixture.teams.home.logo} alt={fixture.teams.home.name} className="w-12 h-12 object-contain" />
+                                    {/* Teams */}
+                                    <div className="flex justify-between items-center mb-6">
+                                        <div className="flex flex-col items-center gap-2 w-1/3">
+                                            <img src={match.teams.home.logo} alt={match.teams.home.name} className="w-12 h-12 object-contain group-hover:scale-110 transition" />
+                                            <span className="text-sm font-bold text-center leading-tight line-clamp-2">{match.teams.home.name}</span>
                                         </div>
 
-                                        {/* Score / VS */}
-                                        <div className="px-8 flex flex-col items-center">
-                                            {fixture.goals.home !== null ? (
-                                                <div className="text-3xl font-bold text-white tracking-widest">
-                                                    {fixture.goals.home} - {fixture.goals.away}
+                                        <div className="flex flex-col items-center justify-center w-1/3">
+                                            {match.fixture.status.short === 'NS' ? (
+                                                <span className="text-2xl font-bold text-gray-500">{formatTime(match.fixture.date)}</span>
+                                            ) : (
+                                                <div className="text-3xl font-bold text-white tracking-widest bg-gray-800 px-3 py-1 rounded-lg">
+                                                    {match.goals.home} - {match.goals.away}
                                                 </div>
-                                            ) : (
-                                                <div className="text-2xl font-bold text-gray-600">VS</div>
                                             )}
                                         </div>
 
-                                        {/* Away */}
-                                        <div className="flex items-center gap-4 flex-1 justify-start">
-                                            <img src={fixture.teams.away.logo} alt={fixture.teams.away.name} className="w-12 h-12 object-contain" />
-                                            <span className="text-white font-bold text-lg text-left hidden sm:block">{fixture.teams.away.name}</span>
+                                        <div className="flex flex-col items-center gap-2 w-1/3">
+                                            <img src={match.teams.away.logo} alt={match.teams.away.name} className="w-12 h-12 object-contain group-hover:scale-110 transition" />
+                                            <span className="text-sm font-bold text-center leading-tight line-clamp-2">{match.teams.away.name}</span>
                                         </div>
                                     </div>
 
-                                    {/* Action Button (Visible on Hover) */}
-                                    <div className="mt-6 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0 relative z-10">
-                                        <span className="text-accent-green font-medium text-sm flex items-center gap-1">
-                                            Analisar Partida →
+                                    {/* Footer */}
+                                    <div className="text-center pt-4 border-t border-gray-700">
+                                        <span className="text-accent-green text-sm font-medium group-hover:underline">
+                                            Ver Detalhes & Analisar
                                         </span>
                                     </div>
                                 </div>
                             ))}
-
-                            {/* Load More */}
-                            {hasMore && (
-                                <button
-                                    onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-                                    className="w-full py-3 mt-4 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-colors"
-                                >
-                                    Carregar mais partidas
-                                </button>
-                            )}
                         </div>
                     )}
-                </div>
-            </div>
-        </AnalysisLayout>
-    );
-}
+                </>
+            ) : (
+                /* Custom Match Form */
+                <div className="max-w-2xl mx-auto">
+                    <form onSubmit={handleStartCustomAnalysis} className="bg-panel-dark border border-gray-700 rounded-xl p-8 shadow-2xl">
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-white mb-2">Configurar Partida Personalizada</h2>
+                            <p className="text-gray-400">Insira os detalhes do jogo para começar a análise</p>
+                        </div>
 
-export default MatchSelection;
+                        <div className="grid grid-cols-2 gap-6 mb-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Time da Casa</label>
+                                <input
+                                    type="text"
+                                    value={customHome}
+                                    onChange={(e) => setCustomHome(e.target.value)}
+                                    placeholder="Ex: Flamengo"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-accent-green focus:ring-1 focus:ring-accent-green transition"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Time Visitante</label>
+                                <input
+                                    type="text"
+                                    value={customAway}
+                                    onChange={(e) => setCustomAway(e.target.value)}
+                                    placeholder="Ex: Vasco"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-accent-green focus:ring-1 focus:ring-accent-green transition"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-8 space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Data da Partida</label>
+                            <input
+                                type="date"
+                                value={customDate}
+                                onChange={(e) => setCustomDate(e.target.value)}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-accent-green focus:ring-1 focus:ring-accent-green transition"
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="w-full bg-accent-green hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-green-900/20 transition flex items-center justify-center gap-3 transform hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            <PlusCircle className="w-6 h-6" />
+                            Iniciar Análise
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* Modal */}
+            {selectedMatch && (
+                <MatchDetailsModal
+                    match={selectedMatch}
+                    onClose={() => setSelectedMatch(null)}
+                />
+            )}
+        </div>
+    );
+};
+
+export default MatchesPage;

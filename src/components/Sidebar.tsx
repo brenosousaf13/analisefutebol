@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, ClipboardList, FolderOpen, LogOut, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, FolderOpen, LogOut, User, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 interface SidebarProps {
@@ -17,8 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, tools }) => {
     }, [location]);
 
     const mainMenuItems = [
-        { icon: Calendar, label: 'Todas as Partidas', path: '/' },
-        { icon: ClipboardList, label: 'Análise de Partida', path: '/analise' },
+        { icon: Calendar, label: 'Partidas', path: '/' },
         { icon: FolderOpen, label: 'Minhas Análises', path: '/minhas-analises' },
     ];
 

@@ -89,6 +89,7 @@ export interface SavedAnalysisSummary {
 export interface AnalysisFilters {
     status?: AnalysisStatus | 'todas';
     search?: string;
+    fixtureId?: number;
     orderBy?: 'created_at' | 'updated_at' | 'titulo';
     orderDirection?: 'asc' | 'desc';
 }
@@ -234,6 +235,11 @@ export const analysisService = {
         // Apply status filter
         if (filters?.status && filters.status !== 'todas') {
             query = query.eq('status', filters.status);
+        }
+
+        // Apply fixtureId filter
+        if (filters?.fixtureId) {
+            query = query.eq('fixture_id', filters.fixtureId);
         }
 
         // Apply search filter

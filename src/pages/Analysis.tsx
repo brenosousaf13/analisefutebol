@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -14,7 +14,7 @@ import AnalysisSidebar from '../components/AnalysisSidebar';
 import EventsSidebar from '../components/EventsSidebar';
 
 import { homeTeamPlayers as initialHomePlayers, awayTeamPlayers as initialAwayPlayers } from '../data/mockData';
-import { getMatchLineups, type Lineup, type LineupPlayer, type Fixture } from '../services/apiFootball';
+import { getMatchLineups, type Lineup, type LineupPlayer } from '../services/apiFootball';
 import { analysisService } from '../services/analysisService';
 import type { Player } from '../types/Player';
 
@@ -30,12 +30,27 @@ import BenchArea from '../components/BenchArea';
 
 
 function Analysis() {
+    const navigate = useNavigate();
     const location = useLocation();
     const { id: routeAnalysisId } = useParams();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const matchState = (location.state as any)?.match as Fixture | undefined;
+    const locationState = location.state as any;
 
-    const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>(routeAnalysisId);
+    const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>(
+        routeAnalysisId === 'new' ? undefined : routeAnalysisId
+    );
+
+    // Match Info State
+    const [matchInfo, setMatchInfo] = useState({
+        matchId: locationState?.matchId,
+        homeTeam: locationState?.homeTeam?.name || 'Casa',
+        awayTeam: locationState?.awayTeam?.name || 'Visitante',
+        homeTeamLogo: locationState?.homeTeam?.logo,
+        awayTeamLogo: locationState?.awayTeam?.logo,
+        competition: locationState?.competition?.name,
+        date: locationState?.date,
+    });
+
     const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -44,22 +59,25 @@ function Analysis() {
     const [activePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
 
     // Team View State: 'home' | 'away' - Toggle to see which team's tactic
-    // Default to 'home'
     const [viewTeam, setViewTeam] = useState<'home' | 'away'>('home');
 
     // Data State
-    const [homePlayersDef, setHomePlayersDef] = useState<Player[]>(matchState ? [] : initialHomePlayers);
-    const [homePlayersOff, setHomePlayersOff] = useState<Player[]>(matchState ? [] : initialHomePlayers);
-    const [awayPlayersDef, setAwayPlayersDef] = useState<Player[]>(matchState ? [] : initialAwayPlayers);
-    const [awayPlayersOff, setAwayPlayersOff] = useState<Player[]>(matchState ? [] : initialAwayPlayers);
+    // Initial players should be empty if we are starting a new analysis (API or Custom)
+    // Only use mock data if accessing directly without state (Legacy/Fallback)
+    const shouldInitEmpty = !!locationState;
+
+    const [homePlayersDef, setHomePlayersDef] = useState<Player[]>(shouldInitEmpty ? [] : initialHomePlayers);
+    const [homePlayersOff, setHomePlayersOff] = useState<Player[]>(shouldInitEmpty ? [] : initialHomePlayers);
+    const [awayPlayersDef, setAwayPlayersDef] = useState<Player[]>(shouldInitEmpty ? [] : initialAwayPlayers);
+    const [awayPlayersOff, setAwayPlayersOff] = useState<Player[]>(shouldInitEmpty ? [] : initialAwayPlayers);
 
     // Substitutes
     const [homeSubstitutes, setHomeSubstitutes] = useState<Player[]>([]);
     const [awaySubstitutes, setAwaySubstitutes] = useState<Player[]>([]);
 
     // Scores
-    const [homeScore, setHomeScore] = useState<number>(0);
-    const [awayScore, setAwayScore] = useState<number>(0);
+    const [homeScore, setHomeScore] = useState<number>(locationState?.score?.home ?? 0);
+    const [awayScore, setAwayScore] = useState<number>(locationState?.score?.away ?? 0);
 
     // Notes
     const [gameNotes, setGameNotes] = useState('');
@@ -74,7 +92,6 @@ function Analysis() {
 
     // Timeline Events
     const [events, setEvents] = useState<MatchEvent[]>([]);
-    // deletedEventIds removed as we sync full state via JSONBModalOpen] = useState(false);
     const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
     const [isEventsExpansionModalOpen, setIsEventsExpansionModalOpen] = useState(false);
     const [eventToEdit, setEventToEdit] = useState<MatchEvent | null>(null);
@@ -149,26 +166,6 @@ function Analysis() {
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
     const [editingPlayerPhase, setEditingPlayerPhase] = useState<'defensive' | 'offensive' | null>(null);
 
-    // Global Drag State (Manual Mouse Tracking)
-    // const [globalDraggingPlayer, setGlobalDraggingPlayer] = useState<Player | null>(null);
-
-    // Responsive State
-    // const [isMobile, setIsMobile] = useState(false);
-    // const [isTablet, setIsTablet] = useState(false);
-    // const [reservesExpanded, setReservesExpanded] = useState(false);
-
-    /*
-    useEffect(() => {
-        const checkSize = () => {
-            setIsMobile(window.innerWidth < 768);
-            // setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1280);
-        };
-        checkSize();
-        window.addEventListener('resize', checkSize);
-        return () => window.removeEventListener('resize', checkSize);
-    }, []);
-    */
-
     // --- Helpers ---
     const convertLineupToPlayers = (lineup: Lineup): Player[] => {
         const players: Player[] = [];
@@ -194,9 +191,6 @@ function Analysis() {
                 // Inline Y calculation
                 let y = 90;
                 if (maxLine > 1) {
-                    // If home team (defensive at bottom), line 1 (GK) is 90.
-                    // If activePhase is ... wait, this helper is generic.
-                    // Let's assume standard intuitive visual: GK at bottom (90%), Forwards at top (20%).
                     y = 90 - (line - 1) * step;
                 }
 
@@ -222,18 +216,59 @@ function Analysis() {
 
     // Load Analysis
     useEffect(() => {
-        if (routeAnalysisId) {
+        if (routeAnalysisId && routeAnalysisId !== 'new') {
             setLoading(true);
             analysisService.getAnalysis(routeAnalysisId).then(data => {
                 if (data) {
                     setCurrentAnalysisId(data.id);
+                    // Update Match Info from Analysis Data
+                    setMatchInfo(prev => ({
+                        ...prev,
+                        matchId: data.matchId,
+                        homeTeam: data.homeTeam,
+                        awayTeam: data.awayTeam,
+                        homeTeamLogo: data.homeTeamLogo,
+                        awayTeamLogo: data.awayTeamLogo,
+                    }));
+
                     setHomePlayersDef(data.homePlayersDef);
                     setHomePlayersOff(data.homePlayersOff);
                     setAwayPlayersDef(data.awayPlayersDef);
                     setAwayPlayersOff(data.awayPlayersOff);
                     if (data.homeScore !== undefined) setHomeScore(data.homeScore);
                     if (data.awayScore !== undefined) setAwayScore(data.awayScore);
-                    // ... other fields
+
+                    setHomeSubstitutes(data.homeSubstitutes || []);
+                    setAwaySubstitutes(data.awaySubstitutes || []);
+                    setGameNotes(data.gameNotes || '');
+
+                    setNotasCasa(data.notasCasa || '');
+                    setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
+                    setNotasVisitante(data.notasVisitante || '');
+                    setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
+                    setEvents(data.events || []);
+
+                    setDefensiveNotes(data.defensiveNotes || '');
+                    setOffensiveNotes(data.offensiveNotes || '');
+                    setHomeTeamColor(data.homeTeamColor || '#EF4444');
+                    setAwayTeamColor(data.awayTeamColor || '#3B82F6');
+
+                    if (data.homeArrowsDef || data.homeArrowsOff) {
+                        setHomeArrows({
+                            defensive: data.homeArrowsDef || [],
+                            offensive: data.homeArrowsOff || [],
+                            transition: []
+                        });
+                    }
+                    if (data.awayArrowsDef || data.awayArrowsOff) {
+                        setAwayArrows({
+                            defensive: data.awayArrowsDef || [],
+                            offensive: data.awayArrowsOff || [],
+                            transition: []
+                        });
+                    }
+
+                    setHasUnsavedChanges(false);
                 }
             }).finally(() => setLoading(false));
         }
@@ -241,8 +276,8 @@ function Analysis() {
 
     // Load Lineups
     useEffect(() => {
-        if (!routeAnalysisId && matchState?.fixture.id) {
-            getMatchLineups(matchState.fixture.id).then(data => {
+        if ((!routeAnalysisId || routeAnalysisId === 'new') && matchInfo.matchId) {
+            getMatchLineups(matchInfo.matchId).then(data => {
                 if (data && data.length >= 2) {
                     const homeLineup = data[0];
                     const awayLineup = data[1];
@@ -269,10 +304,8 @@ function Analysis() {
                     }
                 }
             });
-            if (matchState.goals.home) setHomeScore(matchState.goals.home);
-            if (matchState.goals.away) setAwayScore(matchState.goals.away);
         }
-    }, [matchState, routeAnalysisId]);
+    }, [routeAnalysisId, matchInfo.matchId]);
 
 
     // --- Handlers ---
@@ -291,8 +324,6 @@ function Analysis() {
 
 
     const handlePlayerMove = (id: number, pos: { x: number, y: number }, phase: 'defensive' | 'offensive') => {
-        // targetPhase is now explicit from 'phase' argument
-
         const updateFn = viewTeam === 'home'
             ? (phase === 'defensive' ? setHomePlayersDef : setHomePlayersOff)
             : (phase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
@@ -323,8 +354,6 @@ function Analysis() {
                 if (error) throw error;
                 setAutoSaveStatus('saved');
             } else {
-                // If not created yet, we can't auto-save to DB. 
-                // We rely on the user clicking "Save Analysis" eventually.
                 setAutoSaveStatus('saved');
             }
 
@@ -335,65 +364,55 @@ function Analysis() {
     };
 
     const handleSave = useCallback(async () => {
-        // Allow save even without matchState for blank analyses
         setSaveStatus('loading');
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const data: any = {
                 id: currentAnalysisId,
-                matchId: matchState?.fixture?.id,
-                homeTeam: matchState?.teams?.home?.name || 'Time Casa',
-                awayTeam: matchState?.teams?.away?.name || 'Time Visitante',
-                homeTeamLogo: matchState?.teams?.home?.logo,
-                awayTeamLogo: matchState?.teams?.away?.logo,
+                matchId: matchInfo.matchId,
+                homeTeam: matchInfo.homeTeam,
+                awayTeam: matchInfo.awayTeam,
+                homeTeamLogo: matchInfo.homeTeamLogo,
+                awayTeamLogo: matchInfo.awayTeamLogo,
                 homeScore,
                 awayScore,
                 gameNotes,
-
                 notasCasa,
                 notasCasaUpdatedAt,
                 notasVisitante,
                 notasVisitanteUpdatedAt,
-
-                // New layout fields
                 defensiveNotes,
                 offensiveNotes,
                 homeTeamColor,
                 awayTeamColor,
-
                 homeTeamNotes,
                 homeOffNotes: '',
                 awayTeamNotes: '',
                 awayOffNotes: '',
-
                 homePlayersDef,
                 homePlayersOff,
                 awayPlayersDef,
                 awayPlayersOff,
                 homeSubstitutes,
                 awaySubstitutes,
-
                 homeArrowsDef: homeArrows.defensive,
                 homeArrowsOff: homeArrows.offensive,
                 awayArrowsDef: awayArrows.defensive,
                 awayArrowsOff: awayArrows.offensive,
-
-                events: events, // CRITICAL: Save events to JSONB column
+                events: events,
                 tags: []
             };
 
-            // DEBUG: Log data being saved
-            console.log('=== SALVANDO ANÁLISE ===');
-            console.log('Events state:', events);
-            console.log('Data to save:', data);
-
             const savedId = await analysisService.saveAnalysis(data);
-
-            setEvents(events); // Ensure local state is in sync if needed, though usually it is.
 
             setCurrentAnalysisId(savedId);
             setSaveStatus('success');
             setHasUnsavedChanges(false);
+
+            if (!currentAnalysisId) {
+                navigate(`/analise/${savedId}`, { replace: true });
+            }
+
             toast.success('Análise salva com sucesso!');
             setTimeout(() => setSaveStatus('idle'), 2000);
         } catch (error) {
@@ -403,9 +422,9 @@ function Analysis() {
         }
     }, [currentAnalysisId, homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
         homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes, notasCasa, notasVisitante,
-        homeScore, awayScore, events, matchState, homeTeamNotes,
+        homeScore, awayScore, events, matchInfo, homeTeamNotes,
         notasCasaUpdatedAt, notasVisitanteUpdatedAt,
-        defensiveNotes, offensiveNotes, homeTeamColor, awayTeamColor]);
+        defensiveNotes, offensiveNotes, homeTeamColor, awayTeamColor, navigate]);
 
     // Load existing analysis if available
     useEffect(() => {
@@ -413,7 +432,6 @@ function Analysis() {
             setLoading(true);
             analysisService.getAnalysis(currentAnalysisId).then(data => {
                 if (data) {
-                    // Load positions and basic info
                     setHomePlayersDef(data.homePlayersDef);
                     setHomePlayersOff(data.homePlayersOff);
                     setAwayPlayersDef(data.awayPlayersDef);
@@ -422,22 +440,18 @@ function Analysis() {
                     setAwaySubstitutes(data.awaySubstitutes);
                     setGameNotes(data.gameNotes);
 
-                    // Load Notes
                     setNotasCasa(data.notasCasa);
                     setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
                     setNotasVisitante(data.notasVisitante);
                     setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
 
-                    // Load New Layout Notes & Colors
                     setDefensiveNotes(data.defensiveNotes || '');
                     setOffensiveNotes(data.offensiveNotes || '');
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
 
-                    // Load Events
                     setEvents(data.events || []);
 
-                    // Load arrows for both teams
                     setHomeArrows({
                         defensive: data.homeArrowsDef || [],
                         offensive: data.homeArrowsOff || [],
@@ -449,18 +463,12 @@ function Analysis() {
                         transition: []
                     });
 
-                    // Reset unsaved changes flag after load
                     setHasUnsavedChanges(false);
                 }
                 setLoading(false);
             });
         }
     }, [currentAnalysisId]);
-
-    // Helpers need to be inside component or above.
-    // ...
-
-    // UUID import check
 
     const handleAddArrow = (arrow: Omit<Arrow, 'id'>, phase?: 'defensive' | 'offensive') => {
         const targetPhase = phase || activePhase;
@@ -481,7 +489,6 @@ function Analysis() {
         }));
     };
 
-    // Rectangle handlers
     const handleAddRectangle = (rect: Omit<import('../types/Rectangle').Rectangle, 'id'>, phase?: 'defensive' | 'offensive') => {
         const targetPhase = phase || activePhase;
         const newRect = { ...rect, id: uuidv4() };
@@ -501,7 +508,6 @@ function Analysis() {
         }));
     };
 
-    // Move handlers for arrows and rectangles
     const handleMoveArrow = (id: string, deltaX: number, deltaY: number, phase?: 'defensive' | 'offensive') => {
         const targetPhase = phase || activePhase;
         const setArrowsFn = viewTeam === 'home' ? setHomeArrows : setAwayArrows;
@@ -528,7 +534,6 @@ function Analysis() {
         }));
     };
 
-
     const handleCreatePlayer = (data: { name: string; number: number; position: string; target: 'field' | 'bench' }) => {
         const newPlayer: Player = {
             id: Date.now(),
@@ -552,16 +557,11 @@ function Analysis() {
         }
     };
 
-    // Events are now loaded as part of the main analysis object
-    // useEffect(() => { ... }) removed
-
     const handleSaveEvent = async (eventData: any) => {
         if (eventToEdit) {
-            // EDIT EXISTING
             setEvents(prev => prev.map(e => e.id === eventToEdit.id ? { ...eventData, id: e.id, analysis_id: e.analysis_id } : e));
             setEventToEdit(null);
         } else {
-            // ADD NEW
             const tempId = `temp_${Date.now()}`;
             const newEvent = {
                 ...eventData,
@@ -590,16 +590,13 @@ function Analysis() {
     };
 
     const handleBenchDoubleClick = (player: Player) => {
-        // Open edit modal for bench player
         setEditingPlayer(player);
-        setEditingPlayerPhase('defensive'); // Use defensive as default for bench players
+        setEditingPlayerPhase('defensive');
     };
 
-    // Move player from bench to field (click interaction)
     const handleMoveToField = (player: Player, targetPos?: { x: number, y: number }) => {
-        const pos = targetPos || { x: 50, y: 50 }; // Default center if click
+        const pos = targetPos || { x: 50, y: 50 };
         if (viewTeam === 'home') {
-            // Add to both phases
             setHomeSubstitutes(prev => prev.filter(p => p.id !== player.id));
             setHomePlayersDef(prev => [...prev, { ...player, position: pos }]);
             setHomePlayersOff(prev => [...prev, { ...player, position: pos }]);
@@ -609,43 +606,6 @@ function Analysis() {
             setAwayPlayersOff(prev => [...prev, { ...player, position: pos }]);
         }
     };
-
-    // Specific handlers to close over the phase
-    // Handlers removed as part of DnD refactor
-    // const handleDropOnDefensiveField = ...
-    // const handleDropOnOffensiveField = ...
-
-    // const handleDropOnFieldGeneric = ...
-    // const isFromBench = (team === 'home' && isHomeSub) || (team === 'away' && isAwaySub);
-    //
-    // if (isFromBench) {
-    //     // Promote
-    //     handleMoveToField(player, pos);
-    // } else {
-    //     // Reposition
-    //     handlePlayerMove(player.id, pos, phase);
-    // }
-
-
-    // --- Drag and Drop Handlers (Manual Mouse) ---
-    // Removed/Commented out as part of refactor
-    /*
-    const handleDragStart = (player: Player) => {
-        setGlobalDraggingPlayer(player);
-    };
-
-    const handleDragEnd = () => {
-        setGlobalDraggingPlayer(null);
-    };
-
-    // When dropping ON Bench (from Field)
-    const handleDropToBench = (player: Player) => {
-       // ... existing implementation
-        setGlobalDraggingPlayer(null);
-    };
-    */
-
-    // --- Render ---
 
     const handlePlayerClick = (player: Player) => {
         setSelectedPlayerId(player.id);
@@ -680,30 +640,23 @@ function Analysis() {
         if (!editingPlayerPhase) return;
 
         if (viewTeam === 'home') {
-            // 1. Starter -> Bench
             setHomeSubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
-
-            // 2. Bench -> Field (Replace Starter position)
             const updateField = (prev: Player[]) => prev.map(p => {
                 if (p.id === starter.id) {
                     return { ...benchPlayer, position: p.position, isStarter: true };
                 }
                 return p;
             });
-
             setHomePlayersDef(updateField);
             setHomePlayersOff(updateField);
         } else {
-            // Away Team
             setAwaySubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
-
             const updateField = (prev: Player[]) => prev.map(p => {
                 if (p.id === starter.id) {
                     return { ...benchPlayer, position: p.position, isStarter: true };
                 }
                 return p;
             });
-
             setAwayPlayersDef(updateField);
             setAwayPlayersOff(updateField);
         }
@@ -713,7 +666,6 @@ function Analysis() {
         const updatePlayerInList = (players: Player[]) =>
             players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
 
-        // Check if player is in substitutes (bench)
         const isInHomeSubs = homeSubstitutes.some(p => p.id === updatedPlayer.id);
         const isInAwaySubs = awaySubstitutes.some(p => p.id === updatedPlayer.id);
 
@@ -726,7 +678,6 @@ function Analysis() {
             return;
         }
 
-        // Player is on the field - update based on phase
         if (!editingPlayerPhase) return;
 
         if (viewTeam === 'home') {
@@ -744,12 +695,6 @@ function Analysis() {
         }
     };
 
-    // Responsive sizing for reserves
-    // const { dimensions: fieldDims } = useFieldDimensions(1.54);
-    // const standardPlayerSize = getPlayerSize(fieldDims.width || 800);
-    // const reserveSize = Math.max(30, standardPlayerSize * 0.7);
-
-    // Keyboard shortcut Ctrl+S / Cmd+S for save
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -761,9 +706,8 @@ function Analysis() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSave]);
 
-    // Detect unsaved changes
     useEffect(() => {
-        if (loading) return; // Don't mark as changed during initial load
+        if (loading) return;
         setHasUnsavedChanges(true);
     }, [
         homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
@@ -777,12 +721,12 @@ function Analysis() {
             <div className="flex flex-col h-full bg-nav-dark">
                 {/* New Match Header */}
                 <MatchHeader
-                    homeTeam={matchState?.teams.home.name || 'Casa'}
-                    awayTeam={matchState?.teams.away.name || 'Visitante'}
-                    homeTeamLogo={matchState?.teams.home.logo}
-                    awayTeamLogo={matchState?.teams.away.logo}
-                    competition={matchState?.league?.name}
-                    date={matchState?.fixture.date ? new Date(matchState.fixture.date).toLocaleDateString('pt-BR') : undefined}
+                    homeTeam={matchInfo.homeTeam}
+                    awayTeam={matchInfo.awayTeam}
+                    homeTeamLogo={matchInfo.homeTeamLogo}
+                    awayTeamLogo={matchInfo.awayTeamLogo}
+                    competition={matchInfo.competition}
+                    date={matchInfo.date ? (matchInfo.date.includes('T') ? new Date(matchInfo.date).toLocaleDateString('pt-BR') : matchInfo.date.split('-').reverse().join('/')) : undefined}
                     activeTeam={viewTeam}
                     onTeamChange={setViewTeam}
                 />
@@ -802,6 +746,7 @@ function Analysis() {
                     }}
                     onSave={handleSave}
                     onExport={handleExport}
+                    onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
                     isSaving={saveStatus === 'loading'}
                     hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
                 />
@@ -905,8 +850,8 @@ function Analysis() {
             <NotesModal
                 isOpen={isNotesModalOpen}
                 onClose={() => setIsNotesModalOpen(false)}
-                homeTeamName={matchState?.teams.home.name || 'Casa'}
-                awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                homeTeamName={matchInfo.homeTeam}
+                awayTeamName={matchInfo.awayTeam}
                 homeNotes={notasCasa}
                 awayNotes={notasVisitante}
                 homeUpdatedAt={notasCasaUpdatedAt}
@@ -919,8 +864,8 @@ function Analysis() {
                 isOpen={isAddEventModalOpen}
                 onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
                 onSave={handleSaveEvent}
-                homeTeamName={matchState?.teams.home.name || 'Casa'}
-                awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                homeTeamName={matchInfo.homeTeam}
+                awayTeamName={matchInfo.awayTeam}
                 homePlayers={homePlayersDef}
                 awayPlayers={awayPlayersDef}
                 homeSubstitutes={homeSubstitutes}
@@ -976,8 +921,8 @@ function Analysis() {
             <ColorPickerModal
                 isOpen={isColorPickerOpen}
                 onClose={() => setIsColorPickerOpen(false)}
-                homeTeamName={matchState?.teams.home.name || 'Casa'}
-                awayTeamName={matchState?.teams.away.name || 'Visitante'}
+                homeTeamName={matchInfo.homeTeam}
+                awayTeamName={matchInfo.awayTeam}
                 homeTeamColor={homeTeamColor}
                 awayTeamColor={awayTeamColor}
                 onHomeColorChange={setHomeTeamColor}
@@ -1017,8 +962,8 @@ function Analysis() {
                     } as MatchEvent]);
                 }}
                 onRemoveEvent={(id) => handleDeleteEvent(id)}
-                homeTeam={matchState?.teams.home.name || 'Casa'}
-                awayTeam={matchState?.teams.away.name || 'Visitante'}
+                homeTeam={matchInfo.homeTeam}
+                awayTeam={matchInfo.awayTeam}
                 homePlayers={[
                     ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef),
                     ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes)
