@@ -229,7 +229,7 @@ const Login: React.FC = () => {
 
                 {/* Content */}
                 <div className="relative z-10 p-12 flex flex-col gap-6 text-left">
-                    <div className="w-12 h-1 bg-[#00e1ff] mb-2"></div>
+                    <div className="w-12 h-1 bg-emerald-500 mb-2"></div>
                     <h1 className="text-white text-5xl xl:text-6xl font-black leading-tight tracking-tight drop-shadow-lg">
                         VITÓRIA<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-white">
@@ -240,18 +240,7 @@ const Login: React.FC = () => {
                         Análises de precisão para o jogo moderno. Acesse a plataforma de dados de futebol mais abrangente do mundo.
                     </p>
 
-                    {/* Stat decoration */}
-                    <div className="flex gap-8 pt-4 mt-4 border-t border-white/10">
-                        <div>
-                            <div className="text-emerald-500 font-bold text-2xl font-mono">98.4%</div>
-                            <div className="text-xs text-gray-400 uppercase tracking-wider">Precisão de Passe</div>
-                        </div>
-                        <div>
 
-                            <div className="text-white font-bold text-2xl font-mono">14.2<span className="text-sm align-top">km</span></div>
-                            <div className="text-xs text-gray-400 uppercase tracking-wider">Distância Percorrida</div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -267,7 +256,7 @@ const Login: React.FC = () => {
                     {/* Header */}
                     <div className="flex flex-col gap-2">
                         <div className="flex justify-center mb-6">
-                            <img src="/ZonaLogoOficial.png" alt="Zona 14" className="h-24 w-auto object-contain" />
+                            <img src="/ZonaLogoOficial.png" alt="Zona 14" className="h-20 w-auto object-contain" />
                         </div>
                         <p className="text-slate-500 text-sm">
                             {isRegistering
@@ -573,14 +562,14 @@ const Login: React.FC = () => {
                                     disabled={isLoading}
                                     className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
-                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-10 bg-emerald-950/50 transition-opacity duration-300"></div>
                                     <div className="relative flex items-center gap-2 z-10">
                                         {isLoading ? (
                                             <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
                                         ) : (
                                             <>
                                                 <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Iniciar Sessão</span>
-                                                <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
+                                                <ArrowRight className="text-white group-hover:text-emerald-500 transition-colors" size={20} />
                                             </>
                                         )}
                                     </div>
