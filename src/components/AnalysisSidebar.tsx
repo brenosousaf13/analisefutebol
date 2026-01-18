@@ -1,25 +1,57 @@
-import React from 'react';
-import { X, Shield, Swords } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Shield, Swords, Users } from 'lucide-react';
 
 interface AnalysisSidebarProps {
     isOpen: boolean;
     onClose: () => void;
-    defensiveNotes: string;
-    offensiveNotes: string;
-    onDefensiveNotesChange: (notes: string) => void;
-    onOffensiveNotesChange: (notes: string) => void;
+
+    // Team Info
+    homeTeamName: string;
+    awayTeamName: string;
+
+    // Home Notes
+    homeDefensiveNotes: string;
+    homeOffensiveNotes: string;
+    homeBenchNotes: string;
+    onHomeDefensiveNotesChange: (notes: string) => void;
+    onHomeOffensiveNotesChange: (notes: string) => void;
+    onHomeBenchNotesChange: (notes: string) => void;
+
+    // Away Notes
+    awayDefensiveNotes: string;
+    awayOffensiveNotes: string;
+    awayBenchNotes: string;
+    onAwayDefensiveNotesChange: (notes: string) => void;
+    onAwayOffensiveNotesChange: (notes: string) => void;
+    onAwayBenchNotesChange: (notes: string) => void;
+
     autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
     isOpen,
     onClose,
-    defensiveNotes,
-    offensiveNotes,
-    onDefensiveNotesChange,
-    onOffensiveNotesChange,
+    homeTeamName,
+    awayTeamName,
+
+    homeDefensiveNotes,
+    homeOffensiveNotes,
+    homeBenchNotes,
+    onHomeDefensiveNotesChange,
+    onHomeOffensiveNotesChange,
+    onHomeBenchNotesChange,
+
+    awayDefensiveNotes,
+    awayOffensiveNotes,
+    awayBenchNotes,
+    onAwayDefensiveNotesChange,
+    onAwayOffensiveNotesChange,
+    onAwayBenchNotesChange,
+
     autoSaveStatus = 'idle'
 }) => {
+    const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
+
     if (!isOpen) return null;
 
     const getStatusText = () => {
@@ -31,6 +63,8 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
         }
     };
 
+    const isHome = activeTab === 'home';
+
     return (
         <>
             {/* Overlay */}
@@ -39,13 +73,13 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                 onClick={onClose}
             />
 
-            {/* Sidebar - Full height on left */}
-            <div className="fixed left-16 top-0 bottom-0 w-[700px] max-w-[calc(100vw-80px)] bg-nav-dark z-50 flex flex-col shadow-2xl border-r border-gray-700">
+            {/* Sidebar */}
+            <div className="fixed left-16 top-0 bottom-0 w-[800px] max-w-[calc(100vw-80px)] bg-nav-dark z-50 flex flex-col shadow-2xl border-r border-gray-700">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-700 shrink-0">
                     <h2 className="text-white font-bold text-xl uppercase tracking-wide">
-                        Análise Tática por Fase
+                        Análise Tática
                     </h2>
                     <button
                         onClick={onClose}
@@ -55,47 +89,90 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     </button>
                 </div>
 
+                {/* Team Switcher Tabs */}
+                <div className="px-6 pt-4 pb-0 flex gap-2 border-b border-gray-700">
+                    <button
+                        onClick={() => setActiveTab('home')}
+                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide rounded-t-lg transition-colors border-t border-l border-r ${activeTab === 'home'
+                                ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
+                                : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
+                            }`}
+                        style={{ marginBottom: '-1px' }}
+                    >
+                        {homeTeamName}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('away')}
+                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide rounded-t-lg transition-colors border-t border-l border-r ${activeTab === 'away'
+                                ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
+                                : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
+                            }`}
+                        style={{ marginBottom: '-1px' }}
+                    >
+                        {awayTeamName}
+                    </button>
+                </div>
+
                 {/* Content with scroll */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-6 bg-panel-dark">
                     <div className="grid grid-cols-2 gap-6 h-full min-h-[500px]">
 
-                        {/* Defensive Phase */}
-                        <div className="flex flex-col">
-                            <h3 className="text-green-400 font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <Shield className="w-4 h-4" />
-                                Fase Defensiva
-                            </h3>
-
-                            <textarea
-                                value={defensiveNotes}
-                                onChange={(e) => onDefensiveNotesChange(e.target.value)}
-                                placeholder="Estratégias de marcação, posicionamento defensivo, coberturas..."
-                                className="flex-1 min-h-[400px] bg-panel-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50 placeholder-gray-500 border border-gray-700"
-                            />
+                        {/* Column 1: Defensive */}
+                        <div className="flex flex-col gap-6">
+                            <div className="flex flex-col h-full">
+                                <h3 className="text-green-400 font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Shield className="w-4 h-4" />
+                                    Fase Defensiva
+                                </h3>
+                                <textarea
+                                    value={isHome ? homeDefensiveNotes : awayDefensiveNotes}
+                                    onChange={(e) => isHome ? onHomeDefensiveNotesChange(e.target.value) : onAwayDefensiveNotesChange(e.target.value)}
+                                    placeholder={`Padrões defensivos do ${isHome ? homeTeamName : awayTeamName}...`}
+                                    className="flex-1 min-h-[250px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50 placeholder-gray-500 border border-gray-700"
+                                />
+                            </div>
                         </div>
 
-                        {/* Offensive Phase */}
-                        <div className="flex flex-col">
-                            <h3 className="text-orange-400 font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <Swords className="w-4 h-4" />
-                                Fase Ofensiva
-                            </h3>
+                        {/* Column 2: Offensive + Bench */}
+                        <div className="flex flex-col gap-6">
 
-                            <textarea
-                                value={offensiveNotes}
-                                onChange={(e) => onOffensiveNotesChange(e.target.value)}
-                                placeholder="Estratégias de ataque, movimentações, jogadas ensaiadas..."
-                                className="flex-1 min-h-[400px] bg-panel-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 border border-gray-700"
-                            />
+                            {/* Offensive */}
+                            <div className="flex flex-col h-1/2">
+                                <h3 className="text-orange-400 font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Swords className="w-4 h-4" />
+                                    Fase Ofensiva
+                                </h3>
+                                <textarea
+                                    value={isHome ? homeOffensiveNotes : awayOffensiveNotes}
+                                    onChange={(e) => isHome ? onHomeOffensiveNotesChange(e.target.value) : onAwayOffensiveNotesChange(e.target.value)}
+                                    placeholder={`Padrões ofensivos do ${isHome ? homeTeamName : awayTeamName}...`}
+                                    className="flex-1 min-h-[200px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 border border-gray-700"
+                                />
+                            </div>
+
+                            {/* Bench / Reserves / General */}
+                            <div className="flex flex-col h-1/2">
+                                <h3 className="text-blue-400 font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Users className="w-4 h-4" />
+                                    Reservas / Observações
+                                </h3>
+                                <textarea
+                                    value={isHome ? homeBenchNotes : awayBenchNotes}
+                                    onChange={(e) => isHome ? onHomeBenchNotesChange(e.target.value) : onAwayBenchNotesChange(e.target.value)}
+                                    placeholder={`Observações sobre reservas ou geral do ${isHome ? homeTeamName : awayTeamName}...`}
+                                    className="flex-1 min-h-[150px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder-gray-500 border border-gray-700"
+                                />
+                            </div>
+
                         </div>
                     </div>
                 </div>
 
                 {/* Footer with save status */}
-                <div className="p-4 border-t border-gray-700 text-center shrink-0">
+                <div className="p-4 border-t border-gray-700 text-center shrink-0 bg-nav-dark">
                     <span className={`text-sm ${autoSaveStatus === 'error' ? 'text-red-400' :
-                            autoSaveStatus === 'saved' ? 'text-green-400' :
-                                'text-gray-500'
+                        autoSaveStatus === 'saved' ? 'text-green-400' :
+                            'text-gray-500'
                         }`}>
                         {getStatusText()}
                     </span>

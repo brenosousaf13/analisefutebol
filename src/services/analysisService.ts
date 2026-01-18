@@ -32,9 +32,17 @@ export interface AnalysisData {
     notasVisitante: string;
     notasVisitanteUpdatedAt?: string;
 
-    // Phase Notes (New Layout)
-    defensiveNotes: string;
-    offensiveNotes: string;
+    // Phase Notes (New Layout - Team Specific)
+    homeDefensiveNotes: string;
+    homeOffensiveNotes: string;
+    homeBenchNotes: string;
+    awayDefensiveNotes: string;
+    awayOffensiveNotes: string;
+    awayBenchNotes: string;
+
+    // Deprecated Global Notes (keeping for type safety until fully removed if needed)
+    defensiveNotes?: string;
+    offensiveNotes?: string;
 
     // Colors
     homeTeamColor: string;
@@ -125,9 +133,19 @@ export const analysisService = {
                 notas_visitante: data.notasVisitante,
                 notas_visitante_updated_at: data.notasVisitanteUpdatedAt,
 
-                // New layout fields
-                defensive_notes: data.defensiveNotes,
-                offensive_notes: data.offensiveNotes,
+                // New Team Specific Fields
+                home_defensive_notes: data.homeDefensiveNotes,
+                home_offensive_notes: data.homeOffensiveNotes,
+                home_bench_notes: data.homeBenchNotes,
+
+                away_defensive_notes: data.awayDefensiveNotes,
+                away_offensive_notes: data.awayOffensiveNotes,
+                away_bench_notes: data.awayBenchNotes,
+
+                // Legacy global fields (saving empty or legacy if needed)
+                defensive_notes: data.defensiveNotes || '',
+                offensive_notes: data.offensiveNotes || '',
+
                 home_team_color: data.homeTeamColor,
                 away_team_color: data.awayTeamColor,
 
@@ -360,6 +378,13 @@ export const analysisService = {
             notasVisitanteUpdatedAt: analysis.notas_visitante_updated_at,
 
             // New Layout Fields
+            homeDefensiveNotes: analysis.home_defensive_notes || '',
+            homeOffensiveNotes: analysis.home_offensive_notes || '',
+            homeBenchNotes: analysis.home_bench_notes || '',
+            awayDefensiveNotes: analysis.away_defensive_notes || '',
+            awayOffensiveNotes: analysis.away_offensive_notes || '',
+            awayBenchNotes: analysis.away_bench_notes || '',
+
             defensiveNotes: analysis.defensive_notes || '',
             offensiveNotes: analysis.offensive_notes || '',
             homeTeamColor: analysis.home_team_color || '#EF4444',
@@ -456,6 +481,13 @@ export const analysisService = {
             awayOffNotes: '',
 
             // New defaults
+            homeDefensiveNotes: '',
+            homeOffensiveNotes: '',
+            homeBenchNotes: '',
+            awayDefensiveNotes: '',
+            awayOffensiveNotes: '',
+            awayBenchNotes: '',
+
             defensiveNotes: '',
             offensiveNotes: '',
             homeTeamColor: '#EF4444',

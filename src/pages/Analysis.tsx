@@ -127,8 +127,14 @@ function Analysis() {
     const [isEventsSidebarOpen, setIsEventsSidebarOpen] = useState(false);
 
     // Phase notes for AnalysisSidebar
-    const [defensiveNotes, setDefensiveNotes] = useState('');
-    const [offensiveNotes, setOffensiveNotes] = useState('');
+    // Phase notes for AnalysisSidebar (Team Specific)
+    const [homeDefensiveNotes, setHomeDefensiveNotes] = useState('');
+    const [homeOffensiveNotes, setHomeOffensiveNotes] = useState('');
+    const [homeBenchNotes, setHomeBenchNotes] = useState('');
+
+    const [awayDefensiveNotes, setAwayDefensiveNotes] = useState('');
+    const [awayOffensiveNotes, setAwayOffensiveNotes] = useState('');
+    const [awayBenchNotes, setAwayBenchNotes] = useState('');
 
     // Rectangle state - separated by team and phase
     const [homeRectangles, setHomeRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
@@ -248,8 +254,13 @@ function Analysis() {
                     setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
                     setEvents(data.events || []);
 
-                    setDefensiveNotes(data.defensiveNotes || '');
-                    setOffensiveNotes(data.offensiveNotes || '');
+                    setHomeDefensiveNotes(data.homeDefensiveNotes || '');
+                    setHomeOffensiveNotes(data.homeOffensiveNotes || '');
+                    setHomeBenchNotes(data.homeBenchNotes || '');
+
+                    setAwayDefensiveNotes(data.awayDefensiveNotes || '');
+                    setAwayOffensiveNotes(data.awayOffensiveNotes || '');
+                    setAwayBenchNotes(data.awayBenchNotes || '');
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
 
@@ -381,8 +392,13 @@ function Analysis() {
                 notasCasaUpdatedAt,
                 notasVisitante,
                 notasVisitanteUpdatedAt,
-                defensiveNotes,
-                offensiveNotes,
+                homeDefensiveNotes,
+                homeOffensiveNotes,
+                homeBenchNotes,
+
+                awayDefensiveNotes,
+                awayOffensiveNotes,
+                awayBenchNotes,
                 homeTeamColor,
                 awayTeamColor,
                 homeTeamNotes,
@@ -424,7 +440,10 @@ function Analysis() {
         homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes, notasCasa, notasVisitante,
         homeScore, awayScore, events, matchInfo, homeTeamNotes,
         notasCasaUpdatedAt, notasVisitanteUpdatedAt,
-        defensiveNotes, offensiveNotes, homeTeamColor, awayTeamColor, navigate]);
+        notasCasaUpdatedAt, notasVisitanteUpdatedAt,
+        homeDefensiveNotes, homeOffensiveNotes, homeBenchNotes,
+        awayDefensiveNotes, awayOffensiveNotes, awayBenchNotes,
+        homeTeamColor, awayTeamColor, navigate]);
 
     // Load existing analysis if available
     useEffect(() => {
@@ -445,8 +464,13 @@ function Analysis() {
                     setNotasVisitante(data.notasVisitante);
                     setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
 
-                    setDefensiveNotes(data.defensiveNotes || '');
-                    setOffensiveNotes(data.offensiveNotes || '');
+                    setHomeDefensiveNotes(data.homeDefensiveNotes || '');
+                    setHomeOffensiveNotes(data.homeOffensiveNotes || '');
+                    setHomeBenchNotes(data.homeBenchNotes || '');
+
+                    setAwayDefensiveNotes(data.awayDefensiveNotes || '');
+                    setAwayOffensiveNotes(data.awayOffensiveNotes || '');
+                    setAwayBenchNotes(data.awayBenchNotes || '');
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
 
@@ -933,10 +957,23 @@ function Analysis() {
             <AnalysisSidebar
                 isOpen={isAnalysisSidebarOpen}
                 onClose={() => setIsAnalysisSidebarOpen(false)}
-                defensiveNotes={defensiveNotes}
-                offensiveNotes={offensiveNotes}
-                onDefensiveNotesChange={setDefensiveNotes}
-                onOffensiveNotesChange={setOffensiveNotes}
+                homeTeamName={matchInfo.homeTeam}
+                awayTeamName={matchInfo.awayTeam}
+
+                homeDefensiveNotes={homeDefensiveNotes}
+                homeOffensiveNotes={homeOffensiveNotes}
+                homeBenchNotes={homeBenchNotes}
+                onHomeDefensiveNotesChange={setHomeDefensiveNotes}
+                onHomeOffensiveNotesChange={setHomeOffensiveNotes}
+                onHomeBenchNotesChange={setHomeBenchNotes}
+
+                awayDefensiveNotes={awayDefensiveNotes}
+                awayOffensiveNotes={awayOffensiveNotes}
+                awayBenchNotes={awayBenchNotes}
+                onAwayDefensiveNotesChange={setAwayDefensiveNotes}
+                onAwayOffensiveNotesChange={setAwayOffensiveNotes}
+                onAwayBenchNotesChange={setAwayBenchNotes}
+
                 autoSaveStatus="idle"
             />
 
@@ -965,12 +1002,12 @@ function Analysis() {
                 homeTeam={matchInfo.homeTeam}
                 awayTeam={matchInfo.awayTeam}
                 homePlayers={[
-                    ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef),
-                    ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes)
+                    ...homePlayersDef,
+                    ...homeSubstitutes
                 ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
                 awayPlayers={[
-                    ...(viewTeam === 'away' ? homePlayersDef : awayPlayersDef),
-                    ...(viewTeam === 'away' ? homeSubstitutes : awaySubstitutes)
+                    ...awayPlayersDef,
+                    ...awaySubstitutes
                 ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
             />
 
