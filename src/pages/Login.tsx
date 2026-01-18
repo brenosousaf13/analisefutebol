@@ -247,6 +247,7 @@ const Login: React.FC = () => {
                             <div className="text-xs text-gray-400 uppercase tracking-wider">Precisão de Passe</div>
                         </div>
                         <div>
+                            <h1 className="text-3xl font-bold text-white mb-2">Zona 14</h1>
                             <div className="text-white font-bold text-2xl font-mono">14.2<span className="text-sm align-top">km</span></div>
                             <div className="text-xs text-gray-400 uppercase tracking-wider">Distância Percorrida</div>
                         </div>
@@ -269,7 +270,7 @@ const Login: React.FC = () => {
                             <div className="w-8 h-8 rounded bg-[#0f2124] flex items-center justify-center text-[#00e1ff]">
                                 <Target size={20} />
                             </div>
-                            <span className="text-[#0f2124] text-xl font-bold tracking-tight">TactiQ</span>
+                            <span className="text-[#0f2124] text-xl font-bold tracking-tight">Zona 14</span>
                         </div>
                         <p className="text-slate-500 text-sm">
                             {isRegistering
