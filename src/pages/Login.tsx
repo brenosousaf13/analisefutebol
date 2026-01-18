@@ -211,7 +211,7 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row h-screen w-full bg-[#fafafa] dark:bg-[#1a1a1a] font-sans selection:bg-[#00e1ff] selection:text-black overflow-hidden">
+        <div className="flex flex-col lg:flex-row h-screen w-full bg-[#fafafa] dark:bg-[#1a1a1a] font-sans selection:bg-emerald-500 selected:text-white overflow-hidden">
             {/* Left Panel: Immersive Visual */}
             <div className="relative hidden lg:flex w-5/12 flex-col justify-end overflow-hidden bg-[#1a1a1a] group">
                 {/* Background Image */}
@@ -221,18 +221,18 @@ const Login: React.FC = () => {
                 ></div>
 
                 {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f2124] via-[#0f2124]/60 to-transparent opacity-90"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-emerald-950 via-emerald-950/60 to-transparent opacity-90"></div>
 
                 {/* Grid Pattern Overlay */}
                 <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,225,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,225,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:linear-gradient(to_bottom,transparent,black)]"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:linear-gradient(to_bottom,transparent,black)]"></div>
 
                 {/* Content */}
                 <div className="relative z-10 p-12 flex flex-col gap-6 text-left">
                     <div className="w-12 h-1 bg-[#00e1ff] mb-2"></div>
                     <h1 className="text-white text-5xl xl:text-6xl font-black leading-tight tracking-tight drop-shadow-lg">
                         VITÓRIA<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00e1ff] to-white">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-white">
                             GUIADA POR DADOS.
                         </span>
                     </h1>
@@ -243,7 +243,7 @@ const Login: React.FC = () => {
                     {/* Stat decoration */}
                     <div className="flex gap-8 pt-4 mt-4 border-t border-white/10">
                         <div>
-                            <div className="text-[#00e1ff] font-bold text-2xl font-mono">98.4%</div>
+                            <div className="text-emerald-500 font-bold text-2xl font-mono">98.4%</div>
                             <div className="text-xs text-gray-400 uppercase tracking-wider">Precisão de Passe</div>
                         </div>
                         <div>
@@ -261,7 +261,7 @@ const Login: React.FC = () => {
                 <div className="absolute inset-0 bg-white lg:bg-[#f4f7f7] -z-10"></div>
 
                 {/* Abstract decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#00e1ff]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
                 <div className="w-full max-w-[440px] flex flex-col gap-8 bg-white lg:p-10 lg:rounded-2xl lg:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] border border-transparent lg:border-slate-100 my-auto">
                     {/* Header */}
@@ -293,7 +293,7 @@ const Login: React.FC = () => {
                                 {/* Name */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Nome</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nome</span>
                                     </div>
                                     <div className="relative flex items-center">
                                         <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -303,7 +303,7 @@ const Login: React.FC = () => {
                                             name="firstName"
                                             value={formData.firstName}
                                             onChange={handleChange}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.firstName ? 'border-red-500' : 'border-slate-200'}`}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.firstName ? 'border-red-500' : 'border-slate-200'}`}
                                             placeholder="João"
                                             type="text"
                                         />
@@ -314,13 +314,13 @@ const Login: React.FC = () => {
                                 {/* Surname */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Sobrenome</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Sobrenome</span>
                                     </div>
                                     <input
                                         name="lastName"
                                         value={formData.lastName}
                                         onChange={handleChange}
-                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 px-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.lastName ? 'border-red-500' : 'border-slate-200'}`}
+                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 px-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.lastName ? 'border-red-500' : 'border-slate-200'}`}
                                         placeholder="Silva"
                                         type="text"
                                     />
@@ -330,7 +330,7 @@ const Login: React.FC = () => {
                                 {/* Birth Date */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Nascimento</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nascimento</span>
                                     </div>
                                     <div className="relative flex items-center">
                                         <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -341,7 +341,7 @@ const Login: React.FC = () => {
                                             value={formData.birthDate}
                                             onChange={handleChange}
                                             maxLength={10}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.birthDate ? 'border-red-500' : 'border-slate-200'}`}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.birthDate ? 'border-red-500' : 'border-slate-200'}`}
                                             placeholder="DD/MM/AAAA"
                                             type="text"
                                         />
@@ -352,7 +352,7 @@ const Login: React.FC = () => {
                                 {/* CPF */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">CPF</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">CPF</span>
                                     </div>
                                     <div className="relative flex items-center">
                                         <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -363,7 +363,7 @@ const Login: React.FC = () => {
                                             value={formData.cpf}
                                             onChange={handleChange}
                                             maxLength={14}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.cpf ? 'border-red-500' : 'border-slate-200'}`}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.cpf ? 'border-red-500' : 'border-slate-200'}`}
                                             placeholder="000.000.000-00"
                                             type="text"
                                         />
@@ -374,7 +374,7 @@ const Login: React.FC = () => {
                                 {/* Phone */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Celular</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Celular</span>
                                     </div>
                                     <div className="relative flex items-center">
                                         <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -385,7 +385,7 @@ const Login: React.FC = () => {
                                             value={formData.phone}
                                             onChange={handleChange}
                                             maxLength={15}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-slate-200'}`}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-slate-200'}`}
                                             placeholder="(11) 99999-9999"
                                             type="text"
                                         />
@@ -401,7 +401,7 @@ const Login: React.FC = () => {
                                 {/* Credential ID / Email */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">E-mail</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">E-mail</span>
                                     </div>
                                     <div className="relative flex items-center">
                                         <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -411,7 +411,7 @@ const Login: React.FC = () => {
                                             name="email"
                                             value={formData.email}
                                             onChange={handleChange}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
                                             placeholder="analista@clube.com"
                                             type="email"
                                         />
@@ -423,7 +423,7 @@ const Login: React.FC = () => {
                                 {isRegistering && step === 2 && (
                                     <label className="flex flex-col gap-1.5 group">
                                         <div className="flex justify-between">
-                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Confirmar E-mail</span>
+                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar E-mail</span>
                                         </div>
                                         <div className="relative flex items-center">
                                             <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -434,7 +434,7 @@ const Login: React.FC = () => {
                                                 value={formData.confirmEmail}
                                                 onChange={handleChange}
                                                 onBlur={handleBlur}
-                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.confirmEmail ? 'border-red-500' : 'border-slate-200'}`}
+                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.confirmEmail ? 'border-red-500' : 'border-slate-200'}`}
                                                 placeholder="Confirme seu e-mail"
                                                 type="email"
                                             />
@@ -446,7 +446,7 @@ const Login: React.FC = () => {
                                 {/* Secure Key / Password */}
                                 <label className="flex flex-col gap-1.5 group">
                                     <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Senha</span>
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Senha</span>
                                         {!isRegistering && (
                                             <a href="#" className="text-[11px] font-bold text-slate-400 hover:text-[#0f2124] transition-colors">ESQUECEU A SENHA?</a>
                                         )}
@@ -459,14 +459,14 @@ const Login: React.FC = () => {
                                             name="password"
                                             value={formData.password}
                                             onChange={handleChange}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm tracking-widest ${errors.password ? 'border-red-500' : 'border-slate-200'}`}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.password ? 'border-red-500' : 'border-slate-200'}`}
                                             placeholder="••••••••"
                                             type={showPassword ? "text" : "password"}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3.5 text-slate-400 hover:text-[#00e1ff] transition-colors flex items-center cursor-pointer"
+                                            className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
                                         >
                                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                         </button>
@@ -478,7 +478,7 @@ const Login: React.FC = () => {
                                 {isRegistering && step === 2 && (
                                     <label className="flex flex-col gap-1.5 group">
                                         <div className="flex justify-between">
-                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Confirmar Senha</span>
+                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar Senha</span>
                                         </div>
                                         <div className="relative flex items-center">
                                             <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
@@ -489,14 +489,14 @@ const Login: React.FC = () => {
                                                 value={formData.confirmPassword}
                                                 onChange={handleChange}
                                                 onBlur={handleBlur}
-                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm tracking-widest ${errors.confirmPassword ? 'border-red-500' : 'border-slate-200'}`}
+                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.confirmPassword ? 'border-red-500' : 'border-slate-200'}`}
                                                 placeholder="••••••••"
                                                 type={showConfirmPassword ? "text" : "password"}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute right-3.5 text-slate-400 hover:text-[#00e1ff] transition-colors flex items-center cursor-pointer"
+                                                className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
                                             >
                                                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                             </button>
@@ -512,12 +512,12 @@ const Login: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={handleNextStep}
-                                className="relative group overflow-hidden w-full h-12 rounded-lg bg-[#0f2124] hover:bg-[#152e32] transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#00e1ff]/10"
+                                className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10"
                             >
-                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-[#00e1ff] via-[#4ff] to-[#00e1ff] transition-opacity duration-300"></div>
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
                                 <div className="relative flex items-center gap-2 z-10">
-                                    <span className="text-white group-hover:text-[#0f2124] font-bold tracking-wide text-sm uppercase transition-colors">Próximo</span>
-                                    <ArrowRight className="text-[#00e1ff] group-hover:text-[#0f2124] transition-colors" size={20} />
+                                    <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Próximo</span>
+                                    <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
                                 </div>
                             </button>
                         )}
@@ -535,16 +535,16 @@ const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="relative flex-1 group overflow-hidden h-12 rounded-lg bg-[#0f2124] hover:bg-[#152e32] transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#00e1ff]/10 disabled:opacity-70 disabled:cursor-not-allowed"
+                                    className="relative flex-1 group overflow-hidden h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
-                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-[#00e1ff] via-[#4ff] to-[#00e1ff] transition-opacity duration-300"></div>
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
                                     <div className="relative flex items-center gap-2 z-10">
                                         {isLoading ? (
                                             <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
                                         ) : (
                                             <>
-                                                <span className="text-white group-hover:text-[#0f2124] font-bold tracking-wide text-sm uppercase transition-colors">Efetuar Cadastro</span>
-                                                <ArrowRight className="text-[#00e1ff] group-hover:text-[#0f2124] transition-colors" size={20} />
+                                                <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Efetuar Cadastro</span>
+                                                <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
                                             </>
                                         )}
                                     </div>
@@ -560,7 +560,7 @@ const Login: React.FC = () => {
                                         <input
                                             id="remember"
                                             type="checkbox"
-                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-[#00e1ff] checked:bg-[#00e1ff] transition-all hover:border-[#00e1ff]/50 focus:ring-2 focus:ring-[#00e1ff]/20 focus:ring-offset-1"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-emerald-600 checked:bg-emerald-600 transition-all hover:border-emerald-600/50 focus:ring-2 focus:ring-emerald-600/20 focus:ring-offset-1"
                                         />
                                         <Check className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" size={14} strokeWidth={4} />
                                     </div>
@@ -571,16 +571,16 @@ const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="relative group overflow-hidden w-full h-12 rounded-lg bg-[#0f2124] hover:bg-[#152e32] transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#00e1ff]/10 disabled:opacity-70 disabled:cursor-not-allowed"
+                                    className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
-                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-[#00e1ff] via-[#4ff] to-[#00e1ff] transition-opacity duration-300"></div>
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
                                     <div className="relative flex items-center gap-2 z-10">
                                         {isLoading ? (
                                             <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
                                         ) : (
                                             <>
-                                                <span className="text-white group-hover:text-[#0f2124] font-bold tracking-wide text-sm uppercase transition-colors">Iniciar Sessão</span>
-                                                <ArrowRight className="text-[#00e1ff] group-hover:text-[#0f2124] transition-colors" size={20} />
+                                                <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Iniciar Sessão</span>
+                                                <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
                                             </>
                                         )}
                                     </div>
@@ -595,7 +595,7 @@ const Login: React.FC = () => {
                             {isRegistering ? "Já tem uma conta de analista? " : "Não tem uma conta de analista? "}
                             <button
                                 onClick={toggleMode}
-                                className="text-[#0f2124] font-bold hover:text-[#00e1ff] transition-colors underline decoration-2 decoration-transparent hover:decoration-[#00e1ff] underline-offset-4"
+                                className="text-[#0f2124] font-bold hover:text-emerald-600 transition-colors underline decoration-2 decoration-transparent hover:decoration-[#00e1ff] underline-offset-4"
                             >
                                 {isRegistering ? "Iniciar Sessão" : "Criar Conta"}
                             </button>
