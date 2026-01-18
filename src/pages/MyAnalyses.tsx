@@ -5,7 +5,7 @@ import {
     Loader2, Trash2, Calendar, FileText, Plus, Search,
     ExternalLink, Copy, Clock, Grid, List, ChevronDown
 } from 'lucide-react';
-import AnalysisLayout from '../layouts/AnalysisLayout';
+import Header from '../components/Header';
 import NewAnalysisModal from '../components/NewAnalysisModal';
 
 type StatusFilter = AnalysisStatus | 'todas';
@@ -102,211 +102,208 @@ const MyAnalyses = () => {
     ];
 
     return (
-        <AnalysisLayout>
-            <div className="min-h-screen bg-[#0d1117]">
-                <div className="p-6 md:p-8 max-w-7xl mx-auto">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 className="text-2xl font-bold text-white">Minhas Análises</h1>
-                            <p className="text-gray-400 text-sm mt-1">Gerencie todas as suas análises táticas</p>
+        <div className="min-h-screen bg-[#0d1117] flex flex-col">
+            <Header />
+            <div className="pt-20 p-6 md:p-8 max-w-7xl mx-auto w-full flex-1 mt-16">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">Minhas Análises</h1>
+                        <p className="text-gray-400 text-sm mt-1">Gerencie todas as suas análises táticas</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar análise..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 pr-4 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-green-500 focus:outline-none"
+                            />
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            {/* Search */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar análise..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-green-500 focus:outline-none"
-                                />
-                            </div>
+                        {/* New Analysis Button */}
+                        <button
+                            onClick={() => setIsNewModalOpen(true)}
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Nova Análise
+                        </button>
+                    </div>
+                </div>
 
-                            {/* New Analysis Button */}
+                {/* Filters Row */}
+                <div className="flex items-center justify-between mb-6 bg-[#1a1f2e] rounded-xl p-2">
+                    {/* Status Tabs */}
+                    <div className="flex gap-1">
+                        {tabs.map(tab => (
                             <button
-                                onClick={() => setIsNewModalOpen(true)}
-                                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.key
+                                    ? 'bg-green-500 text-white'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                                    }`}
                             >
-                                <Plus className="w-5 h-5" />
-                                Nova Análise
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Order & View Toggle */}
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <select
+                                value={orderBy}
+                                onChange={(e) => setOrderBy(e.target.value as typeof orderBy)}
+                                className="appearance-none bg-[#242938] border border-gray-700 rounded-lg px-3 py-2 pr-8 text-sm text-gray-300 cursor-pointer"
+                            >
+                                <option value="created_at">Mais recentes</option>
+                                <option value="updated_at">Última edição</option>
+                                <option value="titulo">Alfabética (A-Z)</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+
+                        <div className="flex bg-[#242938] rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded ${viewMode === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                <Grid className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                <List className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
+                </div>
 
-                    {/* Filters Row */}
-                    <div className="flex items-center justify-between mb-6 bg-[#1a1f2e] rounded-xl p-2">
-                        {/* Status Tabs */}
-                        <div className="flex gap-1">
-                            {tabs.map(tab => (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.key
-                                        ? 'bg-green-500 text-white'
-                                        : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                                        }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
+                {/* Results Count */}
+                <p className="text-sm text-gray-500 mb-4">
+                    📊 {analyses.length} análise{analyses.length !== 1 ? 's' : ''} encontrada{analyses.length !== 1 ? 's' : ''}
+                </p>
 
-                        {/* Order & View Toggle */}
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
-                                <select
-                                    value={orderBy}
-                                    onChange={(e) => setOrderBy(e.target.value as typeof orderBy)}
-                                    className="appearance-none bg-[#242938] border border-gray-700 rounded-lg px-3 py-2 pr-8 text-sm text-gray-300 cursor-pointer"
-                                >
-                                    <option value="created_at">Mais recentes</option>
-                                    <option value="updated_at">Última edição</option>
-                                    <option value="titulo">Alfabética (A-Z)</option>
-                                </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            </div>
-
-                            <div className="flex bg-[#242938] rounded-lg p-1">
-                                <button
-                                    onClick={() => setViewMode('grid')}
-                                    className={`p-2 rounded ${viewMode === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-                                >
-                                    <Grid className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('list')}
-                                    className={`p-2 rounded ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-                                >
-                                    <List className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
+                {/* Content */}
+                {loading ? (
+                    <div className="flex justify-center items-center h-64">
+                        <Loader2 className="animate-spin text-green-500" size={48} />
                     </div>
-
-                    {/* Results Count */}
-                    <p className="text-sm text-gray-500 mb-4">
-                        📊 {analyses.length} análise{analyses.length !== 1 ? 's' : ''} encontrada{analyses.length !== 1 ? 's' : ''}
-                    </p>
-
-                    {/* Content */}
-                    {loading ? (
-                        <div className="flex justify-center items-center h-64">
-                            <Loader2 className="animate-spin text-green-500" size={48} />
+                ) : analyses.length === 0 ? (
+                    /* Empty State */
+                    <div className="flex flex-col items-center justify-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
+                        <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                            <FileText className="w-10 h-10 text-gray-600" />
                         </div>
-                    ) : analyses.length === 0 ? (
-                        /* Empty State */
-                        <div className="flex flex-col items-center justify-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
-                            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                                <FileText className="w-10 h-10 text-gray-600" />
-                            </div>
-                            <h3 className="text-xl font-semibold text-white mb-2">Nenhuma análise encontrada</h3>
-                            <p className="text-gray-400 mb-6 text-center max-w-md">
-                                Comece criando sua primeira análise tática. Você pode analisar partidas ao vivo,
-                                criar modelos táticos ou estudar adversários.
-                            </p>
-                            <button
-                                onClick={() => setIsNewModalOpen(true)}
-                                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                        <h3 className="text-xl font-semibold text-white mb-2">Nenhuma análise encontrada</h3>
+                        <p className="text-gray-400 mb-6 text-center max-w-md">
+                            Comece criando sua primeira análise tática. Você pode analisar partidas ao vivo,
+                            criar modelos táticos ou estudar adversários.
+                        </p>
+                        <button
+                            onClick={() => setIsNewModalOpen(true)}
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Criar Primeira Análise
+                        </button>
+                    </div>
+                ) : (
+                    /* Grid View */
+                    <div className={viewMode === 'grid'
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        : "flex flex-col gap-4"
+                    }>
+                        {analyses.map((analysis) => (
+                            <div
+                                key={analysis.id}
+                                onClick={() => navigate(`/analysis/saved/${analysis.id}`)}
+                                className="bg-[#1a1f2e] rounded-xl overflow-hidden border border-gray-700 hover:border-green-500/50 transition-all group cursor-pointer"
                             >
-                                <Plus className="w-5 h-5" />
-                                Criar Primeira Análise
-                            </button>
-                        </div>
-                    ) : (
-                        /* Grid View */
-                        <div className={viewMode === 'grid'
-                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                            : "flex flex-col gap-4"
-                        }>
-                            {analyses.map((analysis) => (
-                                <div
-                                    key={analysis.id}
-                                    onClick={() => navigate(`/analysis/saved/${analysis.id}`)}
-                                    className="bg-[#1a1f2e] rounded-xl overflow-hidden border border-gray-700 hover:border-green-500/50 transition-all group cursor-pointer"
-                                >
-                                    {/* Thumbnail */}
-                                    <div className="relative h-40 bg-[#2d5a3d] overflow-hidden">
-                                        {analysis.thumbnail_url ? (
-                                            <img src={analysis.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#2d5a3d] to-[#1a3a2a]">
-                                                <FileText className="w-12 h-12 text-green-500/30" />
-                                            </div>
-                                        )}
-
-                                        {/* Status Badge */}
-                                        <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${STATUS_LABELS[analysis.status]?.color || 'bg-gray-500/20 text-gray-400'
-                                            }`}>
-                                            {STATUS_LABELS[analysis.status]?.label || 'Rascunho'}
+                                {/* Thumbnail */}
+                                <div className="relative h-40 bg-[#2d5a3d] overflow-hidden">
+                                    {analysis.thumbnail_url ? (
+                                        <img src={analysis.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#2d5a3d] to-[#1a3a2a]">
+                                            <FileText className="w-12 h-12 text-green-500/30" />
                                         </div>
+                                    )}
 
-                                        {/* Hover Actions */}
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                            <button
-                                                className="p-3 bg-green-500 rounded-full hover:bg-green-600 transition-colors"
-                                                title="Abrir"
-                                                onClick={(e) => { e.stopPropagation(); navigate(`/analysis/saved/${analysis.id}`); }}
-                                            >
-                                                <ExternalLink className="w-5 h-5 text-white" />
-                                            </button>
-                                            <button
-                                                className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
-                                                title="Duplicar"
-                                                onClick={(e) => handleDuplicate(e, analysis.id)}
-                                            >
-                                                <Copy className="w-5 h-5 text-white" />
-                                            </button>
-                                            <button
-                                                className="p-3 bg-red-500/80 rounded-full hover:bg-red-500 transition-colors"
-                                                title="Excluir"
-                                                onClick={(e) => handleDelete(e, analysis.id)}
-                                            >
-                                                <Trash2 className="w-5 h-5 text-white" />
-                                            </button>
-                                        </div>
+                                    {/* Status Badge */}
+                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${STATUS_LABELS[analysis.status]?.color || 'bg-gray-500/20 text-gray-400'
+                                        }`}>
+                                        {STATUS_LABELS[analysis.status]?.label || 'Rascunho'}
                                     </div>
 
-                                    {/* Info */}
-                                    <div className="p-4">
-                                        {/* Title */}
-                                        <h3 className="font-semibold text-white truncate">{analysis.titulo}</h3>
+                                    {/* Hover Actions */}
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                        <button
+                                            className="p-3 bg-green-500 rounded-full hover:bg-green-600 transition-colors"
+                                            title="Abrir"
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/analysis/saved/${analysis.id}`); }}
+                                        >
+                                            <ExternalLink className="w-5 h-5 text-white" />
+                                        </button>
+                                        <button
+                                            className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
+                                            title="Duplicar"
+                                            onClick={(e) => handleDuplicate(e, analysis.id)}
+                                        >
+                                            <Copy className="w-5 h-5 text-white" />
+                                        </button>
+                                        <button
+                                            className="p-3 bg-red-500/80 rounded-full hover:bg-red-500 transition-colors"
+                                            title="Excluir"
+                                            onClick={(e) => handleDelete(e, analysis.id)}
+                                        >
+                                            <Trash2 className="w-5 h-5 text-white" />
+                                        </button>
+                                    </div>
+                                </div>
 
-                                        {/* Teams */}
-                                        <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
-                                            <span>{analysis.home_team_name}</span>
-                                            <span className="text-gray-600">vs</span>
-                                            <span>{analysis.away_team_name}</span>
+                                {/* Info */}
+                                <div className="p-4">
+                                    {/* Title */}
+                                    <h3 className="font-semibold text-white truncate">{analysis.titulo}</h3>
+
+                                    {/* Teams */}
+                                    <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                                        <span>{analysis.home_team_name}</span>
+                                        <span className="text-gray-600">vs</span>
+                                        <span>{analysis.away_team_name}</span>
+                                    </div>
+
+                                    {/* Meta info */}
+                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-700">
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            <span>{formatDate(analysis.created_at)}</span>
                                         </div>
 
-                                        {/* Meta info */}
-                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-700">
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <Calendar className="w-3.5 h-3.5" />
-                                                <span>{formatDate(analysis.created_at)}</span>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <Clock className="w-3.5 h-3.5" />
-                                                <span>{formatRelativeTime(analysis.updated_at)}</span>
-                                            </div>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            <span>{formatRelativeTime(analysis.updated_at)}</span>
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <NewAnalysisModal
+                    isOpen={isNewModalOpen}
+                    onClose={() => setIsNewModalOpen(false)}
+                />
             </div>
-
-            {/* New Analysis Modal */}
-            <NewAnalysisModal
-                isOpen={isNewModalOpen}
-                onClose={() => setIsNewModalOpen(false)}
-            />
-        </AnalysisLayout>
+        </div>
     );
 };
 

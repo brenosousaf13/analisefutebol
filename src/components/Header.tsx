@@ -1,124 +1,174 @@
-import React from 'react';
-import type { Fixture } from '../services/apiFootball';
-import { Menu, Save, Check, Loader2 } from 'lucide-react';
-import { useSidebar } from '../contexts/SidebarContext';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Calendar, FolderOpen, LogOut, User, Menu, X } from 'lucide-react';
 
-interface HeaderProps {
-    onReset?: () => void;
-    mode?: 'move' | 'draw';
-    onModeChange?: (mode: 'move' | 'draw') => void;
-    onClearArrows?: () => void;
-    onSave?: () => void;
-    saveStatus?: 'idle' | 'loading' | 'success';
-    match?: Fixture | null;
+interface MatchInfo {
+    homeTeam: string;
+    awayTeam: string;
+    homeTeamLogo?: string;
+    awayTeamLogo?: string;
+    competition?: string;
+    date?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({
-    onReset,
-    mode = 'move',
-    onModeChange,
-    onClearArrows,
-    onSave,
-    saveStatus = 'idle',
-    match
-}) => {
-    const { toggle } = useSidebar();
+interface HeaderProps {
+    matchInfo?: MatchInfo;
+    activeTeam?: 'home' | 'away';
+    onTeamChange?: (team: 'home' | 'away') => void;
+}
 
+const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) => {
+    const location = useLocation();
+    const [activePath, setActivePath] = useState(location.pathname);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    useEffect(() => {
+        setActivePath(location.pathname);
+    }, [location]);
+
+    const menuItems = [
+        { icon: Calendar, label: 'Partidas', path: '/' },
+        { icon: FolderOpen, label: 'Minhas Análises', path: '/minhas-analises' },
+    ];
 
     return (
-        <header className="sticky top-0 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm z-50">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-nav-dark border-b border-gray-700 flex items-center justify-between px-6 z-50 shadow-md">
+            {/* Left: Hamburger Menu */}
             <div className="flex items-center gap-4">
                 <button
-                    onClick={toggle}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700"
+                    onClick={() => setIsMenuOpen(true)}
+                    className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
                 >
                     <Menu size={24} />
                 </button>
 
-                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold text-lg cursor-pointer" onClick={() => window.location.href = '/'}>
-                    TF
-                </div>
+                {/* Optional: Show Small Logo or Title next to hamburger if NOT in match mode? 
+                    User asked to replace TF Logo with Hamburger. 
+                    But maybe we want the title "TáticaFutebol" somewhere?
+                    User said: "menu hamburger que vai ficar no lugar do TF TaticaFutebol" 
+                    I will hide the big logo branding here as requested, or keep just text if space permits.
+                    Let's strictly follow: Hamburger replaces TF Logo area.
+                */}
+            </div>
 
-                {match ? (
-                    <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-800 text-sm md:text-base">
-                            {match.teams.home.name} vs {match.teams.away.name}
+            {/* Center: Match Info (Team Names) */}
+            {matchInfo ? (
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-6">
+                    {/* Home Team */}
+                    <div className="flex items-center gap-3">
+                        <span className={`text-lg font-bold ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
+                            {matchInfo.homeTeam}
+                        </span>
+                        {matchInfo.homeTeamLogo && (
+                            <img src={matchInfo.homeTeamLogo} alt={matchInfo.homeTeam} className="w-8 h-8 object-contain" />
+                        )}
+                    </div>
+
+                    <span className="text-gray-600 text-sm font-bold">VS</span>
+
+                    {/* Away Team */}
+                    <div className="flex items-center gap-3">
+                        {matchInfo.awayTeamLogo && (
+                            <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-8 h-8 object-contain" />
+                        )}
+                        <span className={`text-lg font-bold ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
+                            {matchInfo.awayTeam}
                         </span>
                     </div>
-                ) : (
-                    <h1 className="text-lg font-bold text-gray-800 tracking-tight">Tática Futebol</h1>
+                </div>
+            ) : (
+                <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-lg tracking-wide opacity-50">
+                    TáticaFutebol
+                </h1>
+            )}
+
+            {/* Right: Team Switcher or Empty */}
+            <div className="flex items-center justify-end w-48">
+                {matchInfo && activeTeam && onTeamChange && (
+                    <div className="bg-gray-800 rounded-lg p-1 flex items-center">
+                        <button
+                            onClick={() => onTeamChange('home')}
+                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTeam === 'home'
+                                ? 'bg-accent-green text-white shadow'
+                                : 'text-gray-400 hover:text-white'
+                                }`}
+                        >
+                            CASA
+                        </button>
+                        <button
+                            onClick={() => onTeamChange('away')}
+                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTeam === 'away'
+                                ? 'bg-accent-green text-white shadow'
+                                : 'text-gray-400 hover:text-white'
+                                }`}
+                        >
+                            VISITANTE
+                        </button>
+                    </div>
                 )}
             </div>
 
-            {/* Analysis Controls - Only show if callbacks are provided */}
-            {onModeChange && onSave && onReset && (
-                <div className="flex items-center gap-4">
-                    {/* Mode Toggle */}
-                    <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
-                        <button
-                            onClick={() => onModeChange('move')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${mode === 'move'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                        >
-                            Mover
-                        </button>
-                        <button
-                            onClick={() => onModeChange('draw')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${mode === 'draw'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                        >
-                            Desenhar
-                        </button>
+            {/* Sidebar Overlay */}
+            {isMenuOpen && (
+                <div className="fixed inset-0 z-[60]">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setIsMenuOpen(false)}
+                    />
+
+                    {/* Sidebar Drawer */}
+                    <div className="absolute top-0 left-0 bottom-0 w-72 bg-panel-dark border-r border-gray-700 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+                        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+                            <h2 className="text-white font-bold text-lg">Menu</h2>
+                            <button
+                                onClick={() => setIsMenuOpen(false)}
+                                className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <nav className="flex-1 p-4 flex flex-col gap-2">
+                            {menuItems.map((item) => {
+                                const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
+                                return (
+                                    <Link
+                                        key={item.label}
+                                        to={item.path}
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium ${isActive
+                                            ? 'bg-accent-green text-white shadow-lg shadow-green-900/20'
+                                            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                            }`}
+                                    >
+                                        <item.icon size={20} />
+                                        <span>{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+
+                        <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white border border-gray-600 shrink-0">
+                                        <User size={20} />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-white text-sm font-bold truncate">Coach Breno</p>
+                                        <p className="text-xs text-gray-400 truncate">Treinador</p>
+                                    </div>
+                                </div>
+                                <button
+                                    className="p-2 text-gray-400 hover:text-red-400 transition-colors bg-gray-800 hover:bg-gray-700 rounded-lg"
+                                    title="Sair"
+                                >
+                                    <LogOut size={18} />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-
-                    <div className="h-6 w-px bg-gray-200 mx-2 hidden md:block"></div>
-
-                    {onClearArrows && (
-                        <button
-                            onClick={onClearArrows}
-                            className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors hidden md:block"
-                            title="Limpar todas as setas"
-                        >
-                            Limpar Setas
-                        </button>
-                    )}
-
-                    <button
-                        onClick={onSave}
-                        disabled={saveStatus === 'loading' || saveStatus === 'success'}
-                        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-md transition-all shadow-sm ${saveStatus === 'success'
-                            ? 'bg-green-600 cursor-default'
-                            : 'bg-green-600 hover:bg-green-700'
-                            }`}
-                    >
-                        {saveStatus === 'loading' ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Salvando...
-                            </>
-                        ) : saveStatus === 'success' ? (
-                            <>
-                                <Check size={18} />
-                                Salvo!
-                            </>
-                        ) : (
-                            <>
-                                <Save size={18} />
-                                Salvar
-                            </>
-                        )}
-                    </button>
-
-                    <button
-                        onClick={onReset}
-                        className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-md transition-colors shadow-sm"
-                    >
-                        Resetar
-                    </button>
                 </div>
             )}
         </header>

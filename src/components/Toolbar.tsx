@@ -80,7 +80,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     hasUnsavedChanges = false
 }) => {
     return (
-        <div className="fixed left-20 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-nav-dark rounded-xl p-2 shadow-2xl border border-gray-700 z-30">
+        <div className="fixed left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-nav-dark rounded-xl p-2 shadow-2xl border border-gray-700 z-30">
 
             {/* Drawing Tools */}
             <div className="flex flex-col gap-1">

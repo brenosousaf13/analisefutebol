@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
 import TacticalField from '../components/TacticalField';
-import MatchHeader from '../components/MatchHeader';
+
 import Toolbar, { type ToolType } from '../components/Toolbar';
 import ColorPickerModal from '../components/ColorPickerModal';
 import AnalysisSidebar from '../components/AnalysisSidebar';
@@ -741,272 +741,283 @@ function Analysis() {
 
 
     return (
-        <AnalysisLayout>
-            <div className="flex flex-col h-full bg-nav-dark">
-                {/* New Match Header */}
-                <MatchHeader
-                    homeTeam={matchInfo.homeTeam}
-                    awayTeam={matchInfo.awayTeam}
-                    homeTeamLogo={matchInfo.homeTeamLogo}
-                    awayTeamLogo={matchInfo.awayTeamLogo}
-                    competition={matchInfo.competition}
-                    date={matchInfo.date ? (matchInfo.date.includes('T') ? new Date(matchInfo.date).toLocaleDateString('pt-BR') : matchInfo.date.split('-').reverse().join('/')) : undefined}
-                    activeTeam={viewTeam}
-                    onTeamChange={setViewTeam}
-                />
-
-                {/* Floating Toolbar */}
-                <Toolbar
-                    activeTool={activeTool}
-                    onToolChange={handleToolChange}
-                    onOpenColorPicker={() => setIsColorPickerOpen(true)}
-                    onOpenAnalysis={() => {
-                        setIsEventsSidebarOpen(false);
-                        setIsAnalysisSidebarOpen(true);
-                    }}
-                    onOpenEvents={() => {
-                        setIsAnalysisSidebarOpen(false);
-                        setIsEventsSidebarOpen(true);
-                    }}
-                    onSave={handleSave}
-                    onExport={handleExport}
-                    onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
-                    isSaving={saveStatus === 'loading'}
-                    hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
-                />
-
-                {/* Main Content Area */}
-                <div className="flex-1 flex bg-[#242938] overflow-hidden p-4 gap-4 ml-14">
-
-                    {/* Fields Area */}
-                    <div className="flex-1 grid grid-cols-2 gap-6">
-                        {/* Defensive Field */}
-                        <div className="flex flex-col h-full">
-                            {/* Label */}
-                            <div className="text-center mb-2">
-                                <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
-                            </div>
-                            {/* Field - Direct on background, no extra wrapper */}
-                            <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
-                                <TacticalField
-                                    players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
-                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
-                                    onPlayerClick={handlePlayerClick}
-                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={getTacticalFieldMode()}
-                                    arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
-                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
-                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
-                                    rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
-                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
-                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
-                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
-                                    isEraserMode={activeTool === 'eraser'}
-                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Offensive Field */}
-                        <div className="flex flex-col h-full">
-                            {/* Label */}
-                            <div className="text-center mb-2">
-                                <span className="text-sm font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
-                            </div>
-                            {/* Field - Direct on background, no extra wrapper */}
-                            <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
-                                <TacticalField
-                                    players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
-                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
-                                    onPlayerClick={handlePlayerClick}
-                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={getTacticalFieldMode()}
-                                    arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
-                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
-                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
-                                    rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
-                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
-                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
-                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
-                                    isEraserMode={activeTool === 'eraser'}
-                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                />
-                            </div>
-                        </div>
+        <AnalysisLayout
+            matchInfo={{
+                homeTeam: matchInfo.homeTeam,
+                awayTeam: matchInfo.awayTeam,
+                homeTeamLogo: matchInfo.homeTeamLogo,
+                awayTeamLogo: matchInfo.awayTeamLogo,
+                competition: matchInfo.competition,
+                date: matchInfo.date
+            }}
+            activeTeam={viewTeam}
+            onTeamChange={setViewTeam}
+        >
+            {loading ? (
+                <div className="flex-1 flex items-center justify-center h-full bg-[#242938]">
+                    <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-10 h-10 text-accent-green animate-spin" />
+                        <span className="text-gray-400 font-medium">Carregando análise...</span>
                     </div>
                 </div>
-            </div>     {/* Reserves Bar (Bottom) */}
-            <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
-                <BenchArea
-                    players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
-                    team={viewTeam}
-                    onPromotePlayer={handleMoveToField}
-                    onPlayerDoubleClick={handleBenchDoubleClick}
-                />
-                <button
-                    onClick={() => setIsCreatePlayerModalOpen(true)}
-                    className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap shrink-0"
-                >
-                    <UserPlus size={14} />
-                    <span className="hidden md:inline">Adicionar</span>
-                </button>
-            </div>
+            ) : (
+                <>
+                    <div className="flex flex-col h-full bg-nav-dark">
 
-            {/* Modals */}
-            <CreatePlayerModal
-                isOpen={isCreatePlayerModalOpen}
-                onClose={() => setIsCreatePlayerModalOpen(false)}
-                onConfirm={handleCreatePlayer}
-                existingNumbers={[
-                    ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef).map(p => p.number),
-                    ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(p => p.number)
-                ]}
-            />
+                        {/* Floating Toolbar */}
+                        <Toolbar
+                            activeTool={activeTool}
+                            onToolChange={handleToolChange}
+                            onOpenColorPicker={() => setIsColorPickerOpen(true)}
+                            onOpenAnalysis={() => {
+                                setIsEventsSidebarOpen(false);
+                                setIsAnalysisSidebarOpen(true);
+                            }}
+                            onOpenEvents={() => {
+                                setIsAnalysisSidebarOpen(false);
+                                setIsEventsSidebarOpen(true);
+                            }}
+                            onSave={handleSave}
+                            onExport={handleExport}
+                            onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
+                            isSaving={saveStatus === 'loading'}
+                            hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
+                        />
 
-            <NotesModal
-                isOpen={isNotesModalOpen}
-                onClose={() => setIsNotesModalOpen(false)}
-                homeTeamName={matchInfo.homeTeam}
-                awayTeamName={matchInfo.awayTeam}
-                homeNotes={notasCasa}
-                awayNotes={notasVisitante}
-                homeUpdatedAt={notasCasaUpdatedAt}
-                awayUpdatedAt={notasVisitanteUpdatedAt}
-                onSave={handleNoteSave}
-                saveStatus={autoSaveStatus}
-            />
+                        {/* Main Content Area */}
+                        <div className="flex-1 flex bg-[#242938] overflow-hidden p-4 gap-4 ml-24">
 
-            <AddEventModal
-                isOpen={isAddEventModalOpen}
-                onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
-                onSave={handleSaveEvent}
-                homeTeamName={matchInfo.homeTeam}
-                awayTeamName={matchInfo.awayTeam}
-                homePlayers={homePlayersDef}
-                awayPlayers={awayPlayersDef}
-                homeSubstitutes={homeSubstitutes}
-                awaySubstitutes={awaySubstitutes}
-                initialData={eventToEdit}
-            />
+                            {/* Fields Area */}
+                            <div className="flex-1 grid grid-cols-2 gap-6">
+                                {/* Defensive Field */}
+                                <div className="flex flex-col h-full">
+                                    {/* Label */}
+                                    <div className="text-center mb-2">
+                                        <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
+                                    </div>
+                                    {/* Field - Direct on background, no extra wrapper */}
+                                    <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
+                                        <TacticalField
+                                            players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                            onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                            onPlayerClick={handlePlayerClick}
+                                            onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
+                                            selectedPlayerId={selectedPlayerId}
+                                            playerNotes={playerNotes}
+                                            mode={getTacticalFieldMode()}
+                                            arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
+                                            onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                            onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                            onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
+                                            rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
+                                            onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
+                                            onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
+                                            onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
+                                            isEraserMode={activeTool === 'eraser'}
+                                            rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                        />
+                                    </div>
+                                </div>
 
-            <EventsExpansionModal
-                isOpen={isEventsExpansionModalOpen}
-                onClose={() => setIsEventsExpansionModalOpen(false)}
-                events={events}
-                onAddEvent={handleAddEventClick}
-                onEditEvent={handleEditEventRequest}
-                onDeleteEvent={handleDeleteEvent}
-            />
+                                {/* Offensive Field */}
+                                <div className="flex flex-col h-full">
+                                    {/* Label */}
+                                    <div className="text-center mb-2">
+                                        <span className="text-sm font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
+                                    </div>
+                                    {/* Field - Direct on background, no extra wrapper */}
+                                    <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
+                                        <TacticalField
+                                            players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                            onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                            onPlayerClick={handlePlayerClick}
+                                            onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
+                                            selectedPlayerId={selectedPlayerId}
+                                            playerNotes={playerNotes}
+                                            mode={getTacticalFieldMode()}
+                                            arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
+                                            onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                            onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                            onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
+                                            rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
+                                            onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
+                                            onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
+                                            onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
+                                            isEraserMode={activeTool === 'eraser'}
+                                            rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>     {/* Reserves Bar (Bottom) */}
+                    <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
+                        <BenchArea
+                            players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
+                            team={viewTeam}
+                            onPromotePlayer={handleMoveToField}
+                            onPlayerDoubleClick={handleBenchDoubleClick}
+                        />
+                        <button
+                            onClick={() => setIsCreatePlayerModalOpen(true)}
+                            className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap shrink-0"
+                        >
+                            <UserPlus size={14} />
+                            <span className="hidden md:inline">Adicionar</span>
+                        </button>
+                    </div>
 
-            {/* Player Edit Modal */}
-            <PlayerEditModal
-                player={editingPlayer}
-                isOpen={!!editingPlayer}
-                onClose={() => {
-                    setEditingPlayer(null);
-                    setEditingPlayerPhase(null);
-                }}
-                onSave={handleSaveEditedPlayer}
-                benchPlayers={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
-                onSubstitute={handleSubstitute}
-                onSendToBench={handleSendToBench}
-            />
-            <Toaster
-                position="bottom-right"
-                toastOptions={{
-                    style: {
-                        background: '#1a1f2e',
-                        color: '#fff',
-                        border: '1px solid #374151',
-                    },
-                    success: {
-                        iconTheme: {
-                            primary: '#22c55e',
-                            secondary: '#fff',
-                        },
-                    },
-                    error: {
-                        iconTheme: {
-                            primary: '#ef4444',
-                            secondary: '#fff',
-                        },
-                    },
-                }}
-            />
-            {/* Color Picker Modal */}
-            <ColorPickerModal
-                isOpen={isColorPickerOpen}
-                onClose={() => setIsColorPickerOpen(false)}
-                homeTeamName={matchInfo.homeTeam}
-                awayTeamName={matchInfo.awayTeam}
-                homeTeamColor={homeTeamColor}
-                awayTeamColor={awayTeamColor}
-                onHomeColorChange={setHomeTeamColor}
-                onAwayColorChange={setAwayTeamColor}
-            />
+                    {/* Modals */}
+                    <CreatePlayerModal
+                        isOpen={isCreatePlayerModalOpen}
+                        onClose={() => setIsCreatePlayerModalOpen(false)}
+                        onConfirm={handleCreatePlayer}
+                        existingNumbers={[
+                            ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef).map(p => p.number),
+                            ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes).map(p => p.number)
+                        ]}
+                    />
 
-            {/* Analysis Sidebar (slides from left) */}
-            <AnalysisSidebar
-                isOpen={isAnalysisSidebarOpen}
-                onClose={() => setIsAnalysisSidebarOpen(false)}
-                homeTeamName={matchInfo.homeTeam}
-                awayTeamName={matchInfo.awayTeam}
+                    <NotesModal
+                        isOpen={isNotesModalOpen}
+                        onClose={() => setIsNotesModalOpen(false)}
+                        homeTeamName={matchInfo.homeTeam}
+                        awayTeamName={matchInfo.awayTeam}
+                        homeNotes={notasCasa}
+                        awayNotes={notasVisitante}
+                        homeUpdatedAt={notasCasaUpdatedAt}
+                        awayUpdatedAt={notasVisitanteUpdatedAt}
+                        onSave={handleNoteSave}
+                        saveStatus={autoSaveStatus}
+                    />
 
-                homeDefensiveNotes={homeDefensiveNotes}
-                homeOffensiveNotes={homeOffensiveNotes}
-                onHomeDefensiveNotesChange={setHomeDefensiveNotes}
-                onHomeOffensiveNotesChange={setHomeOffensiveNotes}
+                    <AddEventModal
+                        isOpen={isAddEventModalOpen}
+                        onClose={() => { setIsAddEventModalOpen(false); setEventToEdit(null); }}
+                        onSave={handleSaveEvent}
+                        homeTeamName={matchInfo.homeTeam}
+                        awayTeamName={matchInfo.awayTeam}
+                        homePlayers={homePlayersDef}
+                        awayPlayers={awayPlayersDef}
+                        homeSubstitutes={homeSubstitutes}
+                        awaySubstitutes={awaySubstitutes}
+                        initialData={eventToEdit}
+                    />
 
-                awayDefensiveNotes={awayDefensiveNotes}
-                awayOffensiveNotes={awayOffensiveNotes}
-                onAwayDefensiveNotesChange={setAwayDefensiveNotes}
-                onAwayOffensiveNotesChange={setAwayOffensiveNotes}
+                    <EventsExpansionModal
+                        isOpen={isEventsExpansionModalOpen}
+                        onClose={() => setIsEventsExpansionModalOpen(false)}
+                        events={events}
+                        onAddEvent={handleAddEventClick}
+                        onEditEvent={handleEditEventRequest}
+                        onDeleteEvent={handleDeleteEvent}
+                    />
 
-                autoSaveStatus="idle"
-            />
+                    {/* Player Edit Modal */}
+                    <PlayerEditModal
+                        player={editingPlayer}
+                        isOpen={!!editingPlayer}
+                        onClose={() => {
+                            setEditingPlayer(null);
+                            setEditingPlayerPhase(null);
+                        }}
+                        onSave={handleSaveEditedPlayer}
+                        benchPlayers={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
+                        onSubstitute={handleSubstitute}
+                        onSendToBench={handleSendToBench}
+                    />
+                    <Toaster
+                        position="bottom-right"
+                        toastOptions={{
+                            style: {
+                                background: '#1a1f2e',
+                                color: '#fff',
+                                border: '1px solid #374151',
+                            },
+                            success: {
+                                iconTheme: {
+                                    primary: '#22c55e',
+                                    secondary: '#fff',
+                                },
+                            },
+                            error: {
+                                iconTheme: {
+                                    primary: '#ef4444',
+                                    secondary: '#fff',
+                                },
+                            },
+                        }}
+                    />
+                    {/* Color Picker Modal */}
+                    <ColorPickerModal
+                        isOpen={isColorPickerOpen}
+                        onClose={() => setIsColorPickerOpen(false)}
+                        homeTeamName={matchInfo.homeTeam}
+                        awayTeamName={matchInfo.awayTeam}
+                        homeTeamColor={homeTeamColor}
+                        awayTeamColor={awayTeamColor}
+                        onHomeColorChange={setHomeTeamColor}
+                        onAwayColorChange={setAwayTeamColor}
+                    />
 
-            {/* Events Sidebar (slides from left) */}
-            <EventsSidebar
-                isOpen={isEventsSidebarOpen}
-                onClose={() => setIsEventsSidebarOpen(false)}
-                events={events
-                    .filter(e => ['goal', 'yellow_card', 'red_card', 'substitution', 'other'].includes(e.type))
-                    .map(e => ({
-                        id: e.id,
-                        type: e.type as 'goal' | 'yellow_card' | 'red_card' | 'substitution' | 'other',
-                        minute: e.minute,
-                        playerName: e.player_name,
-                        team: 'home' as const
-                    }))}
-                onAddEvent={(newEvent) => {
-                    setEvents(prev => [...prev, {
-                        id: uuidv4(),
-                        type: newEvent.type,
-                        minute: newEvent.minute,
-                        player_name: newEvent.playerName
-                    } as MatchEvent]);
-                }}
-                onRemoveEvent={(id) => handleDeleteEvent(id)}
-                homeTeam={matchInfo.homeTeam}
-                awayTeam={matchInfo.awayTeam}
-                homePlayers={[
-                    ...homePlayersDef,
-                    ...homeSubstitutes
-                ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
-                awayPlayers={[
-                    ...awayPlayersDef,
-                    ...awaySubstitutes
-                ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
-            />
+                    {/* Analysis Sidebar (slides from left) */}
+                    <AnalysisSidebar
+                        isOpen={isAnalysisSidebarOpen}
+                        onClose={() => setIsAnalysisSidebarOpen(false)}
+                        homeTeamName={matchInfo.homeTeam}
+                        awayTeamName={matchInfo.awayTeam}
 
+                        homeDefensiveNotes={homeDefensiveNotes}
+                        homeOffensiveNotes={homeOffensiveNotes}
+                        onHomeDefensiveNotesChange={setHomeDefensiveNotes}
+                        onHomeOffensiveNotesChange={setHomeOffensiveNotes}
+
+                        awayDefensiveNotes={awayDefensiveNotes}
+                        awayOffensiveNotes={awayOffensiveNotes}
+                        onAwayDefensiveNotesChange={setAwayDefensiveNotes}
+                        onAwayOffensiveNotesChange={setAwayOffensiveNotes}
+
+                        autoSaveStatus="idle"
+                    />
+
+                    {/* Events Sidebar (slides from left) */}
+                    <EventsSidebar
+                        isOpen={isEventsSidebarOpen}
+                        onClose={() => setIsEventsSidebarOpen(false)}
+                        events={events
+                            .filter(e => ['goal', 'yellow_card', 'red_card', 'substitution', 'other'].includes(e.type))
+                            .map(e => ({
+                                id: e.id,
+                                type: e.type as 'goal' | 'yellow_card' | 'red_card' | 'substitution' | 'other',
+                                minute: e.minute,
+                                playerName: e.player_name,
+                                team: 'home' as const
+                            }))}
+                        onAddEvent={(newEvent) => {
+                            setEvents(prev => [...prev, {
+                                id: uuidv4(),
+                                type: newEvent.type,
+                                minute: newEvent.minute,
+                                player_name: newEvent.playerName
+                            } as MatchEvent]);
+                        }}
+                        onRemoveEvent={(id) => handleDeleteEvent(id)}
+                        homeTeam={matchInfo.homeTeam}
+                        awayTeam={matchInfo.awayTeam}
+                        homePlayers={[
+                            ...homePlayersDef,
+                            ...homeSubstitutes
+                        ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
+                        awayPlayers={[
+                            ...awayPlayersDef,
+                            ...awaySubstitutes
+                        ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
+                    />
+
+                </>
+            )}
         </AnalysisLayout >
     );
 }

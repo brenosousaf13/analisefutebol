@@ -1,28 +1,39 @@
-import React, { type ReactNode, useState } from 'react';
-import Sidebar from '../components/Sidebar';
+import React, { type ReactNode } from 'react';
+import Header from '../components/Header';
+
+interface MatchInfo {
+    homeTeam: string;
+    awayTeam: string;
+    homeTeamLogo?: string;
+    awayTeamLogo?: string;
+    competition?: string;
+    date?: string;
+}
 
 interface AnalysisLayoutProps {
     children: ReactNode;
-    tools?: ReactNode;
+    matchInfo?: MatchInfo;
+    activeTeam?: 'home' | 'away';
+    onTeamChange?: (team: 'home' | 'away') => void;
 }
 
 const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     children,
-    tools
+    matchInfo,
+    activeTeam,
+    onTeamChange
 }) => {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-
     return (
-        <div className="min-h-screen bg-nav-dark flex text-gray-100 font-sans">
-            {/* Left Sidebar */}
-            <Sidebar
-                collapsed={sidebarCollapsed}
-                onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-                tools={tools}
+        <div className="min-h-screen bg-nav-dark flex flex-col text-gray-100 font-sans">
+            {/* Global Header */}
+            <Header
+                matchInfo={matchInfo}
+                activeTeam={activeTeam}
+                onTeamChange={onTeamChange}
             />
 
-            {/* Main Content Area - Now takes full remaining width */}
-            <div className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+            {/* Main Content Area - Full Width, moved down by header height */}
+            <div className="flex-1 flex flex-col pt-16 h-screen overflow-hidden">
                 <main className="flex-1 overflow-hidden p-0 relative flex flex-col">
                     {children}
                 </main>
