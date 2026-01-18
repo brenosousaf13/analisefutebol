@@ -962,17 +962,13 @@ function Analysis() {
 
                 homeDefensiveNotes={homeDefensiveNotes}
                 homeOffensiveNotes={homeOffensiveNotes}
-                homeBenchNotes={homeBenchNotes}
                 onHomeDefensiveNotesChange={setHomeDefensiveNotes}
                 onHomeOffensiveNotesChange={setHomeOffensiveNotes}
-                onHomeBenchNotesChange={setHomeBenchNotes}
 
                 awayDefensiveNotes={awayDefensiveNotes}
                 awayOffensiveNotes={awayOffensiveNotes}
-                awayBenchNotes={awayBenchNotes}
                 onAwayDefensiveNotesChange={setAwayDefensiveNotes}
                 onAwayOffensiveNotesChange={setAwayOffensiveNotes}
-                onAwayBenchNotesChange={setAwayBenchNotes}
 
                 autoSaveStatus="idle"
             />
