@@ -14,7 +14,7 @@ const Login: React.FC = () => {
 
     // Password visibility states
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmMpassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Form Data
     const [formData, setFormData] = useState({
