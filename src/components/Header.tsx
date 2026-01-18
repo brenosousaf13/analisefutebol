@@ -82,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                 </div>
             ) : (
                 <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-lg tracking-wide opacity-50">
-                    TáticaFutebol
+                    TactiQ
                 </h1>
             )}
 

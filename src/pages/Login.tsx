@@ -269,7 +269,7 @@ const Login: React.FC = () => {
                             <div className="w-8 h-8 rounded bg-[#0f2124] flex items-center justify-center text-[#00e1ff]">
                                 <Target size={20} />
                             </div>
-                            <span className="text-[#0f2124] text-xl font-bold tracking-tight">TáticaFutebol</span>
+                            <span className="text-[#0f2124] text-xl font-bold tracking-tight">TactiQ</span>
                         </div>
                         <p className="text-slate-500 text-sm">
                             {isRegistering
