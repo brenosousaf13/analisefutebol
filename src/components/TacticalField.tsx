@@ -524,21 +524,17 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             x2={`${arrow.endX}%`}
                             y2={`${arrow.endY}%`}
                             stroke="white"
-                            strokeWidth={isEraserMode ? "8" : (mode === 'move' ? "6" : "2")}
+                            strokeWidth={isEraserMode ? "4" : "2"}
                             strokeDasharray="8,5"
                             strokeLinecap="round"
                             markerEnd="url(#arrowhead)"
-                            opacity={isEraserMode ? "1" : "0.85"}
+                            opacity="0.85"
                             onClick={isEraserMode ? () => onRemoveArrow?.(arrow.id) : undefined}
-                            onMouseDown={mode === 'move' && !isEraserMode ? (e) => {
-                                e.stopPropagation();
-                                handleElementDragStart('arrow', arrow.id, e.clientX, e.clientY);
-                            } : undefined}
                             style={{
-                                cursor: isEraserMode ? 'pointer' : (mode === 'move' ? 'grab' : 'default'),
-                                pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none'
+                                cursor: isEraserMode ? 'pointer' : 'default',
+                                pointerEvents: isEraserMode ? 'auto' : 'none'
                             }}
-                            className={isEraserMode ? 'hover:stroke-red-400 transition-colors' : (mode === 'move' ? 'hover:stroke-yellow-300 transition-colors' : '')}
+                            className={isEraserMode ? 'hover:stroke-red-400 transition-colors' : ''}
                         />
                     ))}
 

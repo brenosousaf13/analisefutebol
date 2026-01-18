@@ -7,10 +7,11 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
 import TacticalField from '../components/TacticalField';
-import StatsPanel from '../components/StatsPanel';
 import MatchHeader from '../components/MatchHeader';
 import Toolbar, { type ToolType } from '../components/Toolbar';
 import ColorPickerModal from '../components/ColorPickerModal';
+import AnalysisSidebar from '../components/AnalysisSidebar';
+import EventsSidebar from '../components/EventsSidebar';
 
 import { homeTeamPlayers as initialHomePlayers, awayTeamPlayers as initialAwayPlayers } from '../data/mockData';
 import { getMatchLineups, type Lineup, type LineupPlayer, type Fixture } from '../services/apiFootball';
@@ -19,7 +20,7 @@ import type { Player } from '../types/Player';
 
 import type { Arrow } from '../types/Arrow';
 import AddEventModal from '../components/AddEventModal';
-import MatchTimeline, { type MatchEvent } from '../components/MatchTimeline';
+import { type MatchEvent } from '../components/MatchTimeline';
 import EventsExpansionModal from '../components/EventsExpansionModal';
 
 import CreatePlayerModal from '../components/CreatePlayerModal';
@@ -103,6 +104,14 @@ function Analysis() {
 
     // Modal states
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+
+    // Sidebar states (sliding panels from toolbar)
+    const [isAnalysisSidebarOpen, setIsAnalysisSidebarOpen] = useState(false);
+    const [isEventsSidebarOpen, setIsEventsSidebarOpen] = useState(false);
+
+    // Phase notes for AnalysisSidebar
+    const [defensiveNotes, setDefensiveNotes] = useState('');
+    const [offensiveNotes, setOffensiveNotes] = useState('');
 
     // Rectangle state - separated by team and phase
     const [homeRectangles, setHomeRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
@@ -751,34 +760,7 @@ function Analysis() {
 
 
     return (
-        <AnalysisLayout
-            onOpenNotes={() => setIsNotesModalOpen(true)}
-            onOpenEvents={() => setIsEventsExpansionModalOpen(true)}
-            rightPanel={
-                <StatsPanel
-                    homeScore={homeScore}
-                    awayScore={awayScore}
-                    possession={62}
-                    xg={2.14}
-                    homeTeamName={matchState?.teams.home.name || 'Casa'}
-                    awayTeamName={matchState?.teams.away.name || 'Visitante'}
-                    homeNotes={notasCasa}
-                    awayNotes={notasVisitante}
-                    homeNotesUpdatedAt={notasCasaUpdatedAt}
-                    awayNotesUpdatedAt={notasVisitanteUpdatedAt}
-                    onExpandNotes={() => setIsNotesModalOpen(true)}
-                    currentViewTeam={viewTeam}
-                    timelineComponent={
-                        <MatchTimeline
-                            events={events}
-                            onAddClick={handleAddEventClick}
-                            onDeleteEvent={handleDeleteEvent}
-                            onExpand={() => setIsEventsExpansionModalOpen(true)}
-                        />
-                    }
-                />
-            }
-        >
+        <AnalysisLayout>
             <div className="flex flex-col h-full bg-nav-dark">
                 {/* New Match Header */}
                 <MatchHeader
@@ -797,8 +779,14 @@ function Analysis() {
                     activeTool={activeTool}
                     onToolChange={handleToolChange}
                     onOpenColorPicker={() => setIsColorPickerOpen(true)}
-                    onOpenAnalysis={() => setIsNotesModalOpen(true)}
-                    onOpenEvents={() => setIsEventsExpansionModalOpen(true)}
+                    onOpenAnalysis={() => {
+                        setIsEventsSidebarOpen(false);
+                        setIsAnalysisSidebarOpen(true);
+                    }}
+                    onOpenEvents={() => {
+                        setIsAnalysisSidebarOpen(false);
+                        setIsEventsSidebarOpen(true);
+                    }}
                     onSave={handleSave}
                     onExport={handleExport}
                     isSaving={saveStatus === 'loading'}
@@ -981,6 +969,43 @@ function Analysis() {
                 awayTeamColor={awayTeamColor}
                 onHomeColorChange={setHomeTeamColor}
                 onAwayColorChange={setAwayTeamColor}
+            />
+
+            {/* Analysis Sidebar (slides from left) */}
+            <AnalysisSidebar
+                isOpen={isAnalysisSidebarOpen}
+                onClose={() => setIsAnalysisSidebarOpen(false)}
+                defensiveNotes={defensiveNotes}
+                offensiveNotes={offensiveNotes}
+                onDefensiveNotesChange={setDefensiveNotes}
+                onOffensiveNotesChange={setOffensiveNotes}
+                autoSaveStatus="idle"
+            />
+
+            {/* Events Sidebar (slides from left) */}
+            <EventsSidebar
+                isOpen={isEventsSidebarOpen}
+                onClose={() => setIsEventsSidebarOpen(false)}
+                events={events
+                    .filter(e => ['goal', 'yellow_card', 'red_card', 'substitution', 'other'].includes(e.type))
+                    .map(e => ({
+                        id: e.id,
+                        type: e.type as 'goal' | 'yellow_card' | 'red_card' | 'substitution' | 'other',
+                        minute: e.minute,
+                        playerName: e.player_name,
+                        team: 'home' as const
+                    }))}
+                onAddEvent={(newEvent) => {
+                    setEvents(prev => [...prev, {
+                        id: uuidv4(),
+                        type: newEvent.type,
+                        minute: newEvent.minute,
+                        player_name: newEvent.playerName
+                    } as MatchEvent]);
+                }}
+                onRemoveEvent={(id) => handleDeleteEvent(id)}
+                homeTeam={matchState?.teams.home.name || 'Casa'}
+                awayTeam={matchState?.teams.away.name || 'Visitante'}
             />
 
         </AnalysisLayout >
