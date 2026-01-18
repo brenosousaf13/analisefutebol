@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, FolderOpen, LogOut, User, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Calendar, FolderOpen, LogOut, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -51,9 +51,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, tools }) => {
                 {mainMenuItems.map((item) => {
                     const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
                     return (
-                        <a
+                        <Link
                             key={item.label}
-                            href={item.path}
+                            to={item.path}
                             title={collapsed ? item.label : undefined}
                             className={`flex items-center gap-3 p-3 rounded-lg transition-colors group ${isActive
                                 ? 'bg-panel-dark text-white'
@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, tools }) => {
                         >
                             <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-accent-green' : 'text-gray-400 group-hover:text-white'}`} />
                             {!collapsed && <span className="font-medium text-sm truncate">{item.label}</span>}
-                        </a>
+                        </Link>
                     );
                 })}
             </nav>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getLiveFixtures, getFixturesByDate, type Fixture } from '../services/apiFootball';
-import { Calendar, PlayCircle, Trophy, Layers, Edit3, PlusCircle } from 'lucide-react';
+import { Calendar, Trophy, Layers, Edit3, PlusCircle } from 'lucide-react';
 import MatchDetailsModal from '../components/MatchDetailsModal';
 
 const MatchesPage: React.FC = () => {
