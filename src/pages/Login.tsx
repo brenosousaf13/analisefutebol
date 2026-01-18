@@ -267,7 +267,7 @@ const Login: React.FC = () => {
                     {/* Header */}
                     <div className="flex flex-col gap-2">
                         <div className="flex justify-center mb-6">
-                            <img src="/LogoZona14.png" alt="Zona 14" className="h-24 w-auto object-contain" />
+                            <img src="/ZonaLogoOficial.png" alt="Zona 14" className="h-24 w-auto object-contain" />
                         </div>
                         <p className="text-slate-500 text-sm">
                             {isRegistering
