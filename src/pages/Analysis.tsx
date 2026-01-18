@@ -1006,6 +1006,14 @@ function Analysis() {
                 onRemoveEvent={(id) => handleDeleteEvent(id)}
                 homeTeam={matchState?.teams.home.name || 'Casa'}
                 awayTeam={matchState?.teams.away.name || 'Visitante'}
+                homePlayers={[
+                    ...(viewTeam === 'home' ? homePlayersDef : awayPlayersDef),
+                    ...(viewTeam === 'home' ? homeSubstitutes : awaySubstitutes)
+                ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
+                awayPlayers={[
+                    ...(viewTeam === 'away' ? homePlayersDef : awayPlayersDef),
+                    ...(viewTeam === 'away' ? homeSubstitutes : awaySubstitutes)
+                ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
             />
 
         </AnalysisLayout >

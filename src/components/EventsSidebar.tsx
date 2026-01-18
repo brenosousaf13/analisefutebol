@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, BellOff } from 'lucide-react';
 
+interface PlayerLite {
+    id: number;
+    name: string;
+    number: number;
+}
+
 interface MatchEvent {
     id: string;
     type: 'goal' | 'yellow_card' | 'red_card' | 'substitution' | 'other';
@@ -18,6 +24,9 @@ interface EventsSidebarProps {
     onRemoveEvent: (eventId: string) => void;
     homeTeam: string;
     awayTeam: string;
+    // Player lists for dropdown
+    homePlayers?: PlayerLite[];
+    awayPlayers?: PlayerLite[];
 }
 
 const getEventIcon = (type: MatchEvent['type']) => {
@@ -60,7 +69,9 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
     onAddEvent,
     onRemoveEvent,
     homeTeam,
-    awayTeam
+    awayTeam,
+    homePlayers = [],
+    awayPlayers = []
 }) => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [newEvent, setNewEvent] = useState<Omit<MatchEvent, 'id'>>({
@@ -70,15 +81,31 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
         description: '',
         team: 'home'
     });
+    const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
     if (!isOpen) return null;
 
+    // Get current team players
+    const currentTeamPlayers = newEvent.team === 'home' ? homePlayers : awayPlayers;
+
     const handleAdd = () => {
         if (newEvent.minute > 0) {
-            onAddEvent(newEvent);
+            // Get player name from selection if available
+            const selectedPlayer = currentTeamPlayers.find(p => p.id.toString() === selectedPlayerId);
+            const eventToAdd = {
+                ...newEvent,
+                playerName: selectedPlayer ? `${selectedPlayer.number} - ${selectedPlayer.name}` : newEvent.playerName
+            };
+            onAddEvent(eventToAdd);
             setNewEvent({ type: 'goal', minute: 0, playerName: '', description: '', team: 'home' });
+            setSelectedPlayerId('');
             setShowAddForm(false);
         }
+    };
+
+    const handleTeamChange = (team: 'home' | 'away') => {
+        setNewEvent({ ...newEvent, team });
+        setSelectedPlayerId(''); // Reset player selection when team changes
     };
 
     const sortedEvents = [...events].sort((a, b) => a.minute - b.minute);
@@ -92,7 +119,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
             />
 
             {/* Sidebar */}
-            <div className="fixed left-16 top-0 bottom-0 w-96 max-w-[calc(100vw-80px)] bg-nav-dark z-50 flex flex-col shadow-2xl border-r border-gray-700">
+            <div className="fixed left-16 top-0 bottom-0 w-[450px] max-w-[calc(100vw-80px)] bg-nav-dark z-50 flex flex-col shadow-2xl border-r border-gray-700">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-700 shrink-0">
@@ -128,67 +155,120 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
 
                     {/* Add Event Form */}
                     {showAddForm && (
-                        <div className="mt-4 bg-panel-dark rounded-lg p-4 border border-gray-700 space-y-3">
+                        <div className="mt-4 bg-panel-dark rounded-lg p-4 border border-gray-700 space-y-4">
+                            {/* Event Type */}
+                            <div>
+                                <label className="text-gray-400 text-xs mb-2 block font-medium">Tipo de Evento</label>
+                                <select
+                                    value={newEvent.type}
+                                    onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as MatchEvent['type'] })}
+                                    className="w-full bg-gray-800 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
+                                >
+                                    <option value="goal">⚽ Gol</option>
+                                    <option value="yellow_card">🟨 Cartão Amarelo</option>
+                                    <option value="red_card">🟥 Cartão Vermelho</option>
+                                    <option value="substitution">🔄 Substituição</option>
+                                    <option value="other">📋 Outro</option>
+                                </select>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-3">
+                                {/* Minute */}
                                 <div>
-                                    <label className="text-gray-400 text-xs mb-1 block">Minuto</label>
+                                    <label className="text-gray-400 text-xs mb-2 block font-medium">Minuto</label>
                                     <input
                                         type="number"
                                         value={newEvent.minute || ''}
                                         onChange={(e) => setNewEvent({ ...newEvent, minute: parseInt(e.target.value) || 0 })}
-                                        className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
+                                        className="w-full bg-gray-800 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
                                         placeholder="45"
+                                        min="0"
+                                        max="120"
                                     />
                                 </div>
+
+                                {/* Team Selection */}
                                 <div>
-                                    <label className="text-gray-400 text-xs mb-1 block">Tipo</label>
-                                    <select
-                                        value={newEvent.type}
-                                        onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as MatchEvent['type'] })}
-                                        className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
-                                    >
-                                        <option value="goal">⚽ Gol</option>
-                                        <option value="yellow_card">🟨 Cartão Amarelo</option>
-                                        <option value="red_card">🟥 Cartão Vermelho</option>
-                                        <option value="substitution">🔄 Substituição</option>
-                                        <option value="other">📋 Outro</option>
-                                    </select>
+                                    <label className="text-gray-400 text-xs mb-2 block font-medium">Time</label>
+                                    <div className="flex bg-gray-800 rounded-lg p-1 border border-gray-600">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleTeamChange('home')}
+                                            className={`flex-1 py-1.5 rounded text-xs font-medium transition-all ${newEvent.team === 'home'
+                                                ? 'bg-green-600 text-white'
+                                                : 'text-gray-400 hover:text-white'
+                                                }`}
+                                        >
+                                            {homeTeam}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleTeamChange('away')}
+                                            className={`flex-1 py-1.5 rounded text-xs font-medium transition-all ${newEvent.team === 'away'
+                                                ? 'bg-green-600 text-white'
+                                                : 'text-gray-400 hover:text-white'
+                                                }`}
+                                        >
+                                            {awayTeam}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
+                            {/* Player Selection - DROPDOWN */}
                             <div>
-                                <label className="text-gray-400 text-xs mb-1 block">Time</label>
-                                <select
-                                    value={newEvent.team}
-                                    onChange={(e) => setNewEvent({ ...newEvent, team: e.target.value as 'home' | 'away' })}
-                                    className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
-                                >
-                                    <option value="home">{homeTeam}</option>
-                                    <option value="away">{awayTeam}</option>
-                                </select>
+                                <label className="text-gray-400 text-xs mb-2 block font-medium">Jogador</label>
+                                {currentTeamPlayers.length > 0 ? (
+                                    <select
+                                        value={selectedPlayerId}
+                                        onChange={(e) => setSelectedPlayerId(e.target.value)}
+                                        className="w-full bg-gray-800 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
+                                    >
+                                        <option value="">Selecione um jogador...</option>
+                                        {currentTeamPlayers.map(player => (
+                                            <option key={player.id} value={player.id}>
+                                                #{player.number} - {player.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value={newEvent.playerName || ''}
+                                        onChange={(e) => setNewEvent({ ...newEvent, playerName: e.target.value })}
+                                        className="w-full bg-gray-800 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
+                                        placeholder="Nome do jogador"
+                                    />
+                                )}
                             </div>
 
+                            {/* Description */}
                             <div>
-                                <label className="text-gray-400 text-xs mb-1 block">Jogador</label>
+                                <label className="text-gray-400 text-xs mb-2 block font-medium">Descrição (opcional)</label>
                                 <input
                                     type="text"
-                                    value={newEvent.playerName || ''}
-                                    onChange={(e) => setNewEvent({ ...newEvent, playerName: e.target.value })}
-                                    className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
-                                    placeholder="Nome do jogador"
+                                    value={newEvent.description || ''}
+                                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                                    className="w-full bg-gray-800 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600 focus:border-green-500 focus:outline-none"
+                                    placeholder="Ex: Gol de cabeça, Falta..."
                                 />
                             </div>
 
+                            {/* Actions */}
                             <div className="flex gap-2 pt-2">
                                 <button
-                                    onClick={() => setShowAddForm(false)}
-                                    className="flex-1 py-2 text-gray-400 hover:text-white transition text-sm"
+                                    onClick={() => {
+                                        setShowAddForm(false);
+                                        setSelectedPlayerId('');
+                                    }}
+                                    className="flex-1 py-2.5 text-gray-400 hover:text-white transition text-sm rounded-lg hover:bg-gray-700"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={handleAdd}
-                                    className="flex-1 py-2 bg-accent-green text-white rounded-lg hover:bg-green-500 transition text-sm font-medium"
+                                    disabled={newEvent.minute <= 0}
+                                    className="flex-1 py-2.5 bg-accent-green text-white rounded-lg hover:bg-green-500 transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Adicionar
                                 </button>
@@ -215,4 +295,4 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
 };
 
 export default EventsSidebar;
-export type { MatchEvent };
+export type { MatchEvent, PlayerLite };
