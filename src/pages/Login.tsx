@@ -247,7 +247,7 @@ const Login: React.FC = () => {
                             <div className="text-xs text-gray-400 uppercase tracking-wider">Precisão de Passe</div>
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-white mb-2">Zona 14</h1>
+
                             <div className="text-white font-bold text-2xl font-mono">14.2<span className="text-sm align-top">km</span></div>
                             <div className="text-xs text-gray-400 uppercase tracking-wider">Distância Percorrida</div>
                         </div>
@@ -266,11 +266,8 @@ const Login: React.FC = () => {
                 <div className="w-full max-w-[440px] flex flex-col gap-8 bg-white lg:p-10 lg:rounded-2xl lg:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] border border-transparent lg:border-slate-100 my-auto">
                     {/* Header */}
                     <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-8 h-8 rounded bg-[#0f2124] flex items-center justify-center text-[#00e1ff]">
-                                <Target size={20} />
-                            </div>
-                            <span className="text-[#0f2124] text-xl font-bold tracking-tight">Zona 14</span>
+                        <div className="flex justify-center mb-6">
+                            <img src="/LogoZona14.png" alt="Zona 14" className="h-24 w-auto object-contain" />
                         </div>
                         <p className="text-slate-500 text-sm">
                             {isRegistering
