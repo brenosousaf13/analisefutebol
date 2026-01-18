@@ -355,6 +355,12 @@ function Analysis() {
                 notasVisitante,
                 notasVisitanteUpdatedAt,
 
+                // New layout fields
+                defensiveNotes,
+                offensiveNotes,
+                homeTeamColor,
+                awayTeamColor,
+
                 homeTeamNotes,
                 homeOffNotes: '',
                 awayTeamNotes: '',
@@ -398,7 +404,8 @@ function Analysis() {
     }, [currentAnalysisId, homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
         homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes, notasCasa, notasVisitante,
         homeScore, awayScore, events, matchState, homeTeamNotes,
-        notasCasaUpdatedAt, notasVisitanteUpdatedAt]);
+        notasCasaUpdatedAt, notasVisitanteUpdatedAt,
+        defensiveNotes, offensiveNotes, homeTeamColor, awayTeamColor]);
 
     // Load existing analysis if available
     useEffect(() => {
@@ -420,6 +427,12 @@ function Analysis() {
                     setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
                     setNotasVisitante(data.notasVisitante);
                     setNotasVisitanteUpdatedAt(data.notasVisitanteUpdatedAt);
+
+                    // Load New Layout Notes & Colors
+                    setDefensiveNotes(data.defensiveNotes || '');
+                    setOffensiveNotes(data.offensiveNotes || '');
+                    setHomeTeamColor(data.homeTeamColor || '#EF4444');
+                    setAwayTeamColor(data.awayTeamColor || '#3B82F6');
 
                     // Load Events
                     setEvents(data.events || []);

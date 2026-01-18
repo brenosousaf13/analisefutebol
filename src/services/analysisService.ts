@@ -26,13 +26,21 @@ export interface AnalysisData {
     awayScore?: number;
     gameNotes: string;
 
-    // Detailed Notes
+    // Detailed Notes (Legacy/Specific)
     notasCasa: string;
     notasCasaUpdatedAt?: string;
     notasVisitante: string;
     notasVisitanteUpdatedAt?: string;
 
-    // Legacy/Phase notes
+    // Phase Notes (New Layout)
+    defensiveNotes: string;
+    offensiveNotes: string;
+
+    // Colors
+    homeTeamColor: string;
+    awayTeamColor: string;
+
+    // Legacy/Phase notes (Keeping for backward compatibility or removal)
     homeTeamNotes: string;
     homeOffNotes: string;
     awayTeamNotes: string;
@@ -69,6 +77,8 @@ export interface SavedAnalysisSummary {
     away_team_name: string;
     home_team_logo: string;
     away_team_logo: string;
+    home_team_color?: string;
+    away_team_color?: string;
     home_score: number;
     away_score: number;
     created_at: string;
@@ -107,14 +117,25 @@ export const analysisService = {
                 home_score: data.homeScore,
                 away_score: data.awayScore,
                 game_notes: data.gameNotes,
+
+                // Old notes
                 notas_casa: data.notasCasa,
                 notas_casa_updated_at: data.notasCasaUpdatedAt,
                 notas_visitante: data.notasVisitante,
                 notas_visitante_updated_at: data.notasVisitanteUpdatedAt,
+
+                // New layout fields
+                defensive_notes: data.defensiveNotes,
+                offensive_notes: data.offensiveNotes,
+                home_team_color: data.homeTeamColor,
+                away_team_color: data.awayTeamColor,
+
+                // Legacy mapping (optional, or just save empty)
                 home_team_notes: data.homeTeamNotes,
                 home_off_notes: data.homeOffNotes,
                 away_team_notes: data.awayTeamNotes,
                 away_off_notes: data.awayOffNotes,
+
                 events: data.events || [],
                 updated_at: new Date().toISOString()
             };
@@ -206,6 +227,7 @@ export const analysisService = {
             .select(`
                 id, titulo, descricao, tipo, status,
                 home_team_name, away_team_name, home_team_logo, away_team_logo,
+                home_team_color, away_team_color,
                 home_score, away_score, created_at, updated_at, thumbnail_url
             `);
 
@@ -238,6 +260,8 @@ export const analysisService = {
             away_team_name: item.away_team_name,
             home_team_logo: item.home_team_logo,
             away_team_logo: item.away_team_logo,
+            home_team_color: item.home_team_color,
+            away_team_color: item.away_team_color,
             home_score: item.home_score,
             away_score: item.away_score,
             created_at: item.created_at,
@@ -322,14 +346,24 @@ export const analysisService = {
             homeScore: analysis.home_score,
             awayScore: analysis.away_score,
             gameNotes: analysis.game_notes || '',
+
+            // Notes
             notasCasa: analysis.notas_casa || '',
             notasCasaUpdatedAt: analysis.notas_casa_updated_at,
             notasVisitante: analysis.notas_visitante || '',
             notasVisitanteUpdatedAt: analysis.notas_visitante_updated_at,
+
+            // New Layout Fields
+            defensiveNotes: analysis.defensive_notes || '',
+            offensiveNotes: analysis.offensive_notes || '',
+            homeTeamColor: analysis.home_team_color || '#EF4444',
+            awayTeamColor: analysis.away_team_color || '#3B82F6',
+
             homeTeamNotes: analysis.home_team_notes || '',
             homeOffNotes: analysis.home_off_notes || '',
             awayTeamNotes: analysis.away_team_notes || '',
             awayOffNotes: analysis.away_off_notes || '',
+
             homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
             homeSubstitutes, awaySubstitutes,
             homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
@@ -414,6 +448,13 @@ export const analysisService = {
             homeOffNotes: '',
             awayTeamNotes: '',
             awayOffNotes: '',
+
+            // New defaults
+            defensiveNotes: '',
+            offensiveNotes: '',
+            homeTeamColor: '#EF4444',
+            awayTeamColor: '#3B82F6',
+
             homePlayersDef: homePlayers,
             homePlayersOff: homePlayers.map(p => ({ ...p })), // Clone for offensive phase
             awayPlayersDef: awayPlayers,
