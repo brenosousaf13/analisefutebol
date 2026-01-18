@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, FolderOpen, LogOut, User, Menu, X } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MatchInfo {
     homeTeam: string;
@@ -19,6 +20,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user, signOut } = useAuth();
     const [activePath, setActivePath] = useState(location.pathname);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -26,10 +29,19 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
         setActivePath(location.pathname);
     }, [location]);
 
+    const handleSignOut = async () => {
+        await signOut();
+        setIsMenuOpen(false);
+        navigate('/login');
+    };
+
     const menuItems = [
         { icon: Calendar, label: 'Partidas', path: '/' },
         { icon: FolderOpen, label: 'Minhas Análises', path: '/minhas-analises' },
     ];
+
+    const userName = user?.user_metadata?.full_name || 'Analista';
+    const userEmail = user?.email || '';
 
     return (
         <header className="fixed top-0 left-0 right-0 h-16 bg-nav-dark border-b border-gray-700 flex items-center justify-between px-6 z-50 shadow-md">
@@ -41,14 +53,6 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                 >
                     <Menu size={24} />
                 </button>
-
-                {/* Optional: Show Small Logo or Title next to hamburger if NOT in match mode? 
-                    User asked to replace TF Logo with Hamburger. 
-                    But maybe we want the title "TáticaFutebol" somewhere?
-                    User said: "menu hamburger que vai ficar no lugar do TF TaticaFutebol" 
-                    I will hide the big logo branding here as requested, or keep just text if space permits.
-                    Let's strictly follow: Hamburger replaces TF Logo area.
-                */}
             </div>
 
             {/* Center: Match Info (Team Names) */}
@@ -156,11 +160,12 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                                         <User size={20} />
                                     </div>
                                     <div className="overflow-hidden">
-                                        <p className="text-white text-sm font-bold truncate">Coach Breno</p>
-                                        <p className="text-xs text-gray-400 truncate">Treinador</p>
+                                        <p className="text-white text-sm font-bold truncate">{userName}</p>
+                                        <p className="text-xs text-gray-400 truncate">{userEmail}</p>
                                     </div>
                                 </div>
                                 <button
+                                    onClick={handleSignOut}
                                     className="p-2 text-gray-400 hover:text-red-400 transition-colors bg-gray-800 hover:bg-gray-700 rounded-lg"
                                     title="Sair"
                                 >

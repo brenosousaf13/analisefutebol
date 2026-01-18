@@ -3,7 +3,7 @@ import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 
 // Mock User ID (since we don't have auth yet)
-const MOCK_USER_ID = '00000000-0000-0000-0000-000000000001';
+
 
 export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
 export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico';
@@ -112,8 +112,13 @@ export const analysisService = {
             // Generate titulo if not provided
             const titulo = data.titulo || `${data.homeTeam} vs ${data.awayTeam}`;
 
+            // Get current user
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) throw new Error("Usuário não autenticado");
+
             const analysisPayload = {
-                user_id: MOCK_USER_ID,
+                user_id: user.id,
                 fixture_id: data.matchId,
                 titulo,
                 descricao: data.descricao,

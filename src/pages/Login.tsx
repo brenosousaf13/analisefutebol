@@ -25,7 +25,8 @@ const Login: React.FC = () => {
         firstName: '',
         lastName: '',
         birthDate: '',
-        cpf: ''
+        cpf: '',
+        phone: ''
     });
 
     // Validation Errors
@@ -47,6 +48,14 @@ const Login: React.FC = () => {
             .replace(/(\d{3})(\d)/, '$1.$2')
             .replace(/(\d{3})(\d{1,2})/, '$1-$2')
             .replace(/(-\d{2})\d+?$/, '$1');
+    };
+
+    const maskPhone = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2')
+            .replace(/(-\d{4})\d+?$/, '$1');
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -84,6 +93,7 @@ const Login: React.FC = () => {
 
         if (name === 'birthDate') finalValue = maskDate(value);
         if (name === 'cpf') finalValue = maskCPF(value);
+        if (name === 'phone') finalValue = maskPhone(value);
 
         setFormData(prev => ({ ...prev, [name]: finalValue }));
 
@@ -104,6 +114,7 @@ const Login: React.FC = () => {
         if (!formData.lastName) newErrors.lastName = 'Sobrenome é obrigatório';
         if (!formData.birthDate || formData.birthDate.length < 10) newErrors.birthDate = 'Data inválida';
         if (!formData.cpf || formData.cpf.length < 14) newErrors.cpf = 'CPF inválido';
+        if (!formData.phone || formData.phone.length < 15) newErrors.phone = 'Celular inválido';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -150,6 +161,7 @@ const Login: React.FC = () => {
                                 full_name: `${formData.firstName} ${formData.lastName}`,
                                 birth_date: formData.birthDate,
                                 cpf: formData.cpf,
+                                phone: formData.phone,
                             }
                         }
                     });
@@ -359,6 +371,28 @@ const Login: React.FC = () => {
                                         />
                                     </div>
                                     {errors.cpf && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.cpf}</span>}
+                                </label>
+
+                                {/* Phone */}
+                                <label className="flex flex-col gap-1.5 group">
+                                    <div className="flex justify-between">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-[#00e1ff] transition-colors">Celular</span>
+                                    </div>
+                                    <div className="relative flex items-center">
+                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                        </div>
+                                        <input
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            maxLength={15}
+                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#00e1ff]/20 focus:border-[#00e1ff] transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-slate-200'}`}
+                                            placeholder="(11) 99999-9999"
+                                            type="text"
+                                        />
+                                    </div>
+                                    {errors.phone && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.phone}</span>}
                                 </label>
                             </>
                         )}
