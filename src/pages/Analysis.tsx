@@ -45,7 +45,8 @@ function Analysis() {
         homeTeamLogo: locationState?.homeTeam?.logo,
         awayTeamLogo: locationState?.awayTeam?.logo,
         competition: locationState?.competition?.name,
-        date: locationState?.date,
+        date: locationState?.date || locationState?.matchDate,
+        time: locationState?.time || locationState?.matchTime,
     });
 
     const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success'>('idle');
@@ -250,6 +251,8 @@ function Analysis() {
                         awayTeam: data.awayTeam,
                         homeTeamLogo: data.homeTeamLogo,
                         awayTeamLogo: data.awayTeamLogo,
+                        date: data.matchDate,
+                        time: data.matchTime
                     }));
 
                     setHomePlayersDef(data.homePlayersDef);
@@ -761,7 +764,8 @@ function Analysis() {
                 homeTeamLogo: matchInfo.homeTeamLogo,
                 awayTeamLogo: matchInfo.awayTeamLogo,
                 competition: matchInfo.competition,
-                date: matchInfo.date
+                date: matchInfo.date,
+                time: matchInfo.time
             }}
             activeTeam={viewTeam}
             onTeamChange={setViewTeam}

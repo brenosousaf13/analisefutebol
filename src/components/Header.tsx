@@ -10,6 +10,7 @@ interface MatchInfo {
     awayTeamLogo?: string;
     competition?: string;
     date?: string;
+    time?: string;
 }
 
 interface HeaderProps {
@@ -57,28 +58,47 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
 
             {/* Center: Match Info (Team Names) */}
             {matchInfo ? (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-6">
-                    {/* Home Team */}
-                    <div className="flex items-center gap-3">
-                        <span className={`text-lg font-bold ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
-                            {matchInfo.homeTeam}
-                        </span>
-                        {matchInfo.homeTeamLogo && (
-                            <img src={matchInfo.homeTeamLogo} alt={matchInfo.homeTeam} className="w-8 h-8 object-contain" />
-                        )}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                    <div className="flex items-center gap-6">
+                        {/* Home Team */}
+                        <div className="flex items-center gap-3">
+                            <span className={`text-lg font-bold ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
+                                {matchInfo.homeTeam}
+                            </span>
+                            {matchInfo.homeTeamLogo && (
+                                <img src={matchInfo.homeTeamLogo} alt={matchInfo.homeTeam} className="w-8 h-8 object-contain" />
+                            )}
+                        </div>
+
+                        <span className="text-gray-600 text-sm font-bold">VS</span>
+
+                        {/* Away Team */}
+                        <div className="flex items-center gap-3">
+                            {matchInfo.awayTeamLogo && (
+                                <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-8 h-8 object-contain" />
+                            )}
+                            <span className={`text-lg font-bold ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
+                                {matchInfo.awayTeam}
+                            </span>
+                        </div>
                     </div>
 
-                    <span className="text-gray-600 text-sm font-bold">VS</span>
-
-                    {/* Away Team */}
-                    <div className="flex items-center gap-3">
-                        {matchInfo.awayTeamLogo && (
-                            <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-8 h-8 object-contain" />
-                        )}
-                        <span className={`text-lg font-bold ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
-                            {matchInfo.awayTeam}
-                        </span>
-                    </div>
+                    {/* Date & Time */}
+                    {(matchInfo.date || matchInfo.time) && (
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium tracking-wide">
+                            {matchInfo.date && (
+                                <span>
+                                    {new Date(matchInfo.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })}
+                                </span>
+                            )}
+                            {matchInfo.date && matchInfo.time && <span>•</span>}
+                            {matchInfo.time && (
+                                <span className="flex items-center gap-1">
+                                    {matchInfo.time.slice(0, 5)}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
             ) : (
                 <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-lg tracking-wide opacity-50">

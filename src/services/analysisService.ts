@@ -9,6 +9,8 @@ export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico'
 export interface AnalysisData {
     id?: string;
     matchId?: number;
+    matchDate?: string;
+    matchTime?: string;
 
     // New metadata fields
     titulo?: string;
@@ -123,6 +125,8 @@ export const analysisService = {
             const analysisPayload = {
                 user_id: user.id,
                 fixture_id: data.matchId,
+                match_date: data.matchDate,
+                match_time: data.matchTime,
                 titulo,
                 descricao: data.descricao,
                 tipo: data.tipo || 'partida',
@@ -406,6 +410,8 @@ export const analysisService = {
         return {
             id: analysis.id,
             matchId: analysis.fixture_id,
+            matchDate: analysis.match_date,
+            matchTime: analysis.match_time,
             titulo: analysis.titulo,
             descricao: analysis.descricao,
             tipo: analysis.tipo,
@@ -508,7 +514,7 @@ export const analysisService = {
         return subs;
     },
 
-    async createBlankAnalysis(tipo: AnalysisType = 'partida'): Promise<string> {
+    async createBlankAnalysis(tipo: AnalysisType = 'partida', initialData?: Partial<AnalysisData>): Promise<string> {
         const homePlayers = this.generateDefaultPlayers(true);
         const awayPlayers = this.generateDefaultPlayers(false);
         const homeSubs = this.generateDefaultSubstitutes(true);
@@ -555,7 +561,8 @@ export const analysisService = {
             homeRectanglesOff: [],
             awayRectanglesDef: [],
             awayRectanglesOff: [],
-            tags: []
+            tags: [],
+            ...initialData
         };
 
         return await this.saveAnalysis(blankData);

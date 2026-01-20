@@ -8,6 +8,7 @@ interface MatchInfo {
     awayTeamLogo?: string;
     competition?: string;
     date?: string;
+    time?: string;
 }
 
 interface AnalysisLayoutProps {
