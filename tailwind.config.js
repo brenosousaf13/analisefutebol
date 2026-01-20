@@ -12,6 +12,9 @@ export default {
         'field-green': '#2d5a3d',
         'accent-green': '#22c55e',
         'accent-yellow': '#eab308',
+      },
+      fontFamily: {
+        sans: ['"Zalando Sans"', 'sans-serif'],
       }
     },
   },
