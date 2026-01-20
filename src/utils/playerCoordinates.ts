@@ -4,8 +4,8 @@ export const getPlayerSize = (fieldWidth: number): number => {
     // Player occupies ~6-8% of field width
     const baseSize = fieldWidth * 0.07;
     // Limits
-    const minSize = 32;
-    const maxSize = 52;
+    const minSize = 24;
+    const maxSize = 48;
     return Math.max(minSize, Math.min(maxSize, baseSize));
 };
 
