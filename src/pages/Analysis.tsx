@@ -817,10 +817,10 @@ function Analysis() {
                     <div className="flex-1 h-full flex flex-col p-2 md:p-4 overflow-hidden relative">
 
                         {/* Mobile Tab Switcher */}
-                        <div className="lg:hidden shrink-0 mb-3 flex bg-gray-800 rounded-lg p-1 mx-4">
+                        <div className="lg:hidden shrink-0 mb-2 flex bg-gray-800 rounded-lg p-0.5 mx-12">
                             <button
                                 onClick={() => setMobileTab('defensive')}
-                                className={`flex-1 py-2 rounded-md text-sm font-bold uppercase transition-all ${mobileTab === 'defensive'
+                                className={`flex-1 py-1 rounded-md text-xs font-bold uppercase transition-all ${mobileTab === 'defensive'
                                     ? 'bg-amber-500/20 text-amber-400 shadow-sm'
                                     : 'text-gray-400 hover:text-white'
                                     }`}
@@ -829,7 +829,7 @@ function Analysis() {
                             </button>
                             <button
                                 onClick={() => setMobileTab('offensive')}
-                                className={`flex-1 py-2 rounded-md text-sm font-bold uppercase transition-all ${mobileTab === 'offensive'
+                                className={`flex-1 py-1 rounded-md text-xs font-bold uppercase transition-all ${mobileTab === 'offensive'
                                     ? 'bg-green-500/20 text-green-400 shadow-sm'
                                     : 'text-gray-400 hover:text-white'
                                     }`}
