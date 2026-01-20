@@ -153,6 +153,9 @@ function Analysis() {
     const [awayOffensiveNotes, setAwayOffensiveNotes] = useState('');
     const [awayBenchNotes, setAwayBenchNotes] = useState('');
 
+    // Mobile Tab State
+    const [mobileTab, setMobileTab] = useState<'defensive' | 'offensive'>('defensive');
+
     // Coach Names
     const [homeCoach, setHomeCoach] = useState('');
     const [awayCoach, setAwayCoach] = useState('');
@@ -813,6 +816,28 @@ function Analysis() {
                     {/* Main Content Area */}
                     <div className="flex-1 h-full flex flex-col p-2 md:p-4 overflow-hidden relative">
 
+                        {/* Mobile Tab Switcher */}
+                        <div className="lg:hidden shrink-0 mb-3 flex bg-gray-800 rounded-lg p-1 mx-4">
+                            <button
+                                onClick={() => setMobileTab('defensive')}
+                                className={`flex-1 py-2 rounded-md text-sm font-bold uppercase transition-all ${mobileTab === 'defensive'
+                                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                Defensivo
+                            </button>
+                            <button
+                                onClick={() => setMobileTab('offensive')}
+                                className={`flex-1 py-2 rounded-md text-sm font-bold uppercase transition-all ${mobileTab === 'offensive'
+                                    ? 'bg-green-500/20 text-green-400 shadow-sm'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                Ofensivo
+                            </button>
+                        </div>
+
                         {/* Labels Row - Desktop Only */}
                         <div className="hidden lg:flex shrink-0 mb-3 lg:ml-16">
                             <div className="flex-1 text-center">
@@ -832,15 +857,9 @@ function Analysis() {
                         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 ml-0 lg:ml-16 overflow-y-auto lg:overflow-hidden pb-16 lg:pb-0">
 
                             {/* Defensive Field Column */}
-                            <div className="flex flex-col h-auto lg:h-full relative min-h-[450px] sm:min-h-[550px] lg:min-h-0">
-                                {/* Mobile Label */}
-                                <div className="text-center mb-2 lg:hidden">
-                                    <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
-                                        Defensivo
-                                    </span>
-                                </div>
-
-                                <div className="flex-1 relative min-h-0 w-full max-w-[450px] lg:max-w-none mx-auto">
+                            <div className={`flex-col h-full relative min-h-[450px] lg:min-h-0 ${mobileTab === 'defensive' ? 'flex' : 'hidden lg:flex'
+                                }`}>
+                                <div className="flex-1 relative min-h-0 w-full max-w-[450px] lg:max-w-[420px] xl:max-w-[500px] 2xl:max-w-[600px] mx-auto">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
@@ -863,25 +882,12 @@ function Analysis() {
                                     />
                                 </div>
 
-                                <div className="mt-2 text-center shrink-0">
-                                    <CoachNameDisplay
-                                        coachName={viewTeam === 'home' ? homeCoach : awayCoach}
-                                        onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
-                                        align="center"
-                                    />
-                                </div>
                             </div>
 
                             {/* Offensive Field Column */}
-                            <div className="flex flex-col h-auto lg:h-full relative min-h-[450px] sm:min-h-[550px] lg:min-h-0">
-                                {/* Mobile Label */}
-                                <div className="text-center mb-2 lg:hidden">
-                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
-                                        Ofensivo
-                                    </span>
-                                </div>
-
-                                <div className="flex-1 relative min-h-0 w-full max-w-[450px] lg:max-w-none mx-auto">
+                            <div className={`flex-col h-full relative min-h-[450px] lg:min-h-0 ${mobileTab === 'offensive' ? 'flex' : 'hidden lg:flex'
+                                }`}>
+                                <div className="flex-1 relative min-h-0 w-full max-w-[450px] lg:max-w-[420px] xl:max-w-[500px] 2xl:max-w-[600px] mx-auto">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
@@ -903,17 +909,18 @@ function Analysis() {
                                         playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                     />
                                 </div>
-
-                                <div className="mt-2 text-center shrink-0">
-                                    <CoachNameDisplay
-                                        coachName={viewTeam === 'home' ? homeCoach : awayCoach}
-                                        onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
-                                        align="center"
-                                    />
-                                </div>
                             </div>
-
                         </div>
+
+                        {/* Centered Coach Name - Footer */}
+                        <div className="mt-2 text-center shrink-0 w-full flex justify-center pb-2">
+                            <CoachNameDisplay
+                                coachName={viewTeam === 'home' ? homeCoach : awayCoach}
+                                onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
+                                align="center"
+                            />
+                        </div>
+
                     </div>
 
                     {/* Modals */}
@@ -1062,12 +1069,10 @@ function Analysis() {
                             ...awaySubstitutes
                         ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
                     />
-
                 </>
-            )
-            }
-        </AnalysisLayout >
+            )}
+        </AnalysisLayout>
     );
-}
+};
 
 export default Analysis;

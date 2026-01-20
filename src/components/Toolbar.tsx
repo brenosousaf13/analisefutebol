@@ -84,19 +84,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
             fixed z-30
             /* Mobile: Bottom bar horizontal */
             bottom-0 left-0 right-0 h-16
-            flex flex-row items-center justify-around
+            flex flex-row items-center justify-start sm:justify-around
             bg-nav-dark border-t border-gray-700
             px-2 pb-safe
+            overflow-x-auto no-scrollbar
             
             /* Desktop: Sidebar lateral esquerda vertical */
             lg:bottom-auto lg:left-4 lg:right-auto lg:top-1/2 lg:-translate-y-1/2
             lg:h-auto lg:w-auto
             lg:flex-col lg:gap-2 lg:p-2 lg:rounded-xl lg:border lg:border-gray-700
             lg:shadow-2xl
+            lg:overflow-visible
         `}>
 
             {/* Drawing Tools */}
-            <div className="flex flex-row lg:flex-col gap-1 items-center">
+            <div className="flex flex-row lg:flex-col gap-1 items-center shrink-0">
                 <ToolButton
                     icon={<MousePointer2 className="w-5 h-5" />}
                     label="Seleção"
@@ -109,21 +111,19 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     isActive={activeTool === 'arrow'}
                     onClick={() => onToolChange('arrow')}
                 />
-                <div className="hidden sm:block">
-                    <ToolButton
-                        icon={<Square className="w-5 h-5" />}
-                        label="Área"
-                        isActive={activeTool === 'rectangle'}
-                        onClick={() => onToolChange('rectangle')}
-                    />
-                </div>
+                <ToolButton
+                    icon={<Square className="w-5 h-5" />}
+                    label="Área"
+                    isActive={activeTool === 'rectangle'}
+                    onClick={() => onToolChange('rectangle')}
+                />
             </div>
 
-            <div className="h-4 w-px bg-gray-700 mx-1 lg:hidden" />
+            <div className="h-4 w-px bg-gray-700 mx-1 lg:hidden shrink-0" />
             <div className="hidden lg:block h-px w-8 bg-gray-700 my-1" />
 
             {/* Colors & Eraser */}
-            <div className="flex flex-row lg:flex-col gap-1 items-center">
+            <div className="flex flex-row lg:flex-col gap-1 items-center shrink-0">
                 <ToolButton
                     icon={<Palette className="w-5 h-5" />}
                     label="Cores"
@@ -137,30 +137,26 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 />
             </div>
 
-            <div className="h-4 w-px bg-gray-700 mx-1 lg:hidden" />
+            <div className="h-4 w-px bg-gray-700 mx-1 lg:hidden shrink-0" />
             <div className="hidden lg:block h-px bg-gray-700 my-1" />
 
-            {/* Analysis & Events - Mobile Only specific or shared */}
-            <div className="flex flex-row lg:flex-col gap-1 items-center">
+            {/* Analysis & Events */}
+            <div className="flex flex-row lg:flex-col gap-1 items-center shrink-0">
                 <ToolButton
                     icon={<UserPlus className="w-5 h-5" />}
                     label="Add Jogador"
                     onClick={onAddPlayer}
                 />
-                <div className="hidden sm:block lg:block">
-                    <ToolButton
-                        icon={<FileText className="w-5 h-5" />}
-                        label="Análise"
-                        onClick={onOpenAnalysis}
-                    />
-                </div>
-                <div className="hidden sm:block lg:block">
-                    <ToolButton
-                        icon={<Zap className="w-5 h-5" />}
-                        label="Eventos"
-                        onClick={onOpenEvents}
-                    />
-                </div>
+                <ToolButton
+                    icon={<FileText className="w-5 h-5" />}
+                    label="Análise"
+                    onClick={onOpenAnalysis}
+                />
+                <ToolButton
+                    icon={<Zap className="w-5 h-5" />}
+                    label="Eventos"
+                    onClick={onOpenEvents}
+                />
             </div>
 
             <div className="hidden lg:block h-px bg-gray-700 my-1" />
