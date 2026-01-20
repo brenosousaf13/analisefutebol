@@ -49,7 +49,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({
         onClick={onClick}
         disabled={isLoading}
         className={`
-            relative w-9 h-9 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center transition-all
+            relative w-9 h-9 rounded-lg flex items-center justify-center transition-all
             ${isActive
                 ? 'bg-accent-green text-white shadow-lg'
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white'
@@ -92,7 +92,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
             /* Desktop: Sidebar lateral esquerda vertical */
             lg:bottom-auto lg:left-4 lg:right-auto lg:top-1/2 lg:-translate-y-1/2
             lg:h-auto lg:w-auto
-            lg:flex-col lg:gap-2 lg:p-2 lg:rounded-xl lg:border lg:border-gray-700
+            lg:flex-col lg:gap-1 lg:p-1.5 lg:rounded-xl lg:border lg:border-gray-700
             lg:shadow-2xl
             lg:overflow-visible
         `}>
