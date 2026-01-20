@@ -112,7 +112,7 @@ export interface AnalysisFilters {
 export const analysisService = {
     async saveAnalysis(data: AnalysisData): Promise<string> {
         try {
-            console.log('[analysisService.saveAnalysis] Saving...', data);
+
 
             let analysisId = data.id;
 
@@ -275,7 +275,7 @@ export const analysisService = {
             return analysisId;
 
         } catch (error) {
-            console.error("Error saving analysis:", error);
+
             throw error;
         }
     },

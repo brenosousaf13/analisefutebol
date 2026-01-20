@@ -26,6 +26,10 @@ interface TacticalFieldProps {
     rectangleColor?: string;
     // Player color
     playerColor?: string;
+
+    // Export modes
+    compact?: boolean;
+    readOnly?: boolean;
 }
 
 // Field Lines Component - Using CSS for reliability
@@ -90,7 +94,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onMoveRectangle,
     isEraserMode = false,
     rectangleColor = 'rgba(255, 200, 50, 0.3)',
-    playerColor = '#EAB308' // Default yellow
+    playerColor = '#EAB308', // Default yellow
+    compact = false,
+    readOnly = false
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
@@ -524,7 +530,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             x2={`${arrow.endX}%`}
                             y2={`${arrow.endY}%`}
                             stroke="white"
-                            strokeWidth={isEraserMode ? "4" : "2"}
+                            strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
                             strokeDasharray="8,5"
                             strokeLinecap="round"
                             markerEnd="url(#arrowhead)"
@@ -532,7 +538,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             onClick={isEraserMode ? () => onRemoveArrow?.(arrow.id) : undefined}
                             style={{
                                 cursor: isEraserMode ? 'pointer' : 'default',
-                                pointerEvents: isEraserMode ? 'auto' : 'none'
+                                pointerEvents: isEraserMode ? 'auto' : 'none' // readOnly is handled by parent container pointer-events-none? No, arrows usually ignore readOnly except for eraser. 
                             }}
                             className={isEraserMode ? 'hover:stroke-red-400 transition-colors' : ''}
                         />
@@ -609,7 +615,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 className={`
                                     absolute select-none
                                     ${isDragging ? 'z-50' : 'z-10'}
-                                    ${mode === 'draw' || mode === 'rectangle' ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto'}
+                                    ${(mode === 'draw' || mode === 'rectangle' || readOnly) ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto'}
                                 `}
                                 style={{
                                     left: `${position.x}%`,
@@ -617,23 +623,23 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                     transform: 'translate(-50%, -50%)',
                                     touchAction: 'none'
                                 }}
-                                onMouseDown={(e) => handlePlayerMouseDown(e, player)}
-                                onTouchStart={(e) => handlePlayerMouseDown(e, player)}
+                                onMouseDown={(e) => !readOnly && handlePlayerMouseDown(e, player)}
+                                onTouchStart={(e) => !readOnly && handlePlayerMouseDown(e, player)}
                                 onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
-                                onDoubleClick={() => onPlayerDoubleClick?.(player)}
+                                onDoubleClick={() => !readOnly && onPlayerDoubleClick?.(player)}
                             >
                                 <div
                                     className={`
                                         rounded-full 
                                         flex items-center justify-center text-gray-900 font-bold
                                         shadow-lg transition-transform duration-75
-                                        ${isDragging ? 'scale-110 ring-2 ring-white' : 'hover:scale-105'}
+                                        ${isDragging ? 'scale-110 ring-2 ring-white' : (readOnly ? '' : 'hover:scale-105')}
                                         ${selectedPlayerId === player.id ? 'ring-2 ring-green-400' : ''}
                                     `}
                                     style={{
-                                        width: playerSize,
-                                        height: playerSize,
-                                        fontSize: fontSizes.number,
+                                        width: compact ? 24 : playerSize,
+                                        height: compact ? 24 : playerSize,
+                                        fontSize: compact ? 10 : fontSizes.number,
                                         backgroundColor: playerColor
                                     }}
                                 >

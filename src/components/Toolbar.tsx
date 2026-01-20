@@ -26,6 +26,7 @@ interface ToolbarProps {
     onAddPlayer: () => void;
     isSaving?: boolean;
     hasUnsavedChanges?: boolean;
+    isExporting?: boolean;
 }
 
 interface ToolButtonProps {
@@ -77,7 +78,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
     onExport,
     onAddPlayer,
     isSaving = false,
-    hasUnsavedChanges = false
+    hasUnsavedChanges = false,
+    isExporting = false
 }) => {
     return (
         <div className={`
@@ -168,6 +170,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         icon={<Download className="w-5 h-5" />}
                         label="Exportar"
                         onClick={onExport}
+                        isLoading={isExporting}
                     />
                 </div>
                 <ToolButton

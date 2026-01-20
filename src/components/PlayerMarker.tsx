@@ -4,7 +4,7 @@ import type { Player } from '../types/Player';
 interface PlayerMarkerProps {
     player: Player;
     teamColor: 'blue' | 'red' | 'yellow';
-    onMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
+    onMouseDown?: (e: React.MouseEvent | React.TouchEvent) => void;
     onDoubleClick?: () => void;
     isDragging: boolean;
     hasNote?: boolean;
@@ -26,11 +26,17 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
     isSelected,
     shortName,
     playerSize = 36, // Default fallback
-    fontSize = { number: 14, name: 10 }
+    fontSize = { number: 14, name: 10 },
+    compact = false
 }) => {
 
     // Fallback if shortName is not provided
     const labelName = shortName || player.name.split(' ').pop();
+
+    // Effective sizes based on compact mode
+    const effectivePlayerSize = compact ? 24 : playerSize;
+    const effectiveFontSizeNumber = compact ? 10 : fontSize.number;
+    const effectiveFontSizeName = compact ? 8 : fontSize.name;
 
     return (
         <div
@@ -40,7 +46,7 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             style={{
                 left: `${player.position.x}%`,
                 top: `${player.position.y}%`,
-                width: playerSize, // Ensure container has width for centering
+                width: effectivePlayerSize, // Ensure container has width for centering
                 transform: 'translate(-50%, -50%)',
                 touchAction: 'none'
             }}
@@ -55,13 +61,13 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
                     font-bold select-none transition-colors
                     ${isSelected
                         ? 'bg-accent-green border-green-300 text-white'
-                        : (teamColor === 'red' ? 'bg-red-600 border-white text-white' : 'bg-accent-yellow border-white text-gray-900')
+                        : (teamColor === 'red' ? 'bg-red-600 border-white text-white' : (teamColor === 'yellow' ? 'bg-accent-yellow border-white text-gray-900' : 'bg-blue-600 border-white text-white'))
                     }
                 `}
                 style={{
-                    width: playerSize,
-                    height: playerSize,
-                    fontSize: fontSize.number
+                    width: effectivePlayerSize,
+                    height: effectivePlayerSize,
+                    fontSize: effectiveFontSizeNumber
                 }}
             >
                 {player.number}
@@ -75,15 +81,15 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
                     backdrop-blur-sm
                 `}
                 style={{
-                    fontSize: fontSize.name,
-                    maxWidth: playerSize * 2.5 // proportional max width
+                    fontSize: effectiveFontSizeName,
+                    maxWidth: effectivePlayerSize * 2.5 // proportional max width
                 }}
             >
                 {labelName}
             </span>
 
             {/* Note Indicator */}
-            {hasNote && (
+            {hasNote && !compact && (
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white rounded-full translate-x-1" />
             )}
         </div>

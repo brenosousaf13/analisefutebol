@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
@@ -27,6 +27,7 @@ import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
 import { CoachNameDisplay } from '../components/CoachNameDisplay';
+
 function Analysis() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -114,8 +115,8 @@ function Analysis() {
     const [eventToEdit, setEventToEdit] = useState<MatchEvent | null>(null);
 
     // Legacy Notes (Optional maintain or phase out)
-    const [homeTeamNotes, setHomeTeamNotes] = useState('');
-    const [playerNotes, setPlayerNotes] = useState<Record<number, string>>({});
+    const [homeTeamNotes] = useState('');
+    const [playerNotes] = useState<Record<number, string>>({});
 
     // Arrows State - Separated by team AND phase
     const [homeArrows, setHomeArrows] = useState<Record<string, Arrow[]>>({
@@ -182,9 +183,10 @@ function Analysis() {
         return 'move';
     };
 
-    // Export handler (placeholder)
+    // Export handler
     const handleExport = () => {
-        toast.success('Funcionalidade de exportação em desenvolvimento');
+        // Functionality temporarily removed
+        toast.error("Funcionalidade indisponível no momento");
     };
 
 
@@ -352,15 +354,7 @@ function Analysis() {
     // --- Handlers ---
 
 
-    // Debug logging to avoid unused var errors
-    useEffect(() => {
-        console.log('Debug:', {
-            homeSubstitutes, awaySubstitutes,
-            gameNotes, homeTeamNotes, playerNotes,
-            setHomeSubstitutes, setAwaySubstitutes, setGameNotes, setHomeTeamNotes, setPlayerNotes,
-            loading, currentAnalysisId
-        });
-    }, [homeSubstitutes, awaySubstitutes, gameNotes, homeTeamNotes, playerNotes, loading, currentAnalysisId]);
+
 
 
 
@@ -399,7 +393,7 @@ function Analysis() {
             }
 
         } catch (err) {
-            console.error(err);
+
             setAutoSaveStatus('error');
         }
     };
@@ -468,7 +462,7 @@ function Analysis() {
             toast.success('Análise salva com sucesso!');
             setTimeout(() => setSaveStatus('idle'), 2000);
         } catch (error) {
-            console.error(error);
+            // console.error(error);
             setSaveStatus('idle');
             toast.error('Erro ao salvar análise');
         }
@@ -801,6 +795,7 @@ function Analysis() {
                     onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
                     isSaving={saveStatus === 'loading'}
                     hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
+
                 />
             ) : undefined}
         >
@@ -1069,6 +1064,9 @@ function Analysis() {
                             ...awaySubstitutes
                         ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
                     />
+
+
+
                 </>
             )}
         </AnalysisLayout>
