@@ -1,0 +1,103 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Pencil, Check, X } from 'lucide-react';
+
+interface CoachNameDisplayProps {
+    coachName: string;
+    onSave: (newName: string) => void;
+    teamColor: string;
+    align?: 'left' | 'right';
+}
+
+export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
+    coachName,
+    onSave,
+    teamColor,
+    align = 'left'
+}) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState(coachName);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setEditedName(coachName);
+    }, [coachName]);
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isEditing]);
+
+    const handleSave = () => {
+        if (editedName.trim() !== coachName) {
+            onSave(editedName.trim());
+        }
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setEditedName(coachName);
+        setIsEditing(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') handleSave();
+        if (e.key === 'Escape') handleCancel();
+    };
+
+    if (isEditing) {
+        return (
+            <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''} bg-[#1a1f2e] p-1 rounded border border-gray-700`}>
+                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider whitespace-nowrap">
+                    Técnico:
+                </span>
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="bg-[#242938] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500 w-40"
+                    placeholder="Nome do Técnico"
+                />
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={handleSave}
+                        className="p-1 hover:bg-green-500/20 text-green-500 rounded transition-colors"
+                        title="Salvar"
+                    >
+                        <Check size={14} />
+                    </button>
+                    <button
+                        onClick={handleCancel}
+                        className="p-1 hover:bg-red-500/20 text-red-500 rounded transition-colors"
+                        title="Cancelar"
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            onDoubleClick={() => setIsEditing(true)}
+            className={`group flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''} cursor-pointer py-1 px-2 rounded hover:bg-white/5 transition-colors`}
+        >
+            <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+                Técnico:
+            </span>
+            <span
+                className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors"
+                style={{ color: coachName ? undefined : '#6b7280' }}
+            >
+                {coachName || 'Nome do Técnico'}
+            </span>
+            <Pencil
+                size={12}
+                className="opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity"
+            />
+        </div>
+    );
+};

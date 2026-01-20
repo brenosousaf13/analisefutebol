@@ -11,6 +11,8 @@ export interface AnalysisData {
     matchId?: number;
     matchDate?: string;
     matchTime?: string;
+    homeCoach?: string;
+    awayCoach?: string;
 
     // New metadata fields
     titulo?: string;
@@ -167,6 +169,8 @@ export const analysisService = {
                 away_team_notes: data.awayTeamNotes,
                 away_off_notes: data.awayOffNotes,
 
+                home_coach: data.homeCoach,
+                away_coach: data.awayCoach,
                 events: data.events || [],
                 updated_at: new Date().toISOString()
             };
@@ -295,7 +299,7 @@ export const analysisService = {
         }
 
         if (filters?.search) {
-            query = query.or(`titulo.ilike.%${filters.search}%,home_team_name.ilike.%${filters.search}%,away_team_name.ilike.%${filters.search}%`);
+            query = query.or(`titulo.ilike.%${filters.search}%,home_team_name.ilike.%${filters.search}%,away_team_name.ilike.%${filters.search}%,home_coach.ilike.%${filters.search}%,away_coach.ilike.%${filters.search}%`);
         }
 
         const orderBy = filters?.orderBy || 'created_at';
@@ -451,6 +455,8 @@ export const analysisService = {
             homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
             homeRectanglesDef, homeRectanglesOff, awayRectanglesDef, awayRectanglesOff,
             events: analysis.events || [],
+            homeCoach: analysis.home_coach,
+            awayCoach: analysis.away_coach,
             tags: []
         };
     },
@@ -541,6 +547,9 @@ export const analysisService = {
             awayDefensiveNotes: '',
             awayOffensiveNotes: '',
             awayBenchNotes: '',
+
+            homeCoach: '',
+            awayCoach: '',
 
             defensiveNotes: '',
             offensiveNotes: '',

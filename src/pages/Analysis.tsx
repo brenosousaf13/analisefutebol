@@ -26,6 +26,7 @@ import EventsExpansionModal from '../components/EventsExpansionModal';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
+import { CoachNameDisplay } from '../components/CoachNameDisplay';
 function Analysis() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -151,6 +152,10 @@ function Analysis() {
     const [awayDefensiveNotes, setAwayDefensiveNotes] = useState('');
     const [awayOffensiveNotes, setAwayOffensiveNotes] = useState('');
     const [awayBenchNotes, setAwayBenchNotes] = useState('');
+
+    // Coach Names
+    const [homeCoach, setHomeCoach] = useState('');
+    const [awayCoach, setAwayCoach] = useState('');
 
     // Rectangle state - separated by team and phase
     const [homeRectangles, setHomeRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
@@ -280,7 +285,11 @@ function Analysis() {
                     setAwayOffensiveNotes(data.awayOffensiveNotes || '');
                     setAwayBenchNotes(data.awayBenchNotes || '');
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
+                    setHomeTeamColor(data.homeTeamColor || '#EF4444');
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
+
+                    setHomeCoach(data.homeCoach || '');
+                    setAwayCoach(data.awayCoach || '');
 
                     if (data.homeArrowsDef || data.homeArrowsOff) {
                         setHomeArrows({
@@ -437,6 +446,8 @@ function Analysis() {
                 homeRectanglesOff: homeRectangles.offensive,
                 awayRectanglesDef: awayRectangles.defensive,
                 awayRectanglesOff: awayRectangles.offensive,
+                homeCoach,
+                awayCoach,
                 events: events,
                 tags: []
             };
@@ -466,7 +477,7 @@ function Analysis() {
         homeDefensiveNotes, homeOffensiveNotes, homeBenchNotes,
         awayDefensiveNotes, awayOffensiveNotes, awayBenchNotes,
         homeTeamColor, awayTeamColor, navigate,
-        homeRectangles, awayRectangles]);
+        homeRectangles, awayRectangles, homeCoach, awayCoach]);
 
     // Load existing analysis if available
     useEffect(() => {
@@ -847,6 +858,14 @@ function Analysis() {
                                         rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                         playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                     />
+                                    <div className="mt-2 text-center">
+                                        <CoachNameDisplay
+                                            coachName={viewTeam === 'home' ? homeCoach : awayCoach}
+                                            onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
+                                            teamColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            align="left"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Offensive Field */}
@@ -871,6 +890,14 @@ function Analysis() {
                                         rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                         playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                     />
+                                    <div className="mt-2 text-center">
+                                        <CoachNameDisplay
+                                            coachName={viewTeam === 'home' ? homeCoach : awayCoach}
+                                            onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
+                                            teamColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            align="left"
+                                        />
+                                    </div>
                                 </div>
 
                             </div>
