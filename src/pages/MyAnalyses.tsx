@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { analysisService, type SavedAnalysisSummary, type AnalysisStatus, type AnalysisFilters } from '../services/analysisService';
+import { analysisService, type SavedAnalysisSummary, type AnalysisFilters } from '../services/analysisService';
 import {
     Loader2, Trash2, Calendar, FileText, Plus, Search,
     ExternalLink, Copy, Clock, Grid, List, ChevronDown
@@ -8,19 +8,11 @@ import {
 import Header from '../components/Header';
 import NewAnalysisModal from '../components/NewAnalysisModal';
 
-type StatusFilter = AnalysisStatus | 'todas';
-
-const STATUS_LABELS: Record<AnalysisStatus, { label: string; color: string }> = {
-    rascunho: { label: 'Rascunho', color: 'bg-gray-500/20 text-gray-400' },
-    em_andamento: { label: 'Em andamento', color: 'bg-yellow-500/20 text-yellow-400' },
-    finalizada: { label: 'Finalizada', color: 'bg-green-500/20 text-green-400' }
-};
-
 const MyAnalyses = () => {
     const navigate = useNavigate();
     const [analyses, setAnalyses] = useState<SavedAnalysisSummary[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<StatusFilter>('todas');
+    // const [activeTab, setActiveTab] = useState<StatusFilter>('todas'); // Removed
     const [searchQuery, setSearchQuery] = useState('');
     const [orderBy, setOrderBy] = useState<'created_at' | 'updated_at' | 'titulo'>('created_at');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -28,13 +20,13 @@ const MyAnalyses = () => {
 
     useEffect(() => {
         loadAnalyses();
-    }, [activeTab, searchQuery, orderBy]);
+    }, [searchQuery, orderBy]);
 
     async function loadAnalyses() {
         setLoading(true);
         try {
             const filters: AnalysisFilters = {
-                status: activeTab,
+                status: 'todas',
                 search: searchQuery || undefined,
                 orderBy,
                 orderDirection: 'desc'
@@ -94,12 +86,7 @@ const MyAnalyses = () => {
         return formatDate(dateString);
     };
 
-    const tabs: { key: StatusFilter; label: string }[] = [
-        { key: 'todas', label: 'Todas' },
-        { key: 'rascunho', label: 'Rascunhos' },
-        { key: 'em_andamento', label: 'Em Andamento' },
-        { key: 'finalizada', label: 'Finalizadas' }
-    ];
+    // const tabs removed
 
     return (
         <div className="min-h-screen bg-[#0d1117] flex flex-col">
@@ -138,20 +125,11 @@ const MyAnalyses = () => {
 
                 {/* Filters Row */}
                 <div className="flex items-center justify-between mb-6 bg-[#1a1f2e] rounded-xl p-2">
-                    {/* Status Tabs */}
+                    {/* Status Tabs - Changed to just static 'Todas' label as requested */}
                     <div className="flex gap-1">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.key
-                                    ? 'bg-green-500 text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                                    }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
+                        <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-500 text-white cursor-default">
+                            Todas
+                        </span>
                     </div>
 
                     {/* Order & View Toggle */}
@@ -237,11 +215,7 @@ const MyAnalyses = () => {
                                         </div>
                                     )}
 
-                                    {/* Status Badge */}
-                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${STATUS_LABELS[analysis.status]?.color || 'bg-gray-500/20 text-gray-400'
-                                        }`}>
-                                        {STATUS_LABELS[analysis.status]?.label || 'Rascunho'}
-                                    </div>
+                                    {/* Status Badge Removed */}
 
                                     {/* Hover Actions */}
                                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
