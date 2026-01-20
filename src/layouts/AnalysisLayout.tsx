@@ -44,7 +44,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
                 />
 
                 {/* Page Content */}
-                <div className="flex-1 overflow-hidden relative flex flex-col">
+                <div className="flex-1 overflow-hidden relative flex flex-col pt-16">
                     {children}
                 </div>
             </main>

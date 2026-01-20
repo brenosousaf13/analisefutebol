@@ -800,70 +800,75 @@ function Analysis() {
 
                         {/* Fields Area */}
                         {/* Fields Area */}
-                        <div className="flex-1 grid grid-cols-2 gap-6 p-4 ml-16">
+                        {/* Fields Area */}
+                        <div className="flex-1 flex flex-col p-4 ml-16 overflow-hidden">
 
-                            {/* Defensive Field */}
-                            <div className="relative h-full">
-                                {/* LABEL ABSOLUTO - SEMPRE VISÍVEL */}
-                                <div className="absolute top-0 left-0 right-0 z-50 text-center py-2 pointer-events-none">
-                                    <span className="text-sm font-bold text-amber-400 uppercase tracking-widest bg-[#242938]/80 px-4 py-1 rounded">
+                            {/* Labels Row - TOPO ACIMA DOS CAMPOS (Solicitado pelo usuario) */}
+                            <div className="flex shrink-0 mb-4">
+                                <div className="flex-1 text-center">
+                                    <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
                                         Defensivo
                                     </span>
                                 </div>
-
-                                {/* Campo */}
-                                <TacticalField
-                                    players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
-                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
-                                    onPlayerClick={handlePlayerClick}
-                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={getTacticalFieldMode()}
-                                    arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
-                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
-                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
-                                    rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
-                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
-                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
-                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
-                                    isEraserMode={activeTool === 'eraser'}
-                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                />
-                            </div>
-
-                            {/* Offensive Field */}
-                            <div className="relative h-full">
-                                {/* LABEL ABSOLUTO - SEMPRE VISÍVEL */}
-                                <div className="absolute top-0 left-0 right-0 z-50 text-center py-2 pointer-events-none">
-                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest bg-[#242938]/80 px-4 py-1 rounded">
+                                <div className="w-6"></div>
+                                <div className="flex-1 text-center">
+                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
                                         Ofensivo
                                     </span>
                                 </div>
+                            </div>
 
-                                {/* Campo */}
-                                <TacticalField
-                                    players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
-                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
-                                    onPlayerClick={handlePlayerClick}
-                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
-                                    selectedPlayerId={selectedPlayerId}
-                                    playerNotes={playerNotes}
-                                    mode={getTacticalFieldMode()}
-                                    arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
-                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
-                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
-                                    rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
-                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
-                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
-                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
-                                    isEraserMode={activeTool === 'eraser'}
-                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                />
+                            {/* Fields Row - CAMPOS LADO A LADO */}
+                            <div className="flex-1 grid grid-cols-2 gap-6 min-h-0">
+
+                                {/* Defensive Field */}
+                                <div className="relative h-full">
+                                    <TacticalField
+                                        players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                        onPlayerClick={handlePlayerClick}
+                                        onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
+                                        selectedPlayerId={selectedPlayerId}
+                                        playerNotes={playerNotes}
+                                        mode={getTacticalFieldMode()}
+                                        arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
+                                        onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                        onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                        onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
+                                        rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
+                                        onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
+                                        onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
+                                        onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
+                                        isEraserMode={activeTool === 'eraser'}
+                                        rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                        playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                    />
+                                </div>
+
+                                {/* Offensive Field */}
+                                <div className="relative h-full">
+                                    <TacticalField
+                                        players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                        onPlayerClick={handlePlayerClick}
+                                        onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
+                                        selectedPlayerId={selectedPlayerId}
+                                        playerNotes={playerNotes}
+                                        mode={getTacticalFieldMode()}
+                                        arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
+                                        onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                        onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                        onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
+                                        rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
+                                        onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
+                                        onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
+                                        onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
+                                        isEraserMode={activeTool === 'eraser'}
+                                        rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                        playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                    />
+                                </div>
+
                             </div>
 
                         </div>
