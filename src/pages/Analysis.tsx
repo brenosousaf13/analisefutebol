@@ -859,7 +859,7 @@ function Analysis() {
                             {/* Defensive Field Column */}
                             <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'defensive' ? 'flex' : 'hidden lg:flex'
                                 }`}>
-                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[340px] xl:max-w-[400px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
+                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[320px] xl:max-w-[360px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
@@ -887,7 +887,7 @@ function Analysis() {
                             {/* Offensive Field Column */}
                             <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'offensive' ? 'flex' : 'hidden lg:flex'
                                 }`}>
-                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[340px] xl:max-w-[400px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
+                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[320px] xl:max-w-[360px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
