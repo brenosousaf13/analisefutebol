@@ -5,6 +5,7 @@ import MyAnalyses from './pages/MyAnalyses';
 import Login from './pages/Login';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -40,6 +41,12 @@ function App() {
           <Route path="/minhas-analises" element={
             <ProtectedRoute>
               <MyAnalyses />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           } />
 

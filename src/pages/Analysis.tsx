@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';

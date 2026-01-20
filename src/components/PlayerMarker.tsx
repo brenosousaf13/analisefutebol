@@ -26,17 +26,11 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
     isSelected,
     shortName,
     playerSize = 36, // Default fallback
-    fontSize = { number: 14, name: 10 },
-    compact = false
+    fontSize = { number: 14, name: 10 }
 }) => {
 
     // Fallback if shortName is not provided
     const labelName = shortName || player.name.split(' ').pop();
-
-    // Effective sizes based on compact mode
-    const effectivePlayerSize = compact ? 24 : playerSize;
-    const effectiveFontSizeNumber = compact ? 10 : fontSize.number;
-    const effectiveFontSizeName = compact ? 8 : fontSize.name;
 
     return (
         <div
@@ -46,7 +40,7 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
             style={{
                 left: `${player.position.x}%`,
                 top: `${player.position.y}%`,
-                width: effectivePlayerSize, // Ensure container has width for centering
+                width: playerSize, // Ensure container has width for centering
                 transform: 'translate(-50%, -50%)',
                 touchAction: 'none'
             }}
@@ -65,9 +59,9 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
                     }
                 `}
                 style={{
-                    width: effectivePlayerSize,
-                    height: effectivePlayerSize,
-                    fontSize: effectiveFontSizeNumber
+                    width: playerSize,
+                    height: playerSize,
+                    fontSize: fontSize.number
                 }}
             >
                 {player.number}
@@ -81,15 +75,15 @@ const PlayerMarker: React.FC<PlayerMarkerProps> = ({
                     backdrop-blur-sm
                 `}
                 style={{
-                    fontSize: effectiveFontSizeName,
-                    maxWidth: effectivePlayerSize * 2.5 // proportional max width
+                    fontSize: fontSize.name,
+                    maxWidth: playerSize * 2.5 // proportional max width
                 }}
             >
                 {labelName}
             </span>
 
             {/* Note Indicator */}
-            {hasNote && !compact && (
+            {hasNote && (
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white rounded-full translate-x-1" />
             )}
         </div>
