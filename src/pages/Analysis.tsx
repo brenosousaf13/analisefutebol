@@ -857,9 +857,9 @@ function Analysis() {
                         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 ml-0 lg:ml-16 overflow-y-auto lg:overflow-hidden pb-16 lg:pb-0">
 
                             {/* Defensive Field Column */}
-                            <div className={`flex-col h-full relative min-h-[300px] lg:min-h-0 ${mobileTab === 'defensive' ? 'flex' : 'hidden lg:flex'
+                            <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'defensive' ? 'flex' : 'hidden lg:flex'
                                 }`}>
-                                <div className="flex-1 relative min-h-0 w-full max-w-[270px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
+                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
@@ -885,9 +885,9 @@ function Analysis() {
                             </div>
 
                             {/* Offensive Field Column */}
-                            <div className={`flex-col h-full relative min-h-[300px] lg:min-h-0 ${mobileTab === 'offensive' ? 'flex' : 'hidden lg:flex'
+                            <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'offensive' ? 'flex' : 'hidden lg:flex'
                                 }`}>
-                                <div className="flex-1 relative min-h-0 w-full max-w-[270px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
+                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[550px] mx-auto mt-2 lg:mt-0">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
