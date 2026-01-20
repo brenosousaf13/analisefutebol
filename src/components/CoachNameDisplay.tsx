@@ -4,14 +4,12 @@ import { Pencil, Check, X } from 'lucide-react';
 interface CoachNameDisplayProps {
     coachName: string;
     onSave: (newName: string) => void;
-    teamColor: string;
-    align?: 'left' | 'right';
+    align?: 'left' | 'right' | 'center';
 }
 
 export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
     coachName,
     onSave,
-    teamColor,
     align = 'left'
 }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -45,9 +43,17 @@ export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
         if (e.key === 'Escape') handleCancel();
     };
 
+    const getAlignmentClass = () => {
+        switch (align) {
+            case 'right': return 'flex-row-reverse';
+            case 'center': return 'justify-center';
+            default: return '';
+        }
+    };
+
     if (isEditing) {
         return (
-            <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''} bg-[#1a1f2e] p-1 rounded border border-gray-700`}>
+            <div className={`flex items-center gap-2 ${getAlignmentClass()} bg-[#1a1f2e] p-1 rounded border border-gray-700`}>
                 <span className="text-xs text-gray-500 font-medium uppercase tracking-wider whitespace-nowrap">
                     Técnico:
                 </span>
@@ -83,7 +89,7 @@ export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
     return (
         <div
             onDoubleClick={() => setIsEditing(true)}
-            className={`group flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''} cursor-pointer py-1 px-2 rounded hover:bg-white/5 transition-colors`}
+            className={`group flex items-center gap-2 ${getAlignmentClass()} cursor-pointer py-1 px-2 rounded hover:bg-white/5 transition-colors`}
         >
             <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
                 Técnico:

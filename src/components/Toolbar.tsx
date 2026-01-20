@@ -80,13 +80,26 @@ const Toolbar: React.FC<ToolbarProps> = ({
     hasUnsavedChanges = false
 }) => {
     return (
-        <div className="fixed left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-nav-dark rounded-xl p-2 shadow-2xl border border-gray-700 z-30">
+        <div className={`
+            fixed z-30
+            /* Mobile: Bottom bar horizontal */
+            bottom-0 left-0 right-0 h-16
+            flex flex-row items-center justify-around
+            bg-nav-dark border-t border-gray-700
+            px-2 pb-safe
+            
+            /* Desktop: Sidebar lateral esquerda vertical */
+            lg:bottom-auto lg:left-4 lg:right-auto lg:top-1/2 lg:-translate-y-1/2
+            lg:h-auto lg:w-auto
+            lg:flex-col lg:gap-2 lg:p-2 lg:rounded-xl lg:border lg:border-gray-700
+            lg:shadow-2xl
+        `}>
 
             {/* Drawing Tools */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-row lg:flex-col gap-1 items-center">
                 <ToolButton
                     icon={<MousePointer2 className="w-5 h-5" />}
-                    label="Seleção (mover jogadores)"
+                    label="Seleção"
                     isActive={activeTool === 'select'}
                     onClick={() => onToolChange('select')}
                 />
@@ -96,69 +109,81 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     isActive={activeTool === 'arrow'}
                     onClick={() => onToolChange('arrow')}
                 />
-                <ToolButton
-                    icon={<Square className="w-5 h-5" />}
-                    label="Área/Retângulo"
-                    isActive={activeTool === 'rectangle'}
-                    onClick={() => onToolChange('rectangle')}
-                />
+                <div className="hidden sm:block">
+                    <ToolButton
+                        icon={<Square className="w-5 h-5" />}
+                        label="Área"
+                        isActive={activeTool === 'rectangle'}
+                        onClick={() => onToolChange('rectangle')}
+                    />
+                </div>
             </div>
 
-            <div className="h-px bg-gray-700 my-1" />
+            <div className="h-4 w-px bg-gray-700 mx-1 lg:hidden" />
+            <div className="hidden lg:block h-px w-8 bg-gray-700 my-1" />
 
             {/* Colors & Eraser */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-row lg:flex-col gap-1 items-center">
                 <ToolButton
                     icon={<Palette className="w-5 h-5" />}
-                    label="Cores dos Times"
+                    label="Cores"
                     onClick={onOpenColorPicker}
                 />
                 <ToolButton
                     icon={<Eraser className="w-5 h-5" />}
-                    label="Apagar elementos"
+                    label="Apagar"
                     isActive={activeTool === 'eraser'}
                     onClick={() => onToolChange('eraser')}
                 />
             </div>
 
-            <div className="h-px bg-gray-700 my-1" />
+            <div className="h-4 w-px bg-gray-700 mx-1 lg:hidden" />
+            <div className="hidden lg:block h-px bg-gray-700 my-1" />
 
-            {/* Analysis & Events */}
-            <div className="flex flex-col gap-1">
+            {/* Analysis & Events - Mobile Only specific or shared */}
+            <div className="flex flex-row lg:flex-col gap-1 items-center">
                 <ToolButton
                     icon={<UserPlus className="w-5 h-5" />}
-                    label="Adicionar Jogador"
+                    label="Add Jogador"
                     onClick={onAddPlayer}
                 />
-                <ToolButton
-                    icon={<FileText className="w-5 h-5" />}
-                    label="Análise Tática"
-                    onClick={onOpenAnalysis}
-                />
-                <ToolButton
-                    icon={<Zap className="w-5 h-5" />}
-                    label="Eventos da Partida"
-                    onClick={onOpenEvents}
-                />
+                <div className="hidden sm:block lg:block">
+                    <ToolButton
+                        icon={<FileText className="w-5 h-5" />}
+                        label="Análise"
+                        onClick={onOpenAnalysis}
+                    />
+                </div>
+                <div className="hidden sm:block lg:block">
+                    <ToolButton
+                        icon={<Zap className="w-5 h-5" />}
+                        label="Eventos"
+                        onClick={onOpenEvents}
+                    />
+                </div>
             </div>
 
-            <div className="h-px bg-gray-700 my-1" />
+            <div className="hidden lg:block h-px bg-gray-700 my-1" />
 
-            {/* Actions */}
-            <div className="flex flex-col gap-1">
-                <ToolButton
-                    icon={<Download className="w-5 h-5" />}
-                    label="Exportar Análise"
-                    onClick={onExport}
-                />
+            {/* Actions - Desktop mostly, on mobile Save is critical */}
+            <div className="flex flex-row lg:flex-col gap-1 items-center">
+                <div className="hidden lg:block">
+                    <ToolButton
+                        icon={<Download className="w-5 h-5" />}
+                        label="Exportar"
+                        onClick={onExport}
+                    />
+                </div>
                 <ToolButton
                     icon={<Save className="w-5 h-5" />}
-                    label="Salvar Análise"
+                    label="Salvar"
                     onClick={onSave}
                     isLoading={isSaving}
                     badge={hasUnsavedChanges}
                 />
             </div>
+
+            {/* Mobile Menu for hidden items? Or keep simple? keeping simple for now based on request */}
         </div>
     );
 };

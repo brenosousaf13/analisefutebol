@@ -45,39 +45,39 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
     const userEmail = user?.email || '';
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 bg-nav-dark border-b border-gray-700 flex items-center justify-between px-6 z-50 shadow-md">
+        <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 bg-nav-dark border-b border-gray-700 flex items-center justify-between px-2 sm:px-6 z-50 shadow-md">
             {/* Left: Hamburger Menu */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <button
                     onClick={() => setIsMenuOpen(true)}
-                    className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
+                    className="p-1.5 sm:p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
                 >
-                    <Menu size={24} />
+                    <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
             </div>
 
             {/* Center: Match Info (Team Names) */}
             {matchInfo ? (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                    <div className="flex items-center gap-6">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center max-w-[50%] sm:max-w-none">
+                    <div className="flex items-center gap-2 sm:gap-6">
                         {/* Home Team */}
-                        <div className="flex items-center gap-3">
-                            <span className={`text-lg font-bold ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
+                        <div className="flex items-center gap-1 sm:gap-3 justify-end min-w-0">
+                            <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.homeTeam}
                             </span>
                             {matchInfo.homeTeamLogo && (
-                                <img src={matchInfo.homeTeamLogo} alt={matchInfo.homeTeam} className="w-8 h-8 object-contain" />
+                                <img src={matchInfo.homeTeamLogo} alt={matchInfo.homeTeam} className="w-5 h-5 sm:w-8 sm:h-8 object-contain shrink-0" />
                             )}
                         </div>
 
-                        <span className="text-gray-600 text-sm font-bold">VS</span>
+                        <span className="text-gray-600 text-xs sm:text-sm font-bold shrink-0">VS</span>
 
                         {/* Away Team */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 sm:gap-3 justify-start min-w-0">
                             {matchInfo.awayTeamLogo && (
-                                <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-8 h-8 object-contain" />
+                                <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-5 h-5 sm:w-8 sm:h-8 object-contain shrink-0" />
                             )}
-                            <span className={`text-lg font-bold ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
+                            <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.awayTeam}
                             </span>
                         </div>
@@ -85,7 +85,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
 
                     {/* Date & Time */}
                     {(matchInfo.date || matchInfo.time) && (
-                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium tracking-wide">
+                        <div className="hidden sm:flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium tracking-wide">
                             {matchInfo.date && (
                                 <span>
                                     {new Date(matchInfo.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })}
@@ -101,18 +101,18 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                     )}
                 </div>
             ) : (
-                <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-lg tracking-wide opacity-50">
+                <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-base sm:text-lg tracking-wide opacity-50">
                     Zona 14
                 </h1>
             )}
 
             {/* Right: Team Switcher or Empty */}
-            <div className="flex items-center justify-end w-48">
+            <div className="flex items-center justify-end w-auto sm:w-48 shrink-0">
                 {matchInfo && activeTeam && onTeamChange && (
-                    <div className="bg-gray-800 rounded-lg p-1 flex items-center">
+                    <div className="bg-gray-800/50 sm:bg-gray-800 rounded-lg p-0.5 sm:p-1 flex items-center">
                         <button
                             onClick={() => onTeamChange('home')}
-                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTeam === 'home'
+                            className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-all ${activeTeam === 'home'
                                 ? 'bg-accent-green text-white shadow'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
@@ -121,12 +121,12 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                         </button>
                         <button
                             onClick={() => onTeamChange('away')}
-                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTeam === 'away'
+                            className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-all ${activeTeam === 'away'
                                 ? 'bg-accent-green text-white shadow'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
                         >
-                            VISITANTE
+                            VISIT
                         </button>
                     </div>
                 )}
@@ -142,7 +142,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                     />
 
                     {/* Sidebar Drawer */}
-                    <div className="absolute top-0 left-0 bottom-0 w-72 bg-panel-dark border-r border-gray-700 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+                    <div className="absolute top-0 left-0 bottom-0 w-[280px] sm:w-72 bg-panel-dark border-r border-gray-700 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
                         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
                             <h2 className="text-white font-bold text-lg">Menu</h2>
                             <button
@@ -180,8 +180,8 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                                         <User size={20} />
                                     </div>
                                     <div className="overflow-hidden">
-                                        <p className="text-white text-sm font-bold truncate">{userName}</p>
-                                        <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+                                        <p className="text-white text-sm font-bold truncate max-w-[120px]">{userName}</p>
+                                        <p className="text-xs text-gray-400 truncate max-w-[120px]">{userEmail}</p>
                                     </div>
                                 </div>
                                 <button

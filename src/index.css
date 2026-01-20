@@ -8,5 +8,28 @@ body,
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+}
+
+/* Safe area for mobile devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mb-safe {
+        margin-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 1023px) {
+
+    button,
+    [role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
 }

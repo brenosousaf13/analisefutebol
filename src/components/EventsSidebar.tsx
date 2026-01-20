@@ -121,7 +121,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
 
             {/* Sidebar Panel */}
             <div className={`
-                absolute top-0 left-0 bottom-0 w-[450px] max-w-[calc(100vw-64px)] 
+                absolute top-0 left-0 bottom-0 w-full sm:w-[450px] max-w-full sm:max-w-[calc(100vw-64px)] 
                 bg-nav-dark shadow-2xl border-r border-gray-700 font-sans cursor-default
                 transform transition-transform duration-300 ease-in-out
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}

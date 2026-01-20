@@ -68,7 +68,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
 
             {/* Sidebar Panel */}
             <div className={`
-                absolute top-0 left-0 bottom-0 w-[1100px] max-w-[calc(100vw-64px)] 
+                absolute top-0 left-0 bottom-0 w-full sm:w-[600px] lg:w-[800px] xl:w-[1100px] max-w-full sm:max-w-[calc(100vw-64px)]
                 bg-nav-dark shadow-2xl border-r border-gray-700 font-sans cursor-default
                 transform transition-transform duration-300 ease-in-out
                 flex flex-col

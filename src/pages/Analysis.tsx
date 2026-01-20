@@ -811,33 +811,36 @@ function Analysis() {
             ) : (
                 <>
                     {/* Main Content Area */}
-                    <div className="flex-1 h-full flex flex-col p-2 gap-2 overflow-hidden">
+                    <div className="flex-1 h-full flex flex-col p-2 md:p-4 overflow-hidden relative">
 
-                        {/* Fields Area */}
-                        {/* Fields Area */}
-                        {/* Fields Area */}
-                        <div className="flex-1 flex flex-col p-4 ml-16 overflow-hidden">
+                        {/* Labels Row - Desktop Only */}
+                        <div className="hidden lg:flex shrink-0 mb-3 lg:ml-16">
+                            <div className="flex-1 text-center">
+                                <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
+                                    Defensivo
+                                </span>
+                            </div>
+                            <div className="w-6"></div>
+                            <div className="flex-1 text-center">
+                                <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
+                                    Ofensivo
+                                </span>
+                            </div>
+                        </div>
 
-                            {/* Labels Row - TOPO ACIMA DOS CAMPOS (Solicitado pelo usuario) */}
-                            <div className="flex shrink-0 mb-4">
-                                <div className="flex-1 text-center">
+                        {/* Fields Container */}
+                        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 ml-0 lg:ml-16 overflow-y-auto lg:overflow-hidden pb-16 lg:pb-0">
+
+                            {/* Defensive Field Column */}
+                            <div className="flex flex-col h-auto lg:h-full relative min-h-[450px] sm:min-h-[550px] lg:min-h-0">
+                                {/* Mobile Label */}
+                                <div className="text-center mb-2 lg:hidden">
                                     <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
                                         Defensivo
                                     </span>
                                 </div>
-                                <div className="w-6"></div>
-                                <div className="flex-1 text-center">
-                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
-                                        Ofensivo
-                                    </span>
-                                </div>
-                            </div>
 
-                            {/* Fields Row - CAMPOS LADO A LADO */}
-                            <div className="flex-1 grid grid-cols-2 gap-6 min-h-0">
-
-                                {/* Defensive Field */}
-                                <div className="relative h-full">
+                                <div className="flex-1 relative min-h-0 w-full max-w-[450px] lg:max-w-none mx-auto">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
@@ -858,18 +861,27 @@ function Analysis() {
                                         rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                         playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                     />
-                                    <div className="mt-2 text-center">
-                                        <CoachNameDisplay
-                                            coachName={viewTeam === 'home' ? homeCoach : awayCoach}
-                                            onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
-                                            teamColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                            align="left"
-                                        />
-                                    </div>
                                 </div>
 
-                                {/* Offensive Field */}
-                                <div className="relative h-full">
+                                <div className="mt-2 text-center shrink-0">
+                                    <CoachNameDisplay
+                                        coachName={viewTeam === 'home' ? homeCoach : awayCoach}
+                                        onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
+                                        align="center"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Offensive Field Column */}
+                            <div className="flex flex-col h-auto lg:h-full relative min-h-[450px] sm:min-h-[550px] lg:min-h-0">
+                                {/* Mobile Label */}
+                                <div className="text-center mb-2 lg:hidden">
+                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
+                                        Ofensivo
+                                    </span>
+                                </div>
+
+                                <div className="flex-1 relative min-h-0 w-full max-w-[450px] lg:max-w-none mx-auto">
                                     <TacticalField
                                         players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
                                         onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
@@ -890,16 +902,15 @@ function Analysis() {
                                         rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                         playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                     />
-                                    <div className="mt-2 text-center">
-                                        <CoachNameDisplay
-                                            coachName={viewTeam === 'home' ? homeCoach : awayCoach}
-                                            onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
-                                            teamColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                            align="left"
-                                        />
-                                    </div>
                                 </div>
 
+                                <div className="mt-2 text-center shrink-0">
+                                    <CoachNameDisplay
+                                        coachName={viewTeam === 'home' ? homeCoach : awayCoach}
+                                        onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
+                                        align="center"
+                                    />
+                                </div>
                             </div>
 
                         </div>
