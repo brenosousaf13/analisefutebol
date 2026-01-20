@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { UserPlus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
@@ -26,9 +26,6 @@ import EventsExpansionModal from '../components/EventsExpansionModal';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
-import BenchArea from '../components/BenchArea';
-
-
 function Analysis() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -62,18 +59,36 @@ function Analysis() {
     const [viewTeam, setViewTeam] = useState<'home' | 'away'>('home');
 
     // Data State
-    // Initial players should be empty if we are starting a new analysis (API or Custom)
+    // Initial players should be empty if we are starting a new analysis (API)
+    // Use defaults for CUSTOM matches
     // Only use mock data if accessing directly without state (Legacy/Fallback)
     const shouldInitEmpty = !!locationState;
+    const isCustomMatch = !!locationState && !locationState.matchId;
 
-    const [homePlayersDef, setHomePlayersDef] = useState<Player[]>(shouldInitEmpty ? [] : initialHomePlayers);
-    const [homePlayersOff, setHomePlayersOff] = useState<Player[]>(shouldInitEmpty ? [] : initialHomePlayers);
-    const [awayPlayersDef, setAwayPlayersDef] = useState<Player[]>(shouldInitEmpty ? [] : initialAwayPlayers);
-    const [awayPlayersOff, setAwayPlayersOff] = useState<Player[]>(shouldInitEmpty ? [] : initialAwayPlayers);
+    const [homePlayersDef, setHomePlayersDef] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(true) :
+            (shouldInitEmpty ? [] : initialHomePlayers)
+    );
+    const [homePlayersOff, setHomePlayersOff] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(true) :
+            (shouldInitEmpty ? [] : initialHomePlayers)
+    );
+    const [awayPlayersDef, setAwayPlayersDef] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(false) :
+            (shouldInitEmpty ? [] : initialAwayPlayers)
+    );
+    const [awayPlayersOff, setAwayPlayersOff] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(false) :
+            (shouldInitEmpty ? [] : initialAwayPlayers)
+    );
 
     // Substitutes
-    const [homeSubstitutes, setHomeSubstitutes] = useState<Player[]>([]);
-    const [awaySubstitutes, setAwaySubstitutes] = useState<Player[]>([]);
+    const [homeSubstitutes, setHomeSubstitutes] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultSubstitutes(true) : []
+    );
+    const [awaySubstitutes, setAwaySubstitutes] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultSubstitutes(false) : []
+    );
 
     // Scores
     const [homeScore, setHomeScore] = useState<number>(locationState?.score?.home ?? 0);
@@ -627,23 +642,7 @@ function Analysis() {
         }
     };
 
-    const handleBenchDoubleClick = (player: Player) => {
-        setEditingPlayer(player);
-        setEditingPlayerPhase('defensive');
-    };
 
-    const handleMoveToField = (player: Player, targetPos?: { x: number, y: number }) => {
-        const pos = targetPos || { x: 50, y: 50 };
-        if (viewTeam === 'home') {
-            setHomeSubstitutes(prev => prev.filter(p => p.id !== player.id));
-            setHomePlayersDef(prev => [...prev, { ...player, position: pos }]);
-            setHomePlayersOff(prev => [...prev, { ...player, position: pos }]);
-        } else {
-            setAwaySubstitutes(prev => prev.filter(p => p.id !== player.id));
-            setAwayPlayersDef(prev => [...prev, { ...player, position: pos }]);
-            setAwayPlayersOff(prev => [...prev, { ...player, position: pos }]);
-        }
-    };
 
     const handlePlayerClick = (player: Player) => {
         setSelectedPlayerId(player.id);
@@ -766,6 +765,26 @@ function Analysis() {
             }}
             activeTeam={viewTeam}
             onTeamChange={setViewTeam}
+            sidebar={!loading ? (
+                <Toolbar
+                    activeTool={activeTool}
+                    onToolChange={handleToolChange}
+                    onOpenColorPicker={() => setIsColorPickerOpen(true)}
+                    onOpenAnalysis={() => {
+                        setIsEventsSidebarOpen(false);
+                        setIsAnalysisSidebarOpen(true);
+                    }}
+                    onOpenEvents={() => {
+                        setIsAnalysisSidebarOpen(false);
+                        setIsEventsSidebarOpen(true);
+                    }}
+                    onSave={handleSave}
+                    onExport={handleExport}
+                    onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
+                    isSaving={saveStatus === 'loading'}
+                    hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
+                />
+            ) : undefined}
         >
             {loading ? (
                 <div className="flex-1 flex items-center justify-center h-full bg-[#242938]">
@@ -776,111 +795,78 @@ function Analysis() {
                 </div>
             ) : (
                 <>
-                    <div className="flex flex-col h-full bg-nav-dark">
+                    {/* Main Content Area */}
+                    <div className="flex-1 h-full flex flex-col p-2 gap-2 overflow-hidden">
 
-                        {/* Floating Toolbar */}
-                        <Toolbar
-                            activeTool={activeTool}
-                            onToolChange={handleToolChange}
-                            onOpenColorPicker={() => setIsColorPickerOpen(true)}
-                            onOpenAnalysis={() => {
-                                setIsEventsSidebarOpen(false);
-                                setIsAnalysisSidebarOpen(true);
-                            }}
-                            onOpenEvents={() => {
-                                setIsAnalysisSidebarOpen(false);
-                                setIsEventsSidebarOpen(true);
-                            }}
-                            onSave={handleSave}
-                            onExport={handleExport}
-                            onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
-                            isSaving={saveStatus === 'loading'}
-                            hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
-                        />
+                        {/* Fields Area */}
+                        {/* Fields Area */}
+                        <div className="flex-1 grid grid-cols-2 gap-6 p-4 ml-16">
 
-                        {/* Main Content Area */}
-                        <div className="flex-1 flex bg-[#242938] overflow-hidden p-4 gap-4 ml-24">
-
-                            {/* Fields Area */}
-                            <div className="flex-1 grid grid-cols-2 gap-6">
-                                {/* Defensive Field */}
-                                <div className="flex flex-col h-full">
-                                    {/* Label */}
-                                    <div className="text-center mb-2">
-                                        <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">Defensivo</span>
-                                    </div>
-                                    {/* Field - Direct on background, no extra wrapper */}
-                                    <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
-                                        <TacticalField
-                                            players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
-                                            onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
-                                            onPlayerClick={handlePlayerClick}
-                                            onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
-                                            selectedPlayerId={selectedPlayerId}
-                                            playerNotes={playerNotes}
-                                            mode={getTacticalFieldMode()}
-                                            arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
-                                            onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
-                                            onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                            onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
-                                            rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
-                                            onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
-                                            onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
-                                            onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
-                                            isEraserMode={activeTool === 'eraser'}
-                                            rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                            playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                        />
-                                    </div>
+                            {/* Defensive Field */}
+                            <div className="relative h-full">
+                                {/* LABEL ABSOLUTO - SEMPRE VISÍVEL */}
+                                <div className="absolute top-0 left-0 right-0 z-50 text-center py-2 pointer-events-none">
+                                    <span className="text-sm font-bold text-amber-400 uppercase tracking-widest bg-[#242938]/80 px-4 py-1 rounded">
+                                        Defensivo
+                                    </span>
                                 </div>
 
-                                {/* Offensive Field */}
-                                <div className="flex flex-col h-full">
-                                    {/* Label */}
-                                    <div className="text-center mb-2">
-                                        <span className="text-sm font-bold text-green-400 uppercase tracking-widest">Ofensivo</span>
-                                    </div>
-                                    {/* Field - Direct on background, no extra wrapper */}
-                                    <div className="flex-1 relative bg-field-pattern bg-center bg-cover rounded-lg overflow-hidden">
-                                        <TacticalField
-                                            players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
-                                            onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
-                                            onPlayerClick={handlePlayerClick}
-                                            onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
-                                            selectedPlayerId={selectedPlayerId}
-                                            playerNotes={playerNotes}
-                                            mode={getTacticalFieldMode()}
-                                            arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
-                                            onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
-                                            onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                            onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
-                                            rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
-                                            onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
-                                            onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
-                                            onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
-                                            isEraserMode={activeTool === 'eraser'}
-                                            rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                            playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                        />
-                                    </div>
-                                </div>
+                                {/* Campo */}
+                                <TacticalField
+                                    players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                    onPlayerClick={handlePlayerClick}
+                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
+                                    selectedPlayerId={selectedPlayerId}
+                                    playerNotes={playerNotes}
+                                    mode={getTacticalFieldMode()}
+                                    arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
+                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
+                                    rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
+                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
+                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
+                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
+                                    isEraserMode={activeTool === 'eraser'}
+                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                />
                             </div>
+
+                            {/* Offensive Field */}
+                            <div className="relative h-full">
+                                {/* LABEL ABSOLUTO - SEMPRE VISÍVEL */}
+                                <div className="absolute top-0 left-0 right-0 z-50 text-center py-2 pointer-events-none">
+                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest bg-[#242938]/80 px-4 py-1 rounded">
+                                        Ofensivo
+                                    </span>
+                                </div>
+
+                                {/* Campo */}
+                                <TacticalField
+                                    players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                    onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                    onPlayerClick={handlePlayerClick}
+                                    onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
+                                    selectedPlayerId={selectedPlayerId}
+                                    playerNotes={playerNotes}
+                                    mode={getTacticalFieldMode()}
+                                    arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
+                                    onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                    onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                    onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
+                                    rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
+                                    onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
+                                    onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
+                                    onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
+                                    isEraserMode={activeTool === 'eraser'}
+                                    rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                    playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                />
+                            </div>
+
                         </div>
-                    </div>     {/* Reserves Bar (Bottom) */}
-                    <div className="bg-panel-dark border-t border-gray-700 p-4 min-h-[96px] flex items-center justify-between px-8 z-40">
-                        <BenchArea
-                            players={viewTeam === 'home' ? homeSubstitutes : awaySubstitutes}
-                            team={viewTeam}
-                            onPromotePlayer={handleMoveToField}
-                            onPlayerDoubleClick={handleBenchDoubleClick}
-                        />
-                        <button
-                            onClick={() => setIsCreatePlayerModalOpen(true)}
-                            className="text-xs flex items-center gap-2 text-accent-green border border-accent-green/30 px-3 py-1.5 rounded-lg hover:bg-accent-green/10 transition whitespace-nowrap shrink-0"
-                        >
-                            <UserPlus size={14} />
-                            <span className="hidden md:inline">Adicionar</span>
-                        </button>
                     </div>
 
                     {/* Modals */}
@@ -1031,7 +1017,8 @@ function Analysis() {
                     />
 
                 </>
-            )}
+            )
+            }
         </AnalysisLayout >
     );
 }

@@ -221,7 +221,7 @@ const MatchesPage: React.FC = () => {
                                         type="text"
                                         value={customHome}
                                         onChange={(e) => setCustomHome(e.target.value)}
-                                        placeholder="Ex: Flamengo"
+                                        placeholder="Ex: Brasil"
                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-accent-green focus:ring-1 focus:ring-accent-green transition"
                                         required
                                     />
@@ -232,7 +232,7 @@ const MatchesPage: React.FC = () => {
                                         type="text"
                                         value={customAway}
                                         onChange={(e) => setCustomAway(e.target.value)}
-                                        placeholder="Ex: Vasco"
+                                        placeholder="Ex: Argentina"
                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-accent-green focus:ring-1 focus:ring-accent-green transition"
                                         required
                                     />

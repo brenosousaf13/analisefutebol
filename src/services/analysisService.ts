@@ -476,40 +476,44 @@ export const analysisService = {
         if (error) throw error;
     },
 
+    generateDefaultPlayers(isHome: boolean): Player[] {
+        const baseId = isHome ? 1000 : 2000;
+        const positions = [
+            { id: baseId + 1, number: 1, name: 'Goleiro', position: { x: 50, y: 92 } },
+            { id: baseId + 2, number: 2, name: 'Lateral D', position: { x: 85, y: 75 } },
+            { id: baseId + 3, number: 3, name: 'Zagueiro', position: { x: 60, y: 78 } },
+            { id: baseId + 4, number: 4, name: 'Zagueiro', position: { x: 40, y: 78 } },
+            { id: baseId + 5, number: 5, name: 'Lateral E', position: { x: 15, y: 75 } },
+            { id: baseId + 6, number: 6, name: 'Volante', position: { x: 50, y: 60 } },
+            { id: baseId + 7, number: 8, name: 'Meia', position: { x: 70, y: 50 } },
+            { id: baseId + 8, number: 10, name: 'Meia', position: { x: 30, y: 50 } },
+            { id: baseId + 9, number: 7, name: 'Ponta D', position: { x: 80, y: 25 } },
+            { id: baseId + 10, number: 9, name: 'Centroavante', position: { x: 50, y: 18 } },
+            { id: baseId + 11, number: 11, name: 'Ponta E', position: { x: 20, y: 25 } },
+        ];
+        return positions;
+    },
+
+    generateDefaultSubstitutes(isHome: boolean): Player[] {
+        const baseId = isHome ? 1100 : 2100;
+        const subs: Player[] = [];
+        for (let i = 0; i < 11; i++) {
+            subs.push({
+                id: baseId + i + 1,
+                number: 12 + i,
+                name: `Reserva ${12 + i}`,
+                position: { x: 0, y: 0 }
+            });
+        }
+        return subs;
+    },
+
     async createBlankAnalysis(tipo: AnalysisType = 'partida'): Promise<string> {
-        const generateDefaultPlayers = (isHome: boolean): Player[] => {
-            const baseId = isHome ? 1000 : 2000;
-            const positions = [
-                { id: baseId + 1, number: 1, name: 'Goleiro', position: { x: 50, y: 92 } },
-                { id: baseId + 2, number: 2, name: 'Lateral D', position: { x: 85, y: 75 } },
-                { id: baseId + 3, number: 3, name: 'Zagueiro', position: { x: 60, y: 78 } },
-                { id: baseId + 4, number: 4, name: 'Zagueiro', position: { x: 40, y: 78 } },
-                { id: baseId + 5, number: 5, name: 'Lateral E', position: { x: 15, y: 75 } },
-                { id: baseId + 6, number: 6, name: 'Volante', position: { x: 50, y: 60 } },
-                { id: baseId + 7, number: 8, name: 'Meia', position: { x: 70, y: 50 } },
-                { id: baseId + 8, number: 10, name: 'Meia', position: { x: 30, y: 50 } },
-                { id: baseId + 9, number: 7, name: 'Ponta D', position: { x: 80, y: 25 } },
-                { id: baseId + 10, number: 9, name: 'Centroavante', position: { x: 50, y: 18 } },
-                { id: baseId + 11, number: 11, name: 'Ponta E', position: { x: 20, y: 25 } },
-            ];
-            return positions;
-        };
+        const homePlayers = this.generateDefaultPlayers(true);
+        const awayPlayers = this.generateDefaultPlayers(false);
+        const homeSubs = this.generateDefaultSubstitutes(true);
+        const awaySubs = this.generateDefaultSubstitutes(false);
 
-        const generateDefaultSubstitutes = (isHome: boolean): Player[] => {
-            const baseId = isHome ? 1100 : 2100;
-            return [
-                { id: baseId + 1, number: 12, name: 'Goleiro Res', position: { x: 0, y: 0 } },
-                { id: baseId + 2, number: 13, name: 'Reserva', position: { x: 0, y: 0 } },
-                { id: baseId + 3, number: 14, name: 'Reserva', position: { x: 0, y: 0 } },
-                { id: baseId + 4, number: 15, name: 'Reserva', position: { x: 0, y: 0 } },
-                { id: baseId + 5, number: 16, name: 'Reserva', position: { x: 0, y: 0 } },
-            ];
-        };
-
-        const homePlayers = generateDefaultPlayers(true);
-        const awayPlayers = generateDefaultPlayers(false);
-        const homeSubs = generateDefaultSubstitutes(true);
-        const awaySubs = generateDefaultSubstitutes(false);
 
         const blankData: AnalysisData = {
             titulo: 'Nova Análise',

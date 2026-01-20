@@ -44,8 +44,6 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
 
-    if (!isOpen) return null;
-
     const getStatusText = () => {
         switch (autoSaveStatus) {
             case 'saving': return 'Salvando...';
@@ -58,15 +56,24 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
     const isHome = activeTab === 'home';
 
     return (
-        <>
-            {/* Overlay */}
+        <div className={`fixed inset-0 z-50 ${isOpen ? 'visible' : 'invisible'}`}>
+            {/* Overlay/Backdrop */}
             <div
-                className="fixed inset-0 bg-black/40 z-40"
+                className={`
+                    absolute inset-0 bg-black/50 transition-opacity duration-300 ease-in-out
+                    ${isOpen ? 'opacity-100' : 'opacity-0'}
+                `}
                 onClick={onClose}
             />
 
-            {/* Sidebar */}
-            <div className="fixed left-16 top-0 bottom-0 w-[1100px] max-w-[calc(100vw-80px)] bg-nav-dark z-50 flex flex-col shadow-2xl border-r border-gray-700">
+            {/* Sidebar Panel */}
+            <div className={`
+                absolute top-0 left-0 bottom-0 w-[1100px] max-w-[calc(100vw-64px)] 
+                bg-nav-dark shadow-2xl border-r border-gray-700 font-sans cursor-default
+                transform transition-transform duration-300 ease-in-out
+                flex flex-col
+                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-700 shrink-0">
@@ -86,8 +93,8 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     <button
                         onClick={() => setActiveTab('home')}
                         className={`flex - 1 py - 3 text - sm font - bold uppercase tracking - wide rounded - t - lg transition - colors border - t border - l border - r ${activeTab === 'home'
-                                ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
-                                : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
+                            ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
+                            : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
                             } `}
                         style={{ marginBottom: '-1px' }}
                     >
@@ -96,8 +103,8 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     <button
                         onClick={() => setActiveTab('away')}
                         className={`flex - 1 py - 3 text - sm font - bold uppercase tracking - wide rounded - t - lg transition - colors border - t border - l border - r ${activeTab === 'away'
-                                ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
-                                : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
+                            ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
+                            : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
                             } `}
                         style={{ marginBottom: '-1px' }}
                     >
@@ -106,8 +113,8 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                 </div>
 
                 {/* Content with scroll */}
-                <div className="flex-1 overflow-y-auto p-6 bg-panel-dark">
-                    <div className="grid grid-cols-2 gap-6 h-full min-h-[500px]">
+                <div className="flex-1 overflow-y-auto p-6 bg-panel-dark min-h-0">
+                    <div className="grid grid-cols-2 gap-6 h-full min-h-[600px]">
 
                         {/* Column 1: Defensive */}
                         <div className="flex flex-col gap-6">
@@ -120,7 +127,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                                     value={isHome ? homeDefensiveNotes : awayDefensiveNotes}
                                     onChange={(e) => isHome ? onHomeDefensiveNotesChange(e.target.value) : onAwayDefensiveNotesChange(e.target.value)}
                                     placeholder={`Padrões defensivos do ${isHome ? homeTeamName : awayTeamName}...`}
-                                    className="flex-1 min-h-[250px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50 placeholder-gray-500 border border-gray-700"
+                                    className="flex-1 min-h-[400px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50 placeholder-gray-500 border border-gray-700"
                                 />
                             </div>
                         </div>
@@ -138,7 +145,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                                     value={isHome ? homeOffensiveNotes : awayOffensiveNotes}
                                     onChange={(e) => isHome ? onHomeOffensiveNotesChange(e.target.value) : onAwayOffensiveNotesChange(e.target.value)}
                                     placeholder={`Padrões ofensivos do ${isHome ? homeTeamName : awayTeamName}...`}
-                                    className="flex-1 min-h-[200px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 border border-gray-700"
+                                    className="flex-1 min-h-[400px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 border border-gray-700"
                                 />
                             </div>
 
@@ -146,17 +153,14 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     </div>
                 </div>
 
-                {/* Footer with save status */}
-                <div className="p-4 border-t border-gray-700 text-center shrink-0 bg-nav-dark">
-                    <span className={`text - sm ${autoSaveStatus === 'error' ? 'text-red-400' :
-                            autoSaveStatus === 'saved' ? 'text-green-400' :
-                                'text-gray-500'
-                        } `}>
+                {/* Footer with save status - COMACTO */}
+                <div className="py-2 px-4 border-t border-gray-700 text-center shrink-0 bg-nav-dark">
+                    <span className="text-xs text-gray-500">
                         {getStatusText()}
                     </span>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

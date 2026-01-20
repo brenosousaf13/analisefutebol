@@ -83,8 +83,6 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
     });
     const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
-    if (!isOpen) return null;
-
     // Get current team players
     const currentTeamPlayers = newEvent.team === 'home' ? homePlayers : awayPlayers;
 
@@ -111,15 +109,23 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
     const sortedEvents = [...events].sort((a, b) => a.minute - b.minute);
 
     return (
-        <>
+        <div className={`fixed inset-0 z-50 ${isOpen ? 'visible' : 'invisible'}`}>
             {/* Overlay */}
             <div
-                className="fixed inset-0 bg-black/40 z-40"
+                className={`
+                    absolute inset-0 bg-black/50 transition-opacity duration-300 ease-in-out
+                    ${isOpen ? 'opacity-100' : 'opacity-0'}
+                `}
                 onClick={onClose}
             />
 
-            {/* Sidebar */}
-            <div className="fixed left-16 top-0 bottom-0 w-[450px] max-w-[calc(100vw-80px)] bg-nav-dark z-50 flex flex-col shadow-2xl border-r border-gray-700">
+            {/* Sidebar Panel */}
+            <div className={`
+                absolute top-0 left-0 bottom-0 w-[450px] max-w-[calc(100vw-64px)] 
+                bg-nav-dark shadow-2xl border-r border-gray-700 font-sans cursor-default
+                transform transition-transform duration-300 ease-in-out
+                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-700 shrink-0">
@@ -290,7 +296,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
                     </div>
                 )}
             </div>
-        </>
+        </div>
     );
 };
 

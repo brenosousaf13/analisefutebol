@@ -6,23 +6,27 @@ interface BenchAreaProps {
     team: 'home' | 'away';
     onPromotePlayer: (player: Player) => void;
     onPlayerDoubleClick: (player: Player) => void;
+    orientation?: 'horizontal' | 'vertical';
 }
 
 const BenchArea: React.FC<BenchAreaProps> = ({
     players,
     team: _team,
     onPromotePlayer,
-    onPlayerDoubleClick
+    onPlayerDoubleClick,
+    orientation = 'horizontal'
 }) => {
     return (
-        <div className="flex items-center gap-4 flex-1 overflow-x-auto">
+        <div className={`flex ${orientation === 'vertical' ? 'flex-col h-full w-full' : 'flex-row items-center w-full px-2'} ${orientation === 'vertical' ? 'gap-2' : 'gap-6'} overflow-auto scrollbar-hide`}>
             {/* Single RESERVAS label */}
-            <span className="text-gray-400 text-sm font-medium uppercase tracking-wide whitespace-nowrap">
-                Reservas
-            </span>
+            <div className={`flex items-center justify-center ${orientation === 'vertical' ? 'w-full border-b border-gray-700 pb-2 mb-1' : 'border-r border-gray-700 pr-6 h-full'}`}>
+                <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">
+                    Reservas
+                </span>
+            </div>
 
             {/* Players list */}
-            <div className="flex items-center gap-3">
+            <div className={`flex ${orientation === 'vertical' ? 'flex-col w-full items-center gap-2' : 'flex-row items-center gap-3 w-full'}`}>
                 {players.length > 0 ? (
                     players.map(player => (
                         <div
@@ -33,20 +37,20 @@ const BenchArea: React.FC<BenchAreaProps> = ({
                             }}
                             onClick={() => onPromotePlayer(player)}
                             title={`${player.name} - Clique para promover, duplo clique para editar`}
-                            className="flex flex-col items-center cursor-pointer group"
+                            className="flex flex-col items-center cursor-pointer group shrink-0"
                         >
-                            {/* Player circle - proportional to field players (w-9 instead of w-10) */}
-                            <div className="w-9 h-9 rounded-full bg-gray-600 border-2 border-gray-500 flex items-center justify-center text-white font-bold text-sm group-hover:border-green-500 group-hover:bg-gray-500 group-hover:scale-105 transition-all shadow-sm">
+                            {/* Player circle - Responsive size */}
+                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-600 border-2 border-gray-500 flex items-center justify-center text-white font-bold text-xs md:text-sm group-hover:border-green-500 group-hover:bg-gray-500 group-hover:scale-110 transition-all shadow-md">
                                 {player.number}
                             </div>
                             {/* Player name */}
-                            <span className="text-[10px] text-gray-400 mt-0.5 max-w-[40px] truncate text-center group-hover:text-white transition-colors">
+                            <span className="text-[9px] md:text-[10px] text-gray-400 mt-1 max-w-[50px] truncate text-center group-hover:text-white transition-colors font-medium">
                                 {player.name.split(' ').pop()}
                             </span>
                         </div>
                     ))
                 ) : (
-                    <span className="text-gray-500 text-sm italic">Banco vazio</span>
+                    <span className="text-gray-500 text-sm italic w-full text-center">Banco vazio</span>
                 )}
             </div>
         </div>
