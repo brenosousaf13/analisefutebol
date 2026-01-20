@@ -913,7 +913,7 @@ function Analysis() {
                         </div>
 
                         {/* Centered Coach Name - Footer */}
-                        <div className="mt-2 text-center shrink-0 w-full flex justify-center pb-2">
+                        <div className="mt-2 text-center shrink-0 w-full flex justify-center pb-16 lg:pb-2">
                             <CoachNameDisplay
                                 coachName={viewTeam === 'home' ? homeCoach : awayCoach}
                                 onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
