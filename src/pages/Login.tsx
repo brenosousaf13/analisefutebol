@@ -231,13 +231,13 @@ const Login: React.FC = () => {
                 <div className="relative z-10 p-12 flex flex-col gap-6 text-left">
                     <div className="w-12 h-1 bg-emerald-500 mb-2"></div>
                     <h1 className="text-white text-5xl xl:text-6xl font-black leading-tight tracking-tight drop-shadow-lg">
-                        VITÓRIA<br />
+                        ONDE A ANÁLISE<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-white">
-                            GUIADA POR DADOS.
+                            VIRA TÁTICA.
                         </span>
                     </h1>
                     <p className="text-gray-300 text-lg max-w-md font-light leading-relaxed border-l-2 border-white/20 pl-4">
-                        Análises de precisão para o jogo moderno. Acesse a plataforma de dados de futebol mais abrangente do mundo.
+                        Desenhe, revise e apresente suas ideias com uma prancheta feita para analistas.
                     </p>
 
 
