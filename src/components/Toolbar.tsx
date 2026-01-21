@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    MousePointer2,
+    Hand,
     MoveRight,
     Square,
     Palette,
@@ -102,7 +102,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
             {/* Drawing Tools */}
             <div className="flex flex-row lg:flex-col gap-1 items-center shrink-0">
                 <ToolButton
-                    icon={<MousePointer2 className="w-5 h-5" />}
+                    icon={<Hand className="w-5 h-5" />}
                     label="Seleção"
                     isActive={activeTool === 'select'}
                     onClick={() => onToolChange('select')}
