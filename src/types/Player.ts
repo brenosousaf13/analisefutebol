@@ -7,4 +7,5 @@ export interface Player {
         y: number; // 0-100%
     };
     isManual?: boolean;
+    note?: string;
 }

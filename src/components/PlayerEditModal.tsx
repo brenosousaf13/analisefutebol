@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ArrowRightLeft, LogOut } from 'lucide-react';
+import { X, ArrowRightLeft, LogOut, StickyNote } from 'lucide-react';
 import type { Player } from '../types/Player';
 
 interface PlayerEditModalProps {
@@ -12,8 +12,6 @@ interface PlayerEditModalProps {
     onSendToBench: (player: Player) => void;
 }
 
-
-
 export default function PlayerEditModal({
     player,
     isOpen,
@@ -25,14 +23,16 @@ export default function PlayerEditModal({
 }: PlayerEditModalProps) {
     const [name, setName] = useState('');
     const [number, setNumber] = useState(1);
+    const [note, setNote] = useState('');
     const [positionName, setPositionName] = useState('Meia');
-    const [activeTab, setActiveTab] = useState<'edit' | 'substitute'>('edit');
+    const [activeTab, setActiveTab] = useState<'edit' | 'substitute' | 'notes'>('edit');
 
     // Reset values when player changes
     useEffect(() => {
         if (player) {
             setName(player.name);
             setNumber(player.number);
+            setNote(player.note || '');
             // Use player name as position if no dedicated field (adjust if you add 'position' field to Player)
             setPositionName('Meia');
             setActiveTab('edit'); // Always start on edit
@@ -45,7 +45,8 @@ export default function PlayerEditModal({
         onSave({
             ...player,
             name,
-            number
+            number,
+            note
         });
         onClose();
     };
@@ -90,6 +91,16 @@ export default function PlayerEditModal({
                         Editar Informações
                     </button>
                     <button
+                        onClick={() => setActiveTab('notes')}
+                        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes'
+                            ? 'border-green-500 text-green-500'
+                            : 'border-transparent text-gray-400 hover:text-white'
+                            }`}
+                    >
+                        <StickyNote size={16} />
+                        Anotações
+                    </button>
+                    <button
                         onClick={() => setActiveTab('substitute')}
                         className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'substitute'
                             ? 'border-green-500 text-green-500'
@@ -102,13 +113,16 @@ export default function PlayerEditModal({
 
                 {/* Content - Scrollable */}
                 <div className="p-6 overflow-y-auto">
-                    {activeTab === 'edit' ? (
+                    {activeTab === 'edit' && (
                         <>
                             {/* Preview */}
                             <div className="flex justify-center mb-6">
                                 <div className="text-center">
-                                    <div className="w-16 h-16 rounded-full bg-accent-yellow flex items-center justify-center text-gray-900 text-2xl font-bold mx-auto border-2 border-white shadow-lg">
+                                    <div className="relative w-16 h-16 rounded-full bg-accent-yellow flex items-center justify-center text-gray-900 text-2xl font-bold mx-auto border-2 border-white shadow-lg">
                                         {number}
+                                        {note.trim() && (
+                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border border-white" />
+                                        )}
                                     </div>
                                     <p className="text-white mt-2 font-medium">{name || 'Nome'}</p>
                                     <p className="text-gray-400 text-sm">{positionName}</p>
@@ -150,7 +164,35 @@ export default function PlayerEditModal({
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    )}
+
+                    {activeTab === 'notes' && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-gray-400 text-sm mb-2">Anotações do Jogador</label>
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    placeholder="Adicione observações táticas, físicas ou técnicas sobre este jogador..."
+                                    className="w-full h-40 bg-[#242938] text-white px-4 py-3 rounded-lg border border-gray-700 focus:outline-none focus:border-green-500 transition-colors resize-none"
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Estas anotações são salvas com a análise e ficam visíveis apenas para você.
+                                </p>
+                            </div>
+
+                            <div className="pt-4">
+                                <button
+                                    onClick={handleSave}
+                                    className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-green-900/20"
+                                >
+                                    Salvar Anotação
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'substitute' && (
                         <div className="space-y-6">
                             {/* Send to Bench Option */}
                             <div className="bg-[#242938] p-4 rounded-lg border border-gray-700">

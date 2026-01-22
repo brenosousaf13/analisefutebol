@@ -217,7 +217,8 @@ export const analysisService = {
                 variant: p.variant,
                 x: p.position.x,
                 y: p.position.y,
-                note: null,
+                y: p.position.y,
+                note: p.note || null,
                 is_manual: false
             }));
 
@@ -357,7 +358,7 @@ export const analysisService = {
 
         players?.forEach(p => {
             const playerObj: Player = {
-                id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }
+                id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note
             };
             const variant = p.variant || 'defensive';
             if (p.team === 'home') {
