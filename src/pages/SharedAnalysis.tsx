@@ -35,7 +35,7 @@ export default function SharedAnalysis() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-app-dark flex items-center justify-center">
+            <div className="min-h-screen bg-panel-dark flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
             </div>
         );
@@ -43,7 +43,7 @@ export default function SharedAnalysis() {
 
     if (error || !data) {
         return (
-            <div className="min-h-screen bg-app-dark flex items-center justify-center p-4">
+            <div className="min-h-screen bg-panel-dark flex items-center justify-center p-4">
                 <div className="text-center max-w-md">
                     <h1 className="text-2xl font-bold text-white mb-2">Ops! Algo deu errado.</h1>
                     <p className="text-gray-400 mb-6">{error || "Não foi possível carregar esta análise."}</p>
@@ -87,7 +87,7 @@ export default function SharedAnalysis() {
 
 
     return (
-        <div className="min-h-screen bg-app-dark text-white flex flex-col">
+        <div className="min-h-screen bg-panel-dark text-white flex flex-col">
             {/* Header */}
             <header className="bg-nav-dark border-b border-gray-800 p-4 shrink-0">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
