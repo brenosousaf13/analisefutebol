@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Copy, Check, Globe, Link as LinkIcon, Lock } from 'lucide-react';
 import { analysisService } from '../services/analysisService';
 import toast from 'react-hot-toast';
@@ -21,6 +21,12 @@ export default function ShareModal({
     const [shareToken, setShareToken] = useState<string | undefined>(existingShareToken);
     const [loading, setLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (existingShareToken) {
+            setShareToken(existingShareToken);
+        }
+    }, [existingShareToken]);
 
     if (!isOpen) return null;
 
