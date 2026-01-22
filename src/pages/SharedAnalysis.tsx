@@ -83,7 +83,7 @@ export default function SharedAnalysis() {
 
     const defensiveNotes = viewTeam === 'home' ? data.homeDefensiveNotes : data.awayDefensiveNotes;
     const offensiveNotes = viewTeam === 'home' ? data.homeOffensiveNotes : data.awayOffensiveNotes;
-    const benchNotes = viewTeam === 'home' ? data.homeBenchNotes : data.awayBenchNotes;
+
 
 
     return (
