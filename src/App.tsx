@@ -7,12 +7,15 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 
+import SharedAnalysis from './pages/SharedAnalysis';
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/s/:token" element={<SharedAnalysis />} />
 
           <Route path="/" element={
             <ProtectedRoute>
