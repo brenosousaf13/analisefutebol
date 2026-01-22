@@ -10,7 +10,8 @@ import {
     Download,
     Save,
     Loader2,
-    UserPlus
+    UserPlus,
+    Share2
 } from 'lucide-react';
 
 export type ToolType = 'select' | 'arrow' | 'rectangle' | 'line' | 'eraser';
@@ -27,6 +28,7 @@ interface ToolbarProps {
     isSaving?: boolean;
     hasUnsavedChanges?: boolean;
     isExporting?: boolean;
+    onShare?: () => void;
 }
 
 interface ToolButtonProps {
@@ -79,7 +81,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
     onAddPlayer,
     isSaving = false,
     hasUnsavedChanges = false,
-    isExporting = false
+    isExporting = false,
+    onShare
 }) => {
     return (
         <div className={`
@@ -173,6 +176,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         isLoading={isExporting}
                     />
                 </div>
+                <ToolButton
+                    icon={<Share2 className="w-5 h-5" />}
+                    label="Compartilhar"
+                    onClick={onShare || (() => { })}
+                />
                 <ToolButton
                     icon={<Save className="w-5 h-5" />}
                     label="Salvar"
