@@ -217,7 +217,6 @@ export const analysisService = {
                 variant: p.variant,
                 x: p.position.x,
                 y: p.position.y,
-                y: p.position.y,
                 note: p.note || null,
                 is_manual: false
             }));
