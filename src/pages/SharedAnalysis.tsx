@@ -92,20 +92,16 @@ export default function SharedAnalysis() {
             <header className="bg-nav-dark border-b border-gray-800 p-4 shrink-0">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center font-bold text-gray-500 text-xs overflow-hidden border border-gray-600">
-                            {/* Logo fallback */}
-                            {data.homeTeamLogo ? (
-                                <img src={data.homeTeamLogo} className="w-full h-full object-cover" />
-                            ) : (
-                                <span>LOGO</span>
-                            )}
-                        </div>
                         <div>
                             <h1 className="text-lg font-bold leading-tight">{data.titulo}</h1>
                             <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <span>{data.homeTeam}</span>
-                                <span className="font-bold text-gray-600">vs</span>
-                                <span>{data.awayTeam}</span>
+                                <span>{data.matchDate || 'Data não definida'}</span>
+                                {data.matchTime && (
+                                    <>
+                                        <span className="w-1 h-1 rounded-full bg-gray-600" />
+                                        <span>{data.matchTime}</span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -208,15 +204,6 @@ export default function SharedAnalysis() {
                         {/* Notes Section - scrollable */}
                         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                             <div className="bg-card-dark rounded-xl border border-gray-700 p-5 shadow-lg">
-                                <h3 className="text-emerald-400 text-sm font-bold uppercase tracking-wider mb-3">
-                                    Resumo da Partida
-                                </h3>
-                                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
-                                    {data.gameNotes || "Nenhuma observação geral registrada."}
-                                </p>
-                            </div>
-
-                            <div className="bg-card-dark rounded-xl border border-gray-700 p-5 shadow-lg">
                                 <h3 className="text-white text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: teamColor }} />
                                     Organização - {activePhase === 'defensive' ? 'Sem Posse' : 'Com Posse'}
@@ -228,41 +215,32 @@ export default function SharedAnalysis() {
                                 </div>
                             </div>
 
-                            <div className="bg-card-dark rounded-xl border border-gray-700 p-5 shadow-lg">
-                                <h3 className="text-white text-sm font-bold uppercase tracking-wider mb-3">
-                                    Banco de Reservas
-                                </h3>
-                                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
-                                    {benchNotes || "Sem anotações sobre o banco."}
+                            {/* Timeline Section */}
+                            {data.events && data.events.length > 0 && (
+                                <div className="bg-card-dark rounded-xl border border-gray-700 shadow-lg flex flex-col max-h-[400px]">
+                                    <div className="p-4 border-b border-gray-700 bg-gray-800/50 rounded-t-xl">
+                                        <h3 className="text-white font-bold text-sm uppercase tracking-wide">Linha do Tempo</h3>
+                                    </div>
+                                    <div className="overflow-y-auto p-2">
+                                        <MatchTimeline
+                                            events={data.events}
+                                            onAddClick={() => { }}
+                                            onDeleteEvent={() => { }}
+                                            onExpand={() => { }} // Could implement expand modal if needed
+                                            readOnly={true}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Footer Badge */}
+                            <div className="text-center pt-4 opacity-50">
+                                <p className="text-xs text-gray-500 font-mono">
+                                    Powered by <span className="text-emerald-500 font-bold">Analise.Futebol</span>
                                 </p>
                             </div>
+
                         </div>
-
-                        {/* Timeline Section */}
-                        {data.events && data.events.length > 0 && (
-                            <div className="bg-card-dark rounded-xl border border-gray-700 shadow-lg flex flex-col max-h-[300px]">
-                                <div className="p-4 border-b border-gray-700 bg-gray-800/50 rounded-t-xl">
-                                    <h3 className="text-white font-bold text-sm uppercase tracking-wide">Linha do Tempo</h3>
-                                </div>
-                                <div className="overflow-y-auto p-2">
-                                    <MatchTimeline
-                                        events={data.events}
-                                        onAddClick={() => { }}
-                                        onDeleteEvent={() => { }}
-                                        onExpand={() => { }} // Could implement expand modal if needed
-                                        readOnly={true}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Footer Badge */}
-                        <div className="text-center pt-4 opacity-50">
-                            <p className="text-xs text-gray-500 font-mono">
-                                Powered by <span className="text-emerald-500 font-bold">Analise.Futebol</span>
-                            </p>
-                        </div>
-
                     </div>
                 </div>
             </main>
