@@ -193,6 +193,7 @@ export default function SharedAnalysis() {
                                 <CoachNameDisplay
                                     coachName={viewTeam === 'home' ? (data.homeCoach || '') : (data.awayCoach || '')}
                                     onSave={() => { }}
+                                    readOnly={true}
                                 />
                             </div>
                         </div>

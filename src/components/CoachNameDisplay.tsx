@@ -5,12 +5,14 @@ interface CoachNameDisplayProps {
     coachName: string;
     onSave: (newName: string) => void;
     align?: 'left' | 'right' | 'center';
+    readOnly?: boolean;
 }
 
 export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
     coachName,
     onSave,
-    align = 'left'
+    align = 'left',
+    readOnly = false
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(coachName);
@@ -88,8 +90,8 @@ export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
 
     return (
         <div
-            onDoubleClick={() => setIsEditing(true)}
-            className={`group flex items-center gap-2 ${getAlignmentClass()} cursor-pointer py-1 px-2 rounded hover:bg-white/5 transition-colors`}
+            onDoubleClick={() => !readOnly && setIsEditing(true)}
+            className={`group flex items-center gap-2 ${getAlignmentClass()} ${readOnly ? '' : 'cursor-pointer hover:bg-white/5'} py-1 px-2 rounded transition-colors`}
         >
             <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
                 Técnico:
@@ -100,10 +102,12 @@ export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
             >
                 {coachName || 'Nome do Técnico'}
             </span>
-            <Pencil
-                size={12}
-                className="opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity"
-            />
+            {!readOnly && (
+                <Pencil
+                    size={12}
+                    className="opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity"
+                />
+            )}
         </div>
     );
 };
