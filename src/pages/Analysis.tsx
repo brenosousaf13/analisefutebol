@@ -1068,6 +1068,16 @@ function Analysis() {
                         ].map(p => ({ id: p.id, name: p.name, number: p.number }))}
                     />
 
+                    {/* Share Modal */}
+                    {currentAnalysisId && (
+                        <ShareModal
+                            isOpen={isShareModalOpen}
+                            onClose={() => setIsShareModalOpen(false)}
+                            analysisId={currentAnalysisId}
+                            analysisTitle={matchInfo.homeTeam + ' vs ' + matchInfo.awayTeam}
+                        />
+                    )}
+
 
 
                 </>
