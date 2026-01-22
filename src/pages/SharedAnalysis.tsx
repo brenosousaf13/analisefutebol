@@ -12,6 +12,7 @@ export default function SharedAnalysis() {
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<AnalysisData | null>(null);
     const [viewTeam, setViewTeam] = useState<'home' | 'away'>('home');
+    const [activePhase, setActivePhase] = useState<'defensive' | 'offensive'>('defensive');
 
     // Load data
     useEffect(() => {
@@ -62,8 +63,6 @@ export default function SharedAnalysis() {
     // The data object has homePlayersDef, homePlayersOff, etc.
     // Let's create a phase toggler for the viewer if they want to see "Com Posse" vs "Sem Posse"
     // Wait, the main app has a phase selector. We should probably offer that too.
-
-    const [activePhase, setActivePhase] = useState<'defensive' | 'offensive'>('defensive');
 
     // Data prep
     const currentTeamPlayers = viewTeam === 'home'
