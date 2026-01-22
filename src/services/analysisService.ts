@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
@@ -11,6 +12,7 @@ export interface AnalysisData {
     matchId?: number;
     matchDate?: string;
     matchTime?: string;
+    shareToken?: string;
     homeCoach?: string;
     awayCoach?: string;
 
@@ -575,5 +577,152 @@ export const analysisService = {
         };
 
         return await this.saveAnalysis(blankData);
+    },
+
+    async generateShareLink(id: string): Promise<string> {
+        const { data, error } = await supabase
+            .from('analyses')
+            .update({ share_token: uuidv4() }) // Ensure uuidv4 is imported or use SQL extension
+            .eq('id', id)
+            .select('share_token')
+            .single();
+
+        if (error) throw error;
+        return data.share_token;
+    },
+
+    async getSharedAnalysis(token: string): Promise<AnalysisData | null> {
+        const { data: analysis, error } = await supabase
+            .from('analyses')
+            .select('*')
+            .eq('share_token', token)
+            .single();
+
+        if (error || !analysis) return null;
+
+        // Fetch related data (public policies allow this if token matches)
+        const id = analysis.id;
+        const { data: players } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
+        const { data: arrows } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
+        const { data: rectangles } = await supabase.from('analysis_rectangles').select('*').eq('analysis_id', id);
+
+        // Same mapping logic as getAnalysis...
+        // Reuse mapping logic by extracting a private helper function? 
+        // For now, I'll duplicate the mapping to avoid refactoring risk, 
+        // or I can call a shared mapper if I create one.
+        // Let's duplicate carefully to ensure safety.
+        
+        const homePlayersDef: Player[] = [];
+        const homePlayersOff: Player[] = [];
+        const awayPlayersDef: Player[] = [];
+        const awayPlayersOff: Player[] = [];
+        const homeSubstitutes: Player[] = [];
+        const awaySubstitutes: Player[] = [];
+
+        players?.forEach(p => {
+            const playerObj: Player = {
+                id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note
+            };
+            const variant = p.variant || 'defensive';
+            if (p.team === 'home') {
+                if (p.type === 'field') {
+                    if (variant === 'defensive') homePlayersDef.push(playerObj);
+                    else homePlayersOff.push(playerObj);
+                } else homeSubstitutes.push(playerObj);
+            } else {
+                if (p.type === 'field') {
+                    if (variant === 'defensive') awayPlayersDef.push(playerObj);
+                    else awayPlayersOff.push(playerObj);
+                } else awaySubstitutes.push(playerObj);
+            }
+        });
+
+        const homeArrowsDef: Arrow[] = [];
+        const homeArrowsOff: Arrow[] = [];
+        const awayArrowsDef: Arrow[] = [];
+        const awayArrowsOff: Arrow[] = [];
+
+        arrows?.forEach(a => {
+            const arrowObj: Arrow = {
+                id: a.id, startX: a.start_x, startY: a.start_y, endX: a.end_x, endY: a.end_y, color: a.color
+            };
+            const variant = a.variant || 'defensive';
+            if (a.team === 'home') {
+                if (variant === 'defensive') homeArrowsDef.push(arrowObj);
+                else homeArrowsOff.push(arrowObj);
+            } else {
+                if (variant === 'defensive') awayArrowsDef.push(arrowObj);
+                else awayArrowsOff.push(arrowObj);
+            }
+        });
+
+        const homeRectanglesDef: Rectangle[] = [];
+        const homeRectanglesOff: Rectangle[] = [];
+        const awayRectanglesDef: Rectangle[] = [];
+        const awayRectanglesOff: Rectangle[] = [];
+
+        rectangles?.forEach(r => {
+            const rectObj: Rectangle = {
+                id: r.id, startX: r.start_x, startY: r.start_y, endX: r.end_x, endY: r.end_y, color: r.color, opacity: r.opacity
+            };
+            const variant = r.variant || 'defensive';
+            if (r.team === 'home') {
+                if (variant === 'defensive') homeRectanglesDef.push(rectObj);
+                else homeRectanglesOff.push(rectObj);
+            } else {
+                if (variant === 'defensive') awayRectanglesDef.push(rectObj);
+                else awayRectanglesOff.push(rectObj);
+            }
+        });
+
+        return {
+            id: analysis.id,
+            matchId: analysis.fixture_id,
+            matchDate: analysis.match_date,
+            matchTime: analysis.match_time,
+            shareToken: analysis.share_token,
+            titulo: analysis.titulo,
+            descricao: analysis.descricao,
+            tipo: analysis.tipo,
+            status: analysis.status,
+            homeTeam: analysis.home_team_name,
+            awayTeam: analysis.away_team_name,
+            homeTeamLogo: analysis.home_team_logo,
+            awayTeamLogo: analysis.away_team_logo,
+            homeScore: analysis.home_score,
+            awayScore: analysis.away_score,
+            gameNotes: analysis.game_notes || '',
+
+            notasCasa: analysis.notas_casa || '',
+            notasCasaUpdatedAt: analysis.notas_casa_updated_at,
+            notasVisitante: analysis.notas_visitante || '',
+            notasVisitanteUpdatedAt: analysis.notas_visitante_updated_at,
+
+            homeDefensiveNotes: analysis.home_defensive_notes || '',
+            homeOffensiveNotes: analysis.home_offensive_notes || '',
+            homeBenchNotes: analysis.home_bench_notes || '',
+            awayDefensiveNotes: analysis.away_defensive_notes || '',
+            awayOffensiveNotes: analysis.away_offensive_notes || '',
+            awayBenchNotes: analysis.away_bench_notes || '',
+
+            defensiveNotes: analysis.defensive_notes || '',
+            offensiveNotes: analysis.offensive_notes || '',
+            homeTeamColor: analysis.home_team_color || '#EF4444',
+            awayTeamColor: analysis.away_team_color || '#3B82F6',
+
+            homeTeamNotes: analysis.home_team_notes || '',
+            homeOffNotes: analysis.home_off_notes || '',
+            awayTeamNotes: analysis.away_team_notes || '',
+            awayOffNotes: analysis.away_off_notes || '',
+
+            homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+            homeSubstitutes, awaySubstitutes,
+            homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
+            homeRectanglesDef, homeRectanglesOff, awayRectanglesDef, awayRectanglesOff,
+            events: analysis.events || [],
+            homeCoach: analysis.home_coach,
+            awayCoach: analysis.away_coach,
+            tags: []
+        };
     }
 };

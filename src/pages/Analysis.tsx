@@ -26,6 +26,7 @@ import EventsExpansionModal from '../components/EventsExpansionModal';
 import CreatePlayerModal from '../components/CreatePlayerModal';
 import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
+import ShareModal from '../components/ShareModal';
 import { CoachNameDisplay } from '../components/CoachNameDisplay';
 
 function Analysis() {
@@ -138,7 +139,9 @@ function Analysis() {
     const [awayTeamColor, setAwayTeamColor] = useState('#3B82F6');
 
     // Modal states
+    // Modal states
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     // Sidebar states (sliding panels from toolbar)
     const [isAnalysisSidebarOpen, setIsAnalysisSidebarOpen] = useState(false);
@@ -795,7 +798,7 @@ function Analysis() {
                     onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
                     isSaving={saveStatus === 'loading'}
                     hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
-
+                    onShare={() => setIsShareModalOpen(true)}
                 />
             ) : undefined}
         >

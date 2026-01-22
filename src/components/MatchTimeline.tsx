@@ -17,9 +17,10 @@ interface MatchTimelineProps {
     onAddClick: () => void;
     onDeleteEvent: (id: string) => void;
     onExpand: () => void;
+    readOnly?: boolean;
 }
 
-const MatchTimeline: React.FC<MatchTimelineProps> = ({ events, onAddClick, onDeleteEvent, onExpand }) => {
+const MatchTimeline: React.FC<MatchTimelineProps> = ({ events, onAddClick, onDeleteEvent, onExpand, readOnly = false }) => {
 
     // ... getIcon and sortedEvents remain ...
 
@@ -53,13 +54,15 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({ events, onAddClick, onDel
                     >
                         <Maximize2 size={16} />
                     </button>
-                    <button
-                        onClick={onAddClick}
-                        className="text-gray-400 hover:text-accent-green transition-colors p-1"
-                        title="Adicionar Evento"
-                    >
-                        <Plus size={16} />
-                    </button>
+                    {!readOnly && (
+                        <button
+                            onClick={onAddClick}
+                            className="text-gray-400 hover:text-accent-green transition-colors p-1"
+                            title="Adicionar Evento"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -79,14 +82,16 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({ events, onAddClick, onDel
 
                             <div className="group relative flex items-start gap-3 p-3 rounded-lg border border-gray-700/50 bg-[#1f2937]/50 hover:bg-[#1f2937] hover:border-gray-600 transition-all">
                                 {/* Actions (Hover) */}
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-opacity">
-                                    <button
-                                        onClick={() => window.confirm('Excluir evento?') && onDeleteEvent(event.id)}
-                                        className="text-gray-500 hover:text-red-400 transition-colors"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
+                                {!readOnly && (
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-opacity">
+                                        <button
+                                            onClick={() => window.confirm('Excluir evento?') && onDeleteEvent(event.id)}
+                                            className="text-gray-500 hover:text-red-400 transition-colors"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Minute */}
                                 <div className="min-w-[25px] text-right font-bold text-accent-green text-xs pt-0.5 font-mono">
