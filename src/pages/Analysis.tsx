@@ -59,6 +59,9 @@ function Analysis() {
     // Phase State: 'defensive' | 'offensive' | 'transition'
     const [activePhase] = useState<'defensive' | 'offensive' | 'transition'>('defensive');
 
+    // Share Token State
+    const [shareToken, setShareToken] = useState<string | undefined>(undefined);
+
     // Team View State: 'home' | 'away' - Toggle to see which team's tactic
     const [viewTeam, setViewTeam] = useState<'home' | 'away'>('home');
 
@@ -492,6 +495,10 @@ function Analysis() {
                     setHomeSubstitutes(data.homeSubstitutes);
                     setAwaySubstitutes(data.awaySubstitutes);
                     setGameNotes(data.gameNotes);
+
+                    if (data.shareToken) {
+                        setShareToken(data.shareToken);
+                    }
 
                     setNotasCasa(data.notasCasa);
                     setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
@@ -1074,6 +1081,7 @@ function Analysis() {
                             isOpen={isShareModalOpen}
                             onClose={() => setIsShareModalOpen(false)}
                             analysisId={currentAnalysisId}
+                            existingShareToken={shareToken}
                             analysisTitle={matchInfo.homeTeam + ' vs ' + matchInfo.awayTeam}
                         />
                     )}

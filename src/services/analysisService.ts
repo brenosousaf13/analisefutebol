@@ -418,6 +418,7 @@ export const analysisService = {
             matchId: analysis.fixture_id,
             matchDate: analysis.match_date,
             matchTime: analysis.match_time,
+            shareToken: analysis.share_token,
             titulo: analysis.titulo,
             descricao: analysis.descricao,
             tipo: analysis.tipo,
@@ -611,7 +612,7 @@ export const analysisService = {
         // For now, I'll duplicate the mapping to avoid refactoring risk, 
         // or I can call a shared mapper if I create one.
         // Let's duplicate carefully to ensure safety.
-        
+
         const homePlayersDef: Player[] = [];
         const homePlayersOff: Player[] = [];
         const awayPlayersDef: Player[] = [];
