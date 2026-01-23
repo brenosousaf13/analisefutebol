@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { getLiveFixtures, getFixturesByDate, type Fixture } from '../services/apiFootball';
 import { Calendar, Trophy, Layers, Edit3 } from 'lucide-react';
 import MatchDetailsModal from '../components/MatchDetailsModal';
@@ -7,8 +7,7 @@ import NewAnalysisModal from '../components/NewAnalysisModal';
 import Header from '../components/Header';
 
 const MatchesPage: React.FC = () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     // API Matches State
     const [matches, setMatches] = useState<Fixture[]>([]);
