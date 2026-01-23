@@ -29,52 +29,89 @@ interface TacticalFieldProps {
 
     // Export modes
     compact?: boolean;
+
     readOnly?: boolean;
+    orientation?: 'vertical' | 'horizontal';
 }
 
-// Field Lines Component - Using CSS for reliability
-const FieldLines: React.FC = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        {/* Outer Border */}
-        <div className="absolute inset-[3%] border-2 border-white/40 rounded-sm" />
+// ... (FieldLines component logic was updated in previous step via overwrite, but we need to match the previous tool call's expectation or just strictly follow the lines here)
+// Actually the previous tool call updated the component definition `const FieldLines...`.
+// Now we need to update the usage inside `return`.
 
-        {/* Center Line */}
-        <div className="absolute left-[3%] right-[3%] top-1/2 h-0.5 bg-white/40 -translate-y-1/2" />
+// Wait, the previous replacement replaced the *entire* FieldLines definition AND the start of TacticalField.
+// So `orientation` is already destructured in `TacticalField`.
+// We just need to update the interface (if it wasn't valid TS before, but I can't update interface in previous call easily if line numbers gap).
+// Ah, the previous call started at line 36 and went to ~100.
+// Interface is at lines 7-33. I need to update interface separately.
 
-        {/* Center Circle */}
-        <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-white/40 rounded-full"
-            style={{ width: '22%', height: '14%' }}
-        />
+// Let's first update the interface (lines 7-33).
+// Then update the usage of FieldLines and aspect ratio (lines 479-488).
 
-        {/* Center Dot */}
-        <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+// This step: Update Interface.
 
-        {/* Top Penalty Area */}
-        <div
-            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
-            style={{ top: '3%', width: '58%', height: '16%' }}
-        />
 
-        {/* Top Goal Area */}
-        <div
-            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
-            style={{ top: '3%', width: '28%', height: '6%' }}
-        />
+// Field Lines Component
+const FieldLines: React.FC<{ orientation: 'vertical' | 'horizontal' }> = ({ orientation }) => {
+    const isVertical = orientation === 'vertical';
 
-        {/* Bottom Penalty Area */}
-        <div
-            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
-            style={{ bottom: '3%', width: '58%', height: '16%' }}
-        />
+    return (
+        <div className="absolute inset-0 pointer-events-none">
+            {/* Outer Border */}
+            <div className="absolute inset-[3%] border-2 border-white/40 rounded-sm" />
 
-        {/* Bottom Goal Area */}
-        <div
-            className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
-            style={{ bottom: '3%', width: '28%', height: '6%' }}
-        />
-    </div>
-);
+            {/* Center Line */}
+            <div className={`absolute bg-white/40 ${isVertical
+                ? 'left-[3%] right-[3%] top-1/2 h-0.5 -translate-y-1/2'
+                : 'top-[3%] bottom-[3%] left-1/2 w-0.5 -translate-x-1/2'
+                }`} />
+
+            {/* Center Circle */}
+            <div
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-white/40 rounded-full"
+                style={isVertical ? { width: '22%', height: '14%' } : { width: '14%', height: '22%' }}
+            />
+
+            {/* Center Dot */}
+            <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+
+            {/* Areas - Vertical Logic */}
+            {isVertical && (
+                <>
+                    {/* Top Penalty */}
+                    <div className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
+                        style={{ top: '3%', width: '58%', height: '16%' }} />
+                    {/* Top Goal */}
+                    <div className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-t-0"
+                        style={{ top: '3%', width: '28%', height: '6%' }} />
+                    {/* Bottom Penalty */}
+                    <div className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
+                        style={{ bottom: '3%', width: '58%', height: '16%' }} />
+                    {/* Bottom Goal */}
+                    <div className="absolute left-1/2 -translate-x-1/2 border-2 border-white/40 border-b-0"
+                        style={{ bottom: '3%', width: '28%', height: '6%' }} />
+                </>
+            )}
+
+            {/* Areas - Horizontal Logic */}
+            {!isVertical && (
+                <>
+                    {/* Left Penalty */}
+                    <div className="absolute top-1/2 -translate-y-1/2 border-2 border-white/40 border-l-0"
+                        style={{ left: '3%', height: '58%', width: '16%' }} />
+                    {/* Left Goal */}
+                    <div className="absolute top-1/2 -translate-y-1/2 border-2 border-white/40 border-l-0"
+                        style={{ left: '3%', height: '28%', width: '6%' }} />
+                    {/* Right Penalty */}
+                    <div className="absolute top-1/2 -translate-y-1/2 border-2 border-white/40 border-r-0"
+                        style={{ right: '3%', height: '58%', width: '16%' }} />
+                    {/* Right Goal */}
+                    <div className="absolute top-1/2 -translate-y-1/2 border-2 border-white/40 border-r-0"
+                        style={{ right: '3%', height: '28%', width: '6%' }} />
+                </>
+            )}
+        </div>
+    );
+};
 
 const TacticalField: React.FC<TacticalFieldProps> = ({
     players,
@@ -96,7 +133,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     rectangleColor = 'rgba(255, 200, 50, 0.3)',
     playerColor = '#EAB308', // Default yellow
     compact = false,
-    readOnly = false
+    readOnly = false,
+    orientation = 'vertical'
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
@@ -476,16 +514,16 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     ${mode === 'move' && !isEraserMode ? 'cursor-default' : ''}
                 `}
                 style={{
-                    aspectRatio: '68 / 105',
+                    aspectRatio: orientation === 'vertical' ? '68 / 105' : '105 / 68',
                     width: '100%',
-                    maxWidth: '450px',
+                    maxWidth: orientation === 'vertical' ? '450px' : '900px', // Allow wider for horizontal
                     touchAction: 'none' // CRITICAL: Prevents browser gestures during interaction
                 }}
                 onMouseDown={handleFieldMouseDown}
                 onTouchStart={handleFieldTouchStart}
             >
                 {/* Field Lines */}
-                <FieldLines />
+                <FieldLines orientation={orientation} />
 
                 {/* Arrows and Rectangles Layer - Using SVG */}
                 {/* SVG itself has pointer-events: none to allow clicks to pass through to players */}
@@ -640,7 +678,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         width: compact ? 24 : playerSize,
                                         height: compact ? 24 : playerSize,
                                         fontSize: compact ? 10 : fontSizes.number,
-                                        backgroundColor: playerColor
+                                        backgroundColor: player.color || playerColor
                                     }}
                                 >
                                     {player.number}

@@ -9,7 +9,9 @@ interface PlayerEditModalProps {
     onSave: (updatedPlayer: Player) => void;
     benchPlayers: Player[];
     onSubstitute: (starter: Player, benchPlayer: Player) => void;
-    onSendToBench: (player: Player) => void;
+    onSendToBench?: (player: Player) => void;
+    onPromoteToStarter?: (player: Player) => void;
+    substituteListTitle?: string;
 }
 
 export default function PlayerEditModal({
@@ -19,7 +21,9 @@ export default function PlayerEditModal({
     onSave,
     benchPlayers,
     onSubstitute,
-    onSendToBench
+    onSendToBench,
+    onPromoteToStarter,
+    substituteListTitle = 'Substituir por um Reserva'
 }: PlayerEditModalProps) {
     const [name, setName] = useState('');
     const [number, setNumber] = useState(1);
@@ -58,8 +62,14 @@ export default function PlayerEditModal({
     };
 
     const handleSendToBenchClick = () => {
-        if (!player) return;
+        if (!player || !onSendToBench) return;
         onSendToBench(player);
+        onClose();
+    };
+
+    const handlePromoteToStarterClick = () => {
+        if (!player || !onPromoteToStarter) return;
+        onPromoteToStarter(player);
         onClose();
     };
 
@@ -194,25 +204,43 @@ export default function PlayerEditModal({
 
                     {activeTab === 'substitute' && (
                         <div className="space-y-6">
-                            {/* Send to Bench Option */}
+                            {/* Send to Bench / Field Actions */}
                             <div className="bg-[#242938] p-4 rounded-lg border border-gray-700">
                                 <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">Ações Rápidas</h3>
-                                <button
-                                    onClick={handleSendToBenchClick}
-                                    className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-medium py-3 rounded-lg transition-colors"
-                                >
-                                    <LogOut size={16} />
-                                    Enviar para o Banco
-                                </button>
-                                <p className="text-xs text-gray-500 mt-2 text-center">
-                                    O jogador sairá do campo sem ser substituído por ninguém.
-                                </p>
+                                {onSendToBench && (
+                                    <>
+                                        <button
+                                            onClick={handleSendToBenchClick}
+                                            className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-medium py-3 rounded-lg transition-colors"
+                                        >
+                                            <LogOut size={16} />
+                                            Enviar para o Banco
+                                        </button>
+                                        <p className="text-xs text-gray-500 mt-2 text-center">
+                                            O jogador sairá do campo sem ser substituído por ninguém.
+                                        </p>
+                                    </>
+                                )}
+                                {onPromoteToStarter && (
+                                    <>
+                                        <button
+                                            onClick={handlePromoteToStarterClick}
+                                            className="w-full flex items-center justify-center gap-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 font-medium py-3 rounded-lg transition-colors"
+                                        >
+                                            <ArrowRightLeft size={16} />
+                                            Enviar para o Campo
+                                        </button>
+                                        <p className="text-xs text-gray-500 mt-2 text-center">
+                                            O jogador entrará em campo sem substituir ninguém.
+                                        </p>
+                                    </>
+                                )}
                             </div>
 
                             {/* Bench List */}
                             <div>
                                 <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">
-                                    Substituir por um Reserva
+                                    {substituteListTitle}
                                 </h3>
 
                                 {benchPlayers.length === 0 ? (

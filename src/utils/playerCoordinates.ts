@@ -1,11 +1,12 @@
 
 // Helper for responsive player sizing
+// Helper for responsive player sizing
 export const getPlayerSize = (fieldWidth: number): number => {
-    // Player occupies ~6-8% of field width
-    const baseSize = fieldWidth * 0.07;
+    // Player occupies ~5% of field width (reduced from 7%)
+    const baseSize = fieldWidth * 0.05;
     // Limits
-    const minSize = 24;
-    const maxSize = 48;
+    const minSize = 20;
+    const maxSize = 40;
     return Math.max(minSize, Math.min(maxSize, baseSize));
 };
 

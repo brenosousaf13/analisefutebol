@@ -1,4 +1,4 @@
-import { X, Calendar, FileEdit, Upload, PlusCircle, ArrowLeft } from 'lucide-react';
+import { X, Calendar, FileEdit, Upload, PlusCircle, ArrowLeft, Maximize } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { analysisService } from '../services/analysisService';
 import { useState } from 'react';
@@ -9,7 +9,7 @@ interface NewAnalysisModalProps {
 }
 
 interface OptionCard {
-    type: 'partida_api' | 'prancheta_livre' | 'importar';
+    type: 'partida_api' | 'prancheta_livre' | 'importar' | 'analise_completa';
     icon: React.ReactNode;
     title: string;
     description: string;
@@ -21,6 +21,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
     const navigate = useNavigate();
     const [isCreating, setIsCreating] = useState(false);
     const [view, setView] = useState<'selection' | 'custom_form'>('selection');
+    const [selectedType, setSelectedType] = useState<'prancheta_livre' | 'analise_completa'>('prancheta_livre');
 
     // Custom Form State
     const [customHome, setCustomHome] = useState('');
@@ -46,6 +47,13 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
             available: true
         },
         {
+            type: 'analise_completa',
+            icon: <Maximize className="w-10 h-10" />,
+            title: 'Análise Completa',
+            description: 'Modo Tela Cheia com escalações e reservas',
+            available: true
+        },
+        {
             type: 'importar',
             icon: <Upload className="w-10 h-10" />,
             title: 'Importar Análise',
@@ -66,7 +74,8 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
             return;
         }
 
-        if (type === 'prancheta_livre') {
+        if (type === 'prancheta_livre' || type === 'analise_completa') {
+            setSelectedType(type);
             setView('custom_form');
         }
     };
@@ -75,14 +84,30 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
         e.preventDefault();
         try {
             setIsCreating(true);
-            const analysisId = await analysisService.createBlankAnalysis('partida', {
+            // If analise_completa, pass that type. Else default to partisa (or maybe prancheta type?)
+            // The service uses 'partida' default. 
+            // If prancheta_livre, we might map to 'modelo_tatico' or keep 'partida' with blank data.
+            // Let's keep existing behavior for prancheta (default 'partida' or whatever uses). 
+            // Wait, createBlankAnalysis defaults to 'partida'. 
+            // I should use 'analise_completa' if selectedType is analise_completa.
+
+            const typeToCreate = selectedType === 'analise_completa' ? 'analise_completa' : 'partida';
+
+            const analysisId = await analysisService.createBlankAnalysis(typeToCreate, {
                 homeTeam: customHome,
                 awayTeam: customAway,
                 titulo: `${customHome} vs ${customAway}`,
                 matchDate: customDate,
                 matchTime: customTime
             });
-            navigate(`/analysis/saved/${analysisId}`);
+            // Append mode=full if it's analise_completa to ensure redirection opens in full mode
+            // Analysis.tsx needs to handle reading the TYPE from DB eventually, but URL param helps.
+            if (selectedType === 'analise_completa') {
+                navigate(`/analysis-complete/saved/${analysisId}`);
+            } else {
+                navigate(`/analysis/saved/${analysisId}`);
+            }
+
             onClose();
         } catch (error) {
             console.error('Error creating blank analysis:', error);

@@ -6,13 +6,15 @@ interface CoachNameDisplayProps {
     onSave: (newName: string) => void;
     align?: 'left' | 'right' | 'center';
     readOnly?: boolean;
+    placeholder?: string;
 }
 
 export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
     coachName,
     onSave,
     align = 'left',
-    readOnly = false
+    readOnly = false,
+    placeholder = 'Nome do Técnico'
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(coachName);
@@ -66,7 +68,7 @@ export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
                     onChange={(e) => setEditedName(e.target.value)}
                     onKeyDown={handleKeyDown}
                     className="bg-[#242938] text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500 w-40"
-                    placeholder="Nome do Técnico"
+                    placeholder={placeholder}
                 />
                 <div className="flex items-center gap-1">
                     <button
@@ -100,7 +102,7 @@ export const CoachNameDisplay: React.FC<CoachNameDisplayProps> = ({
                 className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors"
                 style={{ color: coachName ? undefined : '#6b7280' }}
             >
-                {coachName || 'Nome do Técnico'}
+                {coachName || placeholder}
             </span>
             {!readOnly && (
                 <Pencil

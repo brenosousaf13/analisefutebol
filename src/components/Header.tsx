@@ -44,6 +44,9 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
     const userName = user?.user_metadata?.full_name || 'Analista';
     const userEmail = user?.email || '';
 
+    // Dynamic Menu Items
+
+
     return (
         <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 bg-nav-dark border-b border-gray-700 flex items-center justify-between px-2 sm:px-6 z-50 shadow-md">
             {/* Left: Hamburger Menu */}

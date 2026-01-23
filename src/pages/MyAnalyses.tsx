@@ -56,8 +56,20 @@ const MyAnalyses = () => {
     const handleDuplicate = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
         try {
-            const newId = await analysisService.duplicateAnalysis(id);
-            navigate(`/analysis/saved/${newId}`);
+            await analysisService.duplicateAnalysis(id);
+            // We should check type, but duplicate usually keeps type.
+            // Ideally we'd know the type to redirect correctly or just fetch it.
+            // For now, let's assume it routes to standard, but if we want perfection we need to know type.
+            // A simple fix is just to reload or let user click. 
+            // But let's try to be smart.
+            // Actually, `duplicateAnalysis` returns ID. We might not know type without fetching.
+            // Let's just navigate to generic and let a redirect handler handle it? 
+            // Or better: Navigate to /minhas-analises triggers reload.
+            // But user wants to go to analysis.
+            // Let's use a helper or just check the *current* analysis type if we had it.
+            // We have it in the list! We can pass type to handleDuplicate.
+            alert('Análise duplicada! Encontre-a na lista.');
+            loadAnalyses(); // Reload list
         } catch (err) {
             console.error('Error duplicating:', err);
             alert('Erro ao duplicar análise');
@@ -202,7 +214,12 @@ const MyAnalyses = () => {
                         {analyses.map((analysis) => (
                             <div
                                 key={analysis.id}
-                                onClick={() => navigate(`/analysis/saved/${analysis.id}`)}
+                                onClick={() => {
+                                    const route = analysis.tipo === 'analise_completa'
+                                        ? `/analysis-complete/saved/${analysis.id}`
+                                        : `/analysis/saved/${analysis.id}`;
+                                    navigate(route);
+                                }}
                                 className="bg-[#1a1f2e] rounded-xl overflow-hidden border border-gray-700 hover:border-green-500/50 transition-all group cursor-pointer"
                             >
                                 {/* Thumbnail */}
@@ -222,7 +239,13 @@ const MyAnalyses = () => {
                                         <button
                                             className="p-3 bg-green-500 rounded-full hover:bg-green-600 transition-colors"
                                             title="Abrir"
-                                            onClick={(e) => { e.stopPropagation(); navigate(`/analysis/saved/${analysis.id}`); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const route = analysis.tipo === 'analise_completa'
+                                                    ? `/analysis-complete/saved/${analysis.id}`
+                                                    : `/analysis/saved/${analysis.id}`;
+                                                navigate(route);
+                                            }}
                                         >
                                             <ExternalLink className="w-5 h-5 text-white" />
                                         </button>

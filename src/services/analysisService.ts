@@ -5,7 +5,7 @@ import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
 
 export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
-export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico';
+export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico' | 'analise_completa';
 
 export interface AnalysisData {
     id?: string;
@@ -523,9 +523,75 @@ export const analysisService = {
         return subs;
     },
 
+    generateFullModePlayers(isHome: boolean): Player[] {
+        const baseId = isHome ? 1000 : 2000;
+
+        // 4-3-3 Formation Coordinates (Home on Left, Away on Right)
+        const homePositions = [
+            { id: 1, name: 'Goleiro', number: 1, x: 5, y: 50 },
+            { id: 2, name: 'Lateral D', number: 2, x: 20, y: 15 },
+            { id: 3, name: 'Zagueiro', number: 3, x: 15, y: 35 },
+            { id: 4, name: 'Zagueiro', number: 4, x: 15, y: 65 },
+            { id: 5, name: 'Lateral E', number: 5, x: 20, y: 85 },
+            { id: 6, name: 'Volante', number: 6, x: 30, y: 50 },
+            { id: 7, name: 'Ponta D', number: 7, x: 45, y: 20 },
+            { id: 8, name: 'Meia', number: 8, x: 40, y: 35 },
+            { id: 9, name: 'Centroavante', number: 9, x: 45, y: 50 },
+            { id: 10, name: 'Meia', number: 10, x: 40, y: 65 },
+            { id: 11, name: 'Ponta E', number: 11, x: 45, y: 80 }
+        ];
+
+        const players: Player[] = homePositions.map(pos => {
+            const x = isHome ? pos.x : 100 - pos.x;
+            // Mirror Y for Away team if we assume they face left?
+            // If Home Lat D(2) is at y=15 (Top), Away Lat D(2) at x=80, should differ?
+            // If Away Lat D is Right Back, and they face left:
+            // their Left is Top (y=0 to 50), Right is Bottom (y=50 to 100).
+            // So Away Lat D should be at y=85.
+            // Home Lat D is at y=15 (Top).
+            // So we DO Mirror Y (100-y) for symmetric positions?
+            // Let's mirror Y as well to ensure "Right Back" is always on the "Right side relative to facing".
+            // Home (Face Right): Right is Bottom (y>50)? No, coordinates usually: Top=0.
+            // If I stand at 0, facing 100. Left hand is Top (y<50). Right hand is Bottom (y>50).
+            // So Left Back (5) should be Top (y=15). Right Back (2) should be Bottom (y=85).
+            // My `homePositions` above has Lat D(2) at y=15 (Top). So that corresponds to LEFT Back in simulation terms?
+            // In TV view: Top is "Far side", Bottom is "Near side".
+            // Usually Left Back is Top (if attacking Right).
+            // Let's assume user wants Lat D at Top.
+            // Then Away Lat D should be at Top (y=15) too if they want same formation?
+            // Or mirrored? Usually mirrored diagonally?
+            // Let's keep Y same for simplicity, logic: "Lat D is Top".
+            // If user wants mirror, they can move. "Like the image".
+            // Image: Red 2 is Top. Blue 2 is Bottom.
+            // Image: Red 5 is Bottom. Blue 5 is Top.
+            // So they ARE mirrored.
+            // So if !isHome, y = 100 - y.
+
+            const y = isHome ? pos.y : 100 - pos.y;
+
+            return {
+                id: baseId + pos.id,
+                number: pos.number,
+                name: pos.name,
+                position: { x, y }
+            };
+        });
+
+        return players;
+    },
+
     async createBlankAnalysis(tipo: AnalysisType = 'partida', initialData?: Partial<AnalysisData>): Promise<string> {
-        const homePlayers = this.generateDefaultPlayers(true);
-        const awayPlayers = this.generateDefaultPlayers(false);
+        let homePlayers: Player[];
+        let awayPlayers: Player[];
+
+        if (tipo === 'analise_completa') {
+            homePlayers = this.generateFullModePlayers(true);
+            awayPlayers = this.generateFullModePlayers(false);
+        } else {
+            homePlayers = this.generateDefaultPlayers(true);
+            awayPlayers = this.generateDefaultPlayers(false);
+        }
+
         const homeSubs = this.generateDefaultSubstitutes(true);
         const awaySubs = this.generateDefaultSubstitutes(false);
 

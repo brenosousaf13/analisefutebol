@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 
 import SharedAnalysis from './pages/SharedAnalysis';
+import FullAnalysisPage from './pages/FullAnalysisPage';
 
 function App() {
   return (
@@ -38,6 +39,12 @@ function App() {
           <Route path="/analysis/saved/:id" element={
             <ProtectedRoute>
               <Analysis />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/analysis-complete/saved/:id" element={
+            <ProtectedRoute>
+              <FullAnalysisPage />
             </ProtectedRoute>
           } />
 

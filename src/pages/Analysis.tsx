@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -19,6 +19,7 @@ import { analysisService } from '../services/analysisService';
 import type { Player } from '../types/Player';
 
 import type { Arrow } from '../types/Arrow';
+import type { Rectangle } from '../types/Rectangle';
 import AddEventModal from '../components/AddEventModal';
 import { type MatchEvent } from '../components/MatchTimeline';
 import EventsExpansionModal from '../components/EventsExpansionModal';
@@ -28,6 +29,7 @@ import NotesModal from '../components/NotesModal';
 import PlayerEditModal from '../components/PlayerEditModal';
 import ShareModal from '../components/ShareModal';
 import { CoachNameDisplay } from '../components/CoachNameDisplay';
+import { FullAnalysisMode } from '../components/FullAnalysisMode';
 
 function Analysis() {
     const navigate = useNavigate();
@@ -71,6 +73,11 @@ function Analysis() {
     // Only use mock data if accessing directly without state (Legacy/Fallback)
     const shouldInitEmpty = !!locationState;
     const isCustomMatch = !!locationState && !locationState.matchId;
+
+    // View Mode Logic
+    // View Mode Logic
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewMode = searchParams.get('mode') === 'full' ? 'full' : 'classic';
 
     const [homePlayersDef, setHomePlayersDef] = useState<Player[]>(
         isCustomMatch ? analysisService.generateDefaultPlayers(true) :
@@ -126,13 +133,49 @@ function Analysis() {
     const [homeArrows, setHomeArrows] = useState<Record<string, Arrow[]>>({
         'defensive': [],
         'offensive': [],
-        'transition': []
+        'transition': [],
+        'full_home': [],
+        'full_away': []
     });
     const [awayArrows, setAwayArrows] = useState<Record<string, Arrow[]>>({
         'defensive': [],
         'offensive': [],
-        'transition': []
+        'transition': [],
+        'full_home': [],
+        'full_away': []
     });
+
+    // --- FULL ANALYSIS MODE INDEPENDENT STATE ---
+    // Initialize with same defaults but separate state to allow independent movement
+    const [fullHomePlayersDef, setFullHomePlayersDef] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(true) :
+            (shouldInitEmpty ? [] : initialHomePlayers)
+    );
+    const [fullHomePlayersOff, setFullHomePlayersOff] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(true) :
+            (shouldInitEmpty ? [] : initialHomePlayers)
+    );
+    const [fullAwayPlayersDef, setFullAwayPlayersDef] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(false) :
+            (shouldInitEmpty ? [] : initialAwayPlayers)
+    );
+    const [fullAwayPlayersOff, setFullAwayPlayersOff] = useState<Player[]>(
+        isCustomMatch ? analysisService.generateDefaultPlayers(false) :
+            (shouldInitEmpty ? [] : initialAwayPlayers)
+    );
+
+    // Sync initial load if API data comes in (optional, but good for UX so it starts populated)
+    useEffect(() => {
+        if (!shouldInitEmpty && !isCustomMatch) {
+            // If we loaded data into standard state, we might want to sync full state ONCE, 
+            // or just let it load from same source. 
+            // Current logic initializes both from same source, so they start same.
+            // If `getAnalysis` overrides standard state, we should override full state too?
+            // User requested "Players must be OTHER", implying totally separate? 
+            // Or just position independence? Usually position.
+            // We will duplicate the `setHomePlayersDef` logic for `setFullHomePlayersDef` in the data loading effects.
+        }
+    }, []);
 
     // New tool state (maps to Toolbar component)
     const [activeTool, setActiveTool] = useState<ToolType>('select');
@@ -168,13 +211,17 @@ function Analysis() {
     const [awayCoach, setAwayCoach] = useState('');
 
     // Rectangle state - separated by team and phase
-    const [homeRectangles, setHomeRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
+    const [homeRectangles, setHomeRectangles] = useState<Record<string, Rectangle[]>>({
         'defensive': [],
-        'offensive': []
+        'offensive': [],
+        'full_home': [],
+        'full_away': []
     });
-    const [awayRectangles, setAwayRectangles] = useState<Record<string, import('../types/Rectangle').Rectangle[]>>({
+    const [awayRectangles, setAwayRectangles] = useState<Record<string, Rectangle[]>>({
         'defensive': [],
-        'offensive': []
+        'offensive': [],
+        'full_home': [],
+        'full_away': []
     });
 
     // Tool change handler - simply updates activeTool
@@ -271,10 +318,24 @@ function Analysis() {
                         time: data.matchTime
                     }));
 
+                    if (data.tipo === 'analise_completa') {
+                        setSearchParams((prev: URLSearchParams) => {
+                            const newParams = new URLSearchParams(prev);
+                            newParams.set('mode', 'full');
+                            return newParams;
+                        });
+                    }
+
                     setHomePlayersDef(data.homePlayersDef);
                     setHomePlayersOff(data.homePlayersOff);
                     setAwayPlayersDef(data.awayPlayersDef);
                     setAwayPlayersOff(data.awayPlayersOff);
+                    // Sync Full Mode state initially
+                    setFullHomePlayersDef(data.homePlayersDef.map(p => ({ ...p })));
+                    setFullHomePlayersOff(data.homePlayersOff.map(p => ({ ...p })));
+                    setFullAwayPlayersDef(data.awayPlayersDef.map(p => ({ ...p })));
+                    setFullAwayPlayersOff(data.awayPlayersOff.map(p => ({ ...p })));
+
                     if (data.homeScore !== undefined) setHomeScore(data.homeScore);
                     if (data.awayScore !== undefined) setAwayScore(data.awayScore);
 
@@ -306,14 +367,18 @@ function Analysis() {
                         setHomeArrows({
                             defensive: data.homeArrowsDef || [],
                             offensive: data.homeArrowsOff || [],
-                            transition: []
+                            transition: [],
+                            full_home: [],
+                            full_away: []
                         });
                     }
                     if (data.awayArrowsDef || data.awayArrowsOff) {
                         setAwayArrows({
                             defensive: data.awayArrowsDef || [],
                             offensive: data.awayArrowsOff || [],
-                            transition: []
+                            transition: [],
+                            full_home: [],
+                            full_away: []
                         });
                     }
 
@@ -336,6 +401,10 @@ function Analysis() {
                         setHomePlayersDef(hPlayers);
                         setHomePlayersOff(hPlayers.map(p => ({ ...p, position: { ...p.position } })));
 
+                        // Sync Full Mode independent state
+                        setFullHomePlayersDef(hPlayers.map(p => ({ ...p })));
+                        setFullHomePlayersOff(hPlayers.map(p => ({ ...p, position: { ...p.position } })));
+
                         if (homeLineup.substitutes?.length > 0) {
                             const hSubs = convertSubsToPlayers(homeLineup);
                             setHomeSubstitutes(hSubs);
@@ -345,6 +414,10 @@ function Analysis() {
                         const aPlayers = convertLineupToPlayers(awayLineup);
                         setAwayPlayersDef(aPlayers);
                         setAwayPlayersOff(aPlayers.map(p => ({ ...p, position: { ...p.position } })));
+
+                        // Sync Full Mode independent state
+                        setFullAwayPlayersDef(aPlayers.map(p => ({ ...p })));
+                        setFullAwayPlayersOff(aPlayers.map(p => ({ ...p, position: { ...p.position } })));
 
                         if (awayLineup.substitutes?.length > 0) {
                             const aSubs = convertSubsToPlayers(awayLineup);
@@ -370,6 +443,15 @@ function Analysis() {
             : (phase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
 
         updateFn(prev => prev.map(p => p.id === id ? { ...p, position: pos } : p));
+    };
+
+    const handleFullPlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+        const updateFn = team === 'home'
+            ? (phase === 'defensive' ? setFullHomePlayersDef : setFullHomePlayersOff)
+            : (phase === 'defensive' ? setFullAwayPlayersDef : setFullAwayPlayersOff);
+
+        updateFn(prev => prev.map(p => p.id === id ? { ...p, position: pos } : p));
+        setHasUnsavedChanges(true);
     };
 
     const handleNoteSave = async (team: 'home' | 'away', content: string) => {
@@ -563,7 +645,7 @@ function Analysis() {
         }));
     };
 
-    const handleAddRectangle = (rect: Omit<import('../types/Rectangle').Rectangle, 'id'>, phase?: 'defensive' | 'offensive') => {
+    const handleAddRectangle = (rect: Omit<Rectangle, 'id'>, phase?: 'defensive' | 'offensive') => {
         const targetPhase = phase || activePhase;
         const newRect = { ...rect, id: uuidv4() };
         const setRectsFn = viewTeam === 'home' ? setHomeRectangles : setAwayRectangles;
@@ -623,12 +705,101 @@ function Analysis() {
                 setAwaySubstitutes(prev => [...prev, newPlayer]);
             }
         } else {
-            const updateDef = viewTeam === 'home' ? setHomePlayersDef : setAwayPlayersDef;
-            const updateOff = viewTeam === 'home' ? setHomePlayersOff : setAwayPlayersOff;
-
-            updateDef(prev => [...prev, newPlayer]);
-            updateOff(prev => [...prev, newPlayer]);
+            // Check View Mode
+            if (viewMode === 'full') {
+                const updateDef = viewTeam === 'home' ? setFullHomePlayersDef : setFullAwayPlayersDef;
+                const updateOff = viewTeam === 'home' ? setFullHomePlayersOff : setFullAwayPlayersOff;
+                updateDef(prev => [...prev, newPlayer]);
+                updateOff(prev => [...prev, newPlayer]);
+            } else {
+                const updateDef = viewTeam === 'home' ? setHomePlayersDef : setAwayPlayersDef;
+                const updateOff = viewTeam === 'home' ? setHomePlayersOff : setAwayPlayersOff;
+                updateDef(prev => [...prev, newPlayer]);
+                updateOff(prev => [...prev, newPlayer]);
+            }
         }
+    };
+
+    const handleFullBenchPlayerClick = (benchPlayer: Player) => {
+        // If a field player is selected, substitute
+        if (selectedPlayerId) {
+            // Full Mode displays both teams. The Bench Player belongs to a team.
+            // We need to know which team the bench player is from. 
+            // But simpler: Check if selectedPlayerId is in Home Field or Away Field.
+
+            // Check Home Field
+            const homeDefIdx = fullHomePlayersDef.findIndex(p => p.id === selectedPlayerId);
+            const homeOffIdx = fullHomePlayersOff.findIndex(p => p.id === selectedPlayerId);
+
+            if (homeDefIdx !== -1 || homeOffIdx !== -1) {
+                // Substitute Home
+                // NOTE: Logic assumes phase symmetry or just updates both? 
+                // In Full Mode, we have Defensive/Offensive phases too but usually they are synced or one is active.
+                // We will update BOTH Def and Off arrays to swap the player.
+
+                const starterId = selectedPlayerId;
+                const starter = fullHomePlayersDef.find(p => p.id === starterId) || fullHomePlayersOff.find(p => p.id === starterId);
+
+                if (starter) {
+                    // 1. Remove bench player from subs
+                    setHomeSubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
+
+                    // 2. Update Field
+                    const updateField = (prev: Player[]) => prev.map(p => {
+                        if (p.id === starterId) {
+                            return { ...benchPlayer, position: p.position, isStarter: true };
+                        }
+                        return p;
+                    });
+
+                    setFullHomePlayersDef(updateField);
+                    setFullHomePlayersOff(updateField); // Assuming same roster
+
+                    setSelectedPlayerId(null); // Deselect
+                    toast.success('Substituição realizada');
+                    return;
+                }
+            }
+
+            // Check Away Field
+            const awayDefIdx = fullAwayPlayersDef.findIndex(p => p.id === selectedPlayerId);
+            const awayOffIdx = fullAwayPlayersOff.findIndex(p => p.id === selectedPlayerId);
+
+            if (awayDefIdx !== -1 || awayOffIdx !== -1) {
+                const starterId = selectedPlayerId;
+                const starter = fullAwayPlayersDef.find(p => p.id === starterId) || fullAwayPlayersOff.find(p => p.id === starterId);
+
+                if (starter) {
+                    setAwaySubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
+
+                    const updateField = (prev: Player[]) => prev.map(p => {
+                        if (p.id === starterId) {
+                            return { ...benchPlayer, position: p.position, isStarter: true };
+                        }
+                        return p;
+                    });
+
+                    setFullAwayPlayersDef(updateField);
+                    setFullAwayPlayersOff(updateField);
+
+                    setSelectedPlayerId(null);
+                    toast.success('Substituição realizada');
+                    return;
+                }
+            }
+        }
+
+        // If no field player selected, maybe just select the bench player? 
+        // Or if we want to "Add to field" without swapping? 
+        // User said: "substitute player from field to bench". Implies swap.
+        // What if they want to ADD? "Adding player also doesn't work".
+        // handleCreatePlayer handles adding NEW players.
+        // Promoting existing bench player to field (without swap) -> implies adding 12th player?
+        // Usually football is 11. 
+        // Let's assume Swap is the primary action. 
+        // For "Add to Field", maybe separate button or double click?
+        // BenchArea calls this on SINGLE CLICK.
+        // Let's stick to Swap if Selected.
     };
 
     const handleSaveEvent = async (eventData: any) => {
@@ -787,7 +958,7 @@ function Analysis() {
             }}
             activeTeam={viewTeam}
             onTeamChange={setViewTeam}
-            sidebar={!loading ? (
+            sidebar={!loading && viewMode !== 'full' ? (
                 <Toolbar
                     activeTool={activeTool}
                     onToolChange={handleToolChange}
@@ -819,114 +990,221 @@ function Analysis() {
             ) : (
                 <>
                     {/* Main Content Area */}
-                    <div className="flex-1 h-full flex flex-col p-2 md:p-4 overflow-hidden relative">
+                    {viewMode === 'full' ? (
+                        <FullAnalysisMode
+                            homeTeamName={matchInfo.homeTeam}
+                            awayTeamName={matchInfo.awayTeam}
+                            homeTeamColor={homeTeamColor}
+                            awayTeamColor={awayTeamColor}
 
-                        {/* Mobile Tab Switcher */}
-                        <div className="lg:hidden shrink-0 mb-2 flex bg-gray-800 rounded-lg p-0.5 mx-12">
-                            <button
-                                onClick={() => setMobileTab('defensive')}
-                                className={`flex-1 py-1 rounded-md text-xs font-bold uppercase transition-all ${mobileTab === 'defensive'
-                                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
-                                    : 'text-gray-400 hover:text-white'
-                                    }`}
-                            >
-                                Defensivo
-                            </button>
-                            <button
-                                onClick={() => setMobileTab('offensive')}
-                                className={`flex-1 py-1 rounded-md text-xs font-bold uppercase transition-all ${mobileTab === 'offensive'
-                                    ? 'bg-green-500/20 text-green-400 shadow-sm'
-                                    : 'text-gray-400 hover:text-white'
-                                    }`}
-                            >
-                                Ofensivo
-                            </button>
-                        </div>
+                            // Independent Data
+                            homePlayersDef={fullHomePlayersDef}
+                            homePlayersOff={fullHomePlayersOff}
+                            homeSubstitutes={homeSubstitutes}
+                            homeArrows={homeArrows}
+                            homeRectangles={homeRectangles}
 
-                        {/* Labels Row - Desktop Only */}
-                        <div className="hidden lg:flex shrink-0 mb-3 lg:ml-16">
-                            <div className="flex-1 text-center">
-                                <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
+                            awayPlayersDef={fullAwayPlayersDef}
+                            awayPlayersOff={fullAwayPlayersOff}
+                            awaySubstitutes={awaySubstitutes}
+                            awayArrows={awayArrows}
+                            awayRectangles={awayRectangles}
+
+                            // Independent Player Handlers
+                            onPlayerMove={handleFullPlayerMove}
+                            onBenchPlayerClick={handleFullBenchPlayerClick}
+                            onPlayerClick={handlePlayerClick}
+                            onPlayerDoubleClick={(player) => {
+                                // Infer phase for the handler
+                                let phase: 'defensive' | 'offensive' = 'defensive';
+                                if (homePlayersOff.find(p => p.id === player.id) || awayPlayersOff.find(p => p.id === player.id)) {
+                                    phase = 'offensive';
+                                }
+                                handlePlayerDoubleClick(player, phase);
+                            }}
+
+                            // Toolbar & Drawing Handlers
+                            activeTool={activeTool}
+                            onToolChange={handleToolChange}
+                            onOpenColorPicker={() => setIsColorPickerOpen(true)}
+                            onOpenAnalysis={() => setIsAnalysisSidebarOpen(true)}
+                            onOpenEvents={() => setIsEventsSidebarOpen(true)}
+                            onSave={handleSave}
+                            onExport={handleExport}
+                            onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
+                            isSaving={saveStatus === 'loading'}
+                            hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
+                            onShare={() => setIsShareModalOpen(true)}
+
+                            // Drawing Adapters (Handling Team + Phase)
+                            onAddArrow={(arrow: Omit<Arrow, 'id'>, team: 'home' | 'away', phase: string) => {
+                                const newArrow: Arrow = { ...arrow, id: uuidv4() };
+                                if (team === 'home') {
+                                    setHomeArrows(prev => ({ ...prev, [phase]: [...(prev[phase] || []), newArrow] }));
+                                } else {
+                                    setAwayArrows(prev => ({ ...prev, [phase]: [...(prev[phase] || []), newArrow] }));
+                                }
+                                setHasUnsavedChanges(true);
+                            }}
+                            onRemoveArrow={(id: string, team: 'home' | 'away', phase: string) => {
+                                if (team === 'home') {
+                                    setHomeArrows(prev => ({ ...prev, [phase]: prev[phase].filter(a => a.id !== id) }));
+                                } else {
+                                    setAwayArrows(prev => ({ ...prev, [phase]: prev[phase].filter(a => a.id !== id) }));
+                                }
+                                setHasUnsavedChanges(true);
+                            }}
+                            onMoveArrow={(id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => {
+                                const updateFn = (arrows: Arrow[]) => arrows.map(a =>
+                                    a.id === id ? { ...a, startX: a.startX + dx, startY: a.startY + dy, endX: a.endX + dx, endY: a.endY + dy } : a
+                                );
+                                if (team === 'home') {
+                                    setHomeArrows(prev => ({ ...prev, [phase]: updateFn(prev[phase]) }));
+                                } else {
+                                    setAwayArrows(prev => ({ ...prev, [phase]: updateFn(prev[phase]) }));
+                                }
+                                setHasUnsavedChanges(true);
+                            }}
+
+                            onAddRectangle={(rect: Omit<Rectangle, 'id'>, team: 'home' | 'away', phase: string) => {
+                                const newRect: Rectangle = { ...rect, id: uuidv4() };
+                                if (team === 'home') {
+                                    setHomeRectangles(prev => ({ ...prev, [phase]: [...(prev[phase] || []), newRect] }));
+                                } else {
+                                    setAwayRectangles(prev => ({ ...prev, [phase]: [...(prev[phase] || []), newRect] }));
+                                }
+                                setHasUnsavedChanges(true);
+                            }}
+                            onRemoveRectangle={(id: string, team: 'home' | 'away', phase: string) => {
+                                if (team === 'home') {
+                                    setHomeRectangles(prev => ({ ...prev, [phase]: prev[phase].filter(r => r.id !== id) }));
+                                } else {
+                                    setAwayRectangles(prev => ({ ...prev, [phase]: prev[phase].filter(r => r.id !== id) }));
+                                }
+                                setHasUnsavedChanges(true);
+                            }}
+                            onMoveRectangle={(id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => {
+                                const updateFn = (rects: Rectangle[]) => rects.map(r =>
+                                    r.id === id ? { ...r, startX: r.startX + dx, startY: r.startY + dy, endX: r.endX + dx, endY: r.endY + dy } : r
+                                );
+                                if (team === 'home') {
+                                    setHomeRectangles(prev => ({ ...prev, [phase]: updateFn(prev[phase]) }));
+                                } else {
+                                    setAwayRectangles(prev => ({ ...prev, [phase]: updateFn(prev[phase]) }));
+                                }
+                                setHasUnsavedChanges(true);
+                            }}
+                        />
+                    ) : (
+                        <div className="flex-1 h-full flex flex-col p-2 md:p-4 overflow-hidden relative">
+
+                            {/* Mobile Tab Switcher */}
+                            <div className="lg:hidden shrink-0 mb-2 flex bg-gray-800 rounded-lg p-0.5 mx-12">
+                                <button
+                                    onClick={() => setMobileTab('defensive')}
+                                    className={`flex-1 py-1 rounded-md text-xs font-bold uppercase transition-all ${mobileTab === 'defensive'
+                                        ? 'bg-amber-500/20 text-amber-400 shadow-sm'
+                                        : 'text-gray-400 hover:text-white'
+                                        }`}
+                                >
                                     Defensivo
-                                </span>
-                            </div>
-                            <div className="w-6"></div>
-                            <div className="flex-1 text-center">
-                                <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
+                                </button>
+                                <button
+                                    onClick={() => setMobileTab('offensive')}
+                                    className={`flex-1 py-1 rounded-md text-xs font-bold uppercase transition-all ${mobileTab === 'offensive'
+                                        ? 'bg-green-500/20 text-green-400 shadow-sm'
+                                        : 'text-gray-400 hover:text-white'
+                                        }`}
+                                >
                                     Ofensivo
-                                </span>
+                                </button>
                             </div>
-                        </div>
 
-                        {/* Fields Container */}
-                        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 ml-0 lg:ml-16 overflow-y-auto lg:overflow-hidden pb-16 lg:pb-0">
-
-                            {/* Defensive Field Column */}
-                            <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'defensive' ? 'flex' : 'hidden lg:flex'
-                                }`}>
-                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[48vh] mx-auto mt-2 lg:mt-0">
-                                    <TacticalField
-                                        players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
-                                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
-                                        onPlayerClick={handlePlayerClick}
-                                        onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
-                                        selectedPlayerId={selectedPlayerId}
-                                        playerNotes={playerNotes}
-                                        mode={getTacticalFieldMode()}
-                                        arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
-                                        onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
-                                        onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
-                                        onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
-                                        rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
-                                        onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
-                                        onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
-                                        onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
-                                        isEraserMode={activeTool === 'eraser'}
-                                        rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                        playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                    />
+                            {/* Labels Row - Desktop Only */}
+                            <div className="hidden lg:flex shrink-0 mb-3 lg:ml-16">
+                                <div className="flex-1 text-center">
+                                    <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
+                                        Defensivo
+                                    </span>
                                 </div>
-
-                            </div>
-
-                            {/* Offensive Field Column */}
-                            <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'offensive' ? 'flex' : 'hidden lg:flex'
-                                }`}>
-                                <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[48vh] mx-auto mt-2 lg:mt-0">
-                                    <TacticalField
-                                        players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
-                                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
-                                        onPlayerClick={handlePlayerClick}
-                                        onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
-                                        selectedPlayerId={selectedPlayerId}
-                                        playerNotes={playerNotes}
-                                        mode={getTacticalFieldMode()}
-                                        arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
-                                        onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
-                                        onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
-                                        onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
-                                        rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
-                                        onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
-                                        onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
-                                        onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
-                                        isEraserMode={activeTool === 'eraser'}
-                                        rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                        playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                    />
+                                <div className="w-6"></div>
+                                <div className="flex-1 text-center">
+                                    <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
+                                        Ofensivo
+                                    </span>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Centered Coach Name - Footer */}
-                        <div className="mt-2 text-center shrink-0 w-full flex justify-center pb-16 lg:pb-2">
-                            <CoachNameDisplay
-                                coachName={viewTeam === 'home' ? homeCoach : awayCoach}
-                                onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
-                                align="center"
-                            />
-                        </div>
+                            {/* Fields Container */}
+                            <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 ml-0 lg:ml-16 overflow-y-auto lg:overflow-hidden pb-16 lg:pb-0">
 
-                    </div>
+                                {/* Defensive Field Column */}
+                                <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'defensive' ? 'flex' : 'hidden lg:flex'
+                                    }`}>
+                                    <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[48vh] mx-auto mt-2 lg:mt-0">
+                                        <TacticalField
+                                            players={viewTeam === 'home' ? homePlayersDef : awayPlayersDef}
+                                            onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'defensive')}
+                                            onPlayerClick={handlePlayerClick}
+                                            onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'defensive')}
+                                            selectedPlayerId={selectedPlayerId}
+                                            playerNotes={playerNotes}
+                                            mode={getTacticalFieldMode()}
+                                            arrows={viewTeam === 'home' ? homeArrows.defensive : awayArrows.defensive}
+                                            onAddArrow={(arrow) => handleAddArrow(arrow, 'defensive')}
+                                            onRemoveArrow={(id) => handleRemoveArrow(id, 'defensive')}
+                                            onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'defensive')}
+                                            rectangles={viewTeam === 'home' ? homeRectangles.defensive : awayRectangles.defensive}
+                                            onAddRectangle={(rect) => handleAddRectangle(rect, 'defensive')}
+                                            onRemoveRectangle={(id) => handleRemoveRectangle(id, 'defensive')}
+                                            onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'defensive')}
+                                            isEraserMode={activeTool === 'eraser'}
+                                            rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                        />
+                                    </div>
+
+                                </div>
+
+                                {/* Offensive Field Column */}
+                                <div className={`flex-col h-full relative min-h-[325px] lg:min-h-0 ${mobileTab === 'offensive' ? 'flex' : 'hidden lg:flex'
+                                    }`}>
+                                    <div className="flex-1 relative min-h-0 w-full max-w-[300px] lg:max-w-[48vh] mx-auto mt-2 lg:mt-0">
+                                        <TacticalField
+                                            players={viewTeam === 'home' ? homePlayersOff : awayPlayersOff}
+                                            onPlayerMove={(id, pos) => handlePlayerMove(id, pos, 'offensive')}
+                                            onPlayerClick={handlePlayerClick}
+                                            onPlayerDoubleClick={(player) => handlePlayerDoubleClick(player, 'offensive')}
+                                            selectedPlayerId={selectedPlayerId}
+                                            playerNotes={playerNotes}
+                                            mode={getTacticalFieldMode()}
+                                            arrows={viewTeam === 'home' ? homeArrows.offensive : awayArrows.offensive}
+                                            onAddArrow={(arrow) => handleAddArrow(arrow, 'offensive')}
+                                            onRemoveArrow={(id) => handleRemoveArrow(id, 'offensive')}
+                                            onMoveArrow={(id, dx, dy) => handleMoveArrow(id, dx, dy, 'offensive')}
+                                            rectangles={viewTeam === 'home' ? homeRectangles.offensive : awayRectangles.offensive}
+                                            onAddRectangle={(rect) => handleAddRectangle(rect, 'offensive')}
+                                            onRemoveRectangle={(id) => handleRemoveRectangle(id, 'offensive')}
+                                            onMoveRectangle={(id, dx, dy) => handleMoveRectangle(id, dx, dy, 'offensive')}
+                                            isEraserMode={activeTool === 'eraser'}
+                                            rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Centered Coach Name - Footer */}
+                            <div className="mt-2 text-center shrink-0 w-full flex justify-center pb-16 lg:pb-2">
+                                <CoachNameDisplay
+                                    coachName={viewTeam === 'home' ? homeCoach : awayCoach}
+                                    onSave={viewTeam === 'home' ? setHomeCoach : setAwayCoach}
+                                    align="center"
+                                />
+                            </div>
+
+                        </div>
+                    )}
 
                     {/* Modals */}
                     <CreatePlayerModal
@@ -1089,8 +1367,9 @@ function Analysis() {
 
 
                 </>
-            )}
-        </AnalysisLayout>
+            )
+            }
+        </AnalysisLayout >
     );
 };
 
