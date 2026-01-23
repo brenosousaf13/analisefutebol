@@ -190,18 +190,17 @@ function FullAnalysisPage() {
     };
 
     const handleBenchPlayerClick = (benchPlayer: Player) => {
-        console.log('[DEBUG] handleBenchPlayerClick:', benchPlayer.name, benchPlayer.id);
-        console.log('[DEBUG] Current selectedPlayerId:', selectedPlayerId);
+
 
         const isHomeBench = homeSubstitutes.find(p => p.id === benchPlayer.id);
         const isAwayBench = awaySubstitutes.find(p => p.id === benchPlayer.id);
 
-        console.log('[DEBUG] isHomeBench:', !!isHomeBench, 'isAwayBench:', !!isAwayBench);
+
 
         if (selectedPlayerId) {
             if (isHomeBench) {
                 const starter = homePlayersDef.find(p => p.id === selectedPlayerId) || homePlayersOff.find(p => p.id === selectedPlayerId);
-                console.log('[DEBUG] Home Starter found:', starter);
+
 
                 if (starter) {
                     setHomeSubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
@@ -214,11 +213,11 @@ function FullAnalysisPage() {
                     toast.success('Substituição realizada');
                     setHasUnsavedChanges(true);
                 } else {
-                    console.log('[DEBUG] Home Starter NOT found for ID:', selectedPlayerId);
+
                 }
             } else if (isAwayBench) {
                 const starter = awayPlayersDef.find(p => p.id === selectedPlayerId) || awayPlayersOff.find(p => p.id === selectedPlayerId);
-                console.log('[DEBUG] Away Starter found:', starter);
+
 
                 if (starter) {
                     setAwaySubstitutes(prev => [...prev.filter(p => p.id !== benchPlayer.id), { ...starter, isStarter: false, position: { x: 50, y: 50 } }]);
@@ -231,11 +230,11 @@ function FullAnalysisPage() {
                     toast.success('Substituição realizada');
                     setHasUnsavedChanges(true);
                 } else {
-                    console.log('[DEBUG] Away Starter NOT found for ID:', selectedPlayerId);
+
                 }
             }
         } else {
-            console.log('[DEBUG] No field player selected. Cannot substitute.');
+
         }
     };
 
@@ -454,7 +453,7 @@ function FullAnalysisPage() {
                     onAwayCoachChange={(name) => { setAwayCoach(name); setHasUnsavedChanges(true); }}
 
                     onPlayerMove={handlePlayerMove}
-                    onPlayerClick={(p) => { console.log('[DEBUG] Player Clicked:', p.id); setSelectedPlayerId(p.id); }}
+                    onPlayerClick={(p) => { setSelectedPlayerId(p.id); }}
                     onPlayerDoubleClick={(p) => setEditingPlayer(p)}
                     onBenchPlayerClick={handleBenchPlayerClick}
 
