@@ -22,6 +22,7 @@ interface AnalysisSidebarProps {
     onAwayOffensiveNotesChange: (notes: string) => void;
 
     autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    readOnly?: boolean;
 }
 
 const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
@@ -40,7 +41,9 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
     onAwayDefensiveNotesChange,
     onAwayOffensiveNotesChange,
 
-    autoSaveStatus = 'idle'
+
+    autoSaveStatus = 'idle',
+    readOnly = false
 }) => {
     const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
 
@@ -127,7 +130,9 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                                     value={isHome ? homeDefensiveNotes : awayDefensiveNotes}
                                     onChange={(e) => isHome ? onHomeDefensiveNotesChange(e.target.value) : onAwayDefensiveNotesChange(e.target.value)}
                                     placeholder={`Padrões defensivos do ${isHome ? homeTeamName : awayTeamName}...`}
-                                    className="flex-1 min-h-[400px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50 placeholder-gray-500 border border-gray-700"
+                                    className="flex-1 min-h-[400px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50 placeholder-gray-500 border border-gray-700 disabled:opacity-70 disabled:cursor-default"
+                                    readOnly={readOnly}
+                                    disabled={readOnly}
                                 />
                             </div>
                         </div>
@@ -145,7 +150,9 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                                     value={isHome ? homeOffensiveNotes : awayOffensiveNotes}
                                     onChange={(e) => isHome ? onHomeOffensiveNotesChange(e.target.value) : onAwayOffensiveNotesChange(e.target.value)}
                                     placeholder={`Padrões ofensivos do ${isHome ? homeTeamName : awayTeamName}...`}
-                                    className="flex-1 min-h-[400px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 border border-gray-700"
+                                    className="flex-1 min-h-[400px] bg-nav-dark text-white p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder-gray-500 border border-gray-700 disabled:opacity-70 disabled:cursor-default"
+                                    readOnly={readOnly}
+                                    disabled={readOnly}
                                 />
                             </div>
 
@@ -156,7 +163,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                 {/* Footer with save status - COMACTO */}
                 <div className="py-2 px-4 border-t border-gray-700 text-center shrink-0 bg-nav-dark">
                     <span className="text-xs text-gray-500">
-                        {getStatusText()}
+                        {readOnly ? 'Modo de Visualização (Somente Leitura)' : getStatusText()}
                     </span>
                 </div>
             </div>

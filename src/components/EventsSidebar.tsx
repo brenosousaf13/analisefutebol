@@ -26,7 +26,9 @@ interface EventsSidebarProps {
     awayTeam: string;
     // Player lists for dropdown
     homePlayers?: PlayerLite[];
+
     awayPlayers?: PlayerLite[];
+    readOnly?: boolean;
 }
 
 const getEventIcon = (type: MatchEvent['type']) => {
@@ -39,7 +41,7 @@ const getEventIcon = (type: MatchEvent['type']) => {
     }
 };
 
-const EventCard: React.FC<{ event: MatchEvent; onRemove: () => void }> = ({ event, onRemove }) => (
+const EventCard: React.FC<{ event: MatchEvent; onRemove: () => void; readOnly?: boolean }> = ({ event, onRemove, readOnly }) => (
     <div className="bg-panel-dark rounded-lg p-3 flex items-start gap-3 group border border-gray-700">
         <span className="text-2xl">{getEventIcon(event.type)}</span>
         <div className="flex-1 min-w-0">
@@ -53,13 +55,18 @@ const EventCard: React.FC<{ event: MatchEvent; onRemove: () => void }> = ({ even
                 <p className="text-gray-500 text-sm mt-1 truncate">{event.description}</p>
             )}
         </div>
-        <button
-            onClick={onRemove}
-            className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 transition rounded-lg hover:bg-gray-700"
-        >
-            <Trash2 className="w-4 h-4" />
-        </button>
-    </div>
+
+        {
+            !readOnly && (
+                <button
+                    onClick={onRemove}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 transition rounded-lg hover:bg-gray-700"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
+            )
+        }
+    </div >
 );
 
 const EventsSidebar: React.FC<EventsSidebarProps> = ({
@@ -70,8 +77,10 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
     onRemoveEvent,
     homeTeam,
     awayTeam,
+
     homePlayers = [],
-    awayPlayers = []
+    awayPlayers = [],
+    readOnly = false
 }) => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [newEvent, setNewEvent] = useState<Omit<MatchEvent, 'id'>>({
@@ -154,6 +163,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
                                     key={event.id}
                                     event={event}
                                     onRemove={() => onRemoveEvent(event.id)}
+                                    readOnly={readOnly}
                                 />
                             ))}
                         </div>
@@ -284,7 +294,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
                 </div>
 
                 {/* Add Button */}
-                {!showAddForm && (
+                {!showAddForm && !readOnly && (
                     <div className="p-4 border-t border-gray-700 shrink-0">
                         <button
                             onClick={() => setShowAddForm(true)}

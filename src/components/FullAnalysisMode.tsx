@@ -63,6 +63,7 @@ interface FullAnalysisModeProps {
     isSaving?: boolean;
     hasUnsavedChanges?: boolean;
     onShare?: () => void;
+    readOnly?: boolean;
 }
 
 export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
@@ -104,7 +105,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     onAddPlayer,
     isSaving,
     hasUnsavedChanges,
-    onShare
+    onShare,
+    readOnly = false
 }) => {
     // State
     const [possession, setPossession] = useState<'home' | 'away'>('home');
@@ -232,6 +234,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         onSave={onCoachChange || (() => { })}
                         align={align === 'right' ? 'right' : 'left'}
                         placeholder="Nome do Técnico"
+                        readOnly={readOnly}
                     />
                 </div>
             </div>
@@ -243,7 +246,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     team={team}
                     orientation="vertical"
                     align={align || 'left'}
-                    onPromotePlayer={onBenchPlayerClick}
+                    onPromotePlayer={readOnly ? () => { } : onBenchPlayerClick}
                     onPlayerDoubleClick={onPlayerDoubleClick}
                 />
             </div>
@@ -329,27 +332,31 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 onMoveRectangle={(id, x, y) => onMoveRectangle(id, x, y, currentDrawTeam, currentPhaseKey)}
                                 playerColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
                                 rectangleColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                playerScale={0.85}
+                                readOnly={readOnly}
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* TOOLBAR - Bottom Center absolute */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 transform scale-90 origin-bottom">
-                    <FullAnalysisToolbar
-                        activeTool={activeTool}
-                        onToolChange={onToolChange}
-                        onOpenColorPicker={onOpenColorPicker}
-                        onOpenAnalysis={onOpenAnalysis}
-                        onOpenEvents={onOpenEvents}
-                        onSave={onSave}
-                        onExport={onExport}
-                        onAddPlayer={onAddPlayer}
-                        isSaving={isSaving}
-                        hasUnsavedChanges={hasUnsavedChanges}
-                        onShare={onShare}
-                    />
-                </div>
+                {!readOnly && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 transform scale-90 origin-bottom">
+                        <FullAnalysisToolbar
+                            activeTool={activeTool}
+                            onToolChange={onToolChange}
+                            onOpenColorPicker={onOpenColorPicker}
+                            onOpenAnalysis={onOpenAnalysis}
+                            onOpenEvents={onOpenEvents}
+                            onSave={onSave}
+                            onExport={onExport}
+                            onAddPlayer={onAddPlayer}
+                            isSaving={isSaving}
+                            hasUnsavedChanges={hasUnsavedChanges}
+                            onShare={onShare}
+                        />
+                    </div>
+                )}
 
             </div>
 

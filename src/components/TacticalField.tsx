@@ -32,6 +32,7 @@ interface TacticalFieldProps {
 
     readOnly?: boolean;
     orientation?: 'vertical' | 'horizontal';
+    playerScale?: number;
 }
 
 // ... (FieldLines component logic was updated in previous step via overwrite, but we need to match the previous tool call's expectation or just strictly follow the lines here)
@@ -134,7 +135,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     playerColor = '#EAB308', // Default yellow
     compact = false,
     readOnly = false,
-    orientation = 'vertical'
+    orientation = 'vertical',
+    playerScale = 1
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
@@ -476,7 +478,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         return () => window.removeEventListener('resize', updateSize);
     }, []);
 
-    const playerSize = getPlayerSize(fieldWidth);
+    const playerSize = getPlayerSize(fieldWidth) * (playerScale || 1);
     const fontSizes = getFontSize(playerSize);
 
 
