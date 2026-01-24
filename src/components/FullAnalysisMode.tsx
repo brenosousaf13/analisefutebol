@@ -260,7 +260,12 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 
     // We access the records passed via props
     const currentArrows = possession === 'home' ? homeArrows['full_home'] : awayArrows['full_away'];
+
     const currentRects = possession === 'home' ? homeRectangles['full_home'] : awayRectangles['full_away'];
+
+    // Map player notes for indicator
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const playerNotes = playersToRender.reduce((acc, p) => (p as any).note ? ({ ...acc, [p.id]: (p as any).note }) : acc, {} as Record<number, string>);
 
     return (
         <div className="flex flex-1 h-full overflow-hidden bg-panel-dark relative" style={{ height: 'calc(100vh - 64px)' }}>
@@ -334,6 +339,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 rectangleColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
                                 playerScale={0.85}
                                 readOnly={readOnly}
+                                playerNotes={playerNotes}
                             />
                         </div>
                     </div>

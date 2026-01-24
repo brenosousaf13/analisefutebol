@@ -655,7 +655,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 className={`
                                     absolute select-none
                                     ${isDragging ? 'z-50' : 'z-10'}
-                                    ${(mode === 'draw' || mode === 'rectangle' || readOnly) ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto'}
+                                    ${readOnly
+                                        ? `pointer-events-auto ${playerNotes?.[player.id] ? 'cursor-pointer' : 'cursor-default'}`
+                                        : ((mode === 'draw' || mode === 'rectangle') ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto')
+                                    }
                                 `}
                                 style={{
                                     left: `${position.x}%`,
@@ -666,7 +669,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 onMouseDown={(e) => !readOnly && handlePlayerMouseDown(e, player)}
                                 onTouchStart={(e) => !readOnly && handlePlayerMouseDown(e, player)}
                                 onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
-                                onDoubleClick={() => !readOnly && onPlayerDoubleClick?.(player)}
+                                onDoubleClick={() => onPlayerDoubleClick?.(player)}
                             >
                                 <div
                                     className={`

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X, StickyNote } from 'lucide-react';
 import TacticalField from '../components/TacticalField';
 import { analysisService, type AnalysisData } from '../services/analysisService';
 import { CoachNameDisplay } from '../components/CoachNameDisplay';
@@ -18,6 +18,13 @@ export default function SharedAnalysis() {
     const [activePhase, setActivePhase] = useState<'defensive' | 'offensive'>('defensive');
     const [isAnalysisSidebarOpen, setIsAnalysisSidebarOpen] = useState(false);
     const [isEventsSidebarOpen, setIsEventsSidebarOpen] = useState(false);
+    const [viewingPlayerNote, setViewingPlayerNote] = useState<{ name: string; note: string } | null>(null);
+
+    const handlePlayerDoubleClick = (player: any) => {
+        if (player && player.note) {
+            setViewingPlayerNote({ name: player.name, note: player.note });
+        }
+    };
 
     // Load data
     useEffect(() => {
@@ -159,7 +166,7 @@ export default function SharedAnalysis() {
 
                             onPlayerMove={() => { }}
                             onPlayerClick={() => { }}
-                            onPlayerDoubleClick={() => { }}
+                            onPlayerDoubleClick={handlePlayerDoubleClick}
                             onBenchPlayerClick={() => { }}
 
                             activeTool="select"
@@ -342,6 +349,48 @@ export default function SharedAnalysis() {
                     </div>
                 )}
             </main>
+
+            {/* Note Viewer Modal */}
+            {viewingPlayerNote && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={() => setViewingPlayerNote(null)}>
+                    <div
+                        className="bg-[#1a1f2e] rounded-xl border border-gray-700 shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <span className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                                {viewingPlayerNote.name}
+                            </h3>
+                            <button
+                                onClick={() => setViewingPlayerNote(null)}
+                                className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 flex items-center justify-center transition"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6">
+                            <h4 className="text-xs uppercase tracking-wider text-gray-500 font-bold mb-3 flex items-center gap-2">
+                                <StickyNote size={14} />
+                                Anotação Tática
+                            </h4>
+                            <div className="bg-black/20 rounded-lg p-5 border border-gray-700/50">
+                                <p className="text-gray-200 text-base leading-relaxed whitespace-pre-wrap font-medium">
+                                    {viewingPlayerNote.note}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-gray-700/50 bg-black/20 text-center">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold opacity-70">Analise.Futebol</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
