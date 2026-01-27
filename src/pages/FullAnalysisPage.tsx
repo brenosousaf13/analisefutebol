@@ -69,7 +69,6 @@ function FullAnalysisPage() {
     const [homeScore, setHomeScore] = useState<number>(0);
     const [awayScore, setAwayScore] = useState<number>(0);
 
-    const [gameNotes, setGameNotes] = useState('');
     const [notasCasa, setNotasCasa] = useState('');
     const [notasCasaUpdatedAt, setNotasCasaUpdatedAt] = useState<string | undefined>(undefined);
     const [notasVisitante, setNotasVisitante] = useState('');
@@ -149,7 +148,6 @@ function FullAnalysisPage() {
 
                     setHomeScore(data.homeScore || 0);
                     setAwayScore(data.awayScore || 0);
-                    setGameNotes(data.gameNotes || '');
                     setNotasCasa(data.notasCasa || '');
                     setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
                     setNotasVisitante(data.notasVisitante || '');
@@ -291,11 +289,11 @@ function FullAnalysisPage() {
                 awayTeam: matchInfo.awayTeam,
                 homeTeamLogo: matchInfo.homeTeamLogo,
                 awayTeamLogo: matchInfo.awayTeamLogo,
-                homeScore,
-                awayScore,
-                gameNotes,
-                notasCasa,
-                notasCasaUpdatedAt,
+                home_score: homeScore,
+                away_score: awayScore,
+
+                // Detailed Notes (Legacy/Specific)
+                notasCasa: notasCasa,
                 notasVisitante,
                 notasVisitanteUpdatedAt,
                 homeDefensiveNotes,

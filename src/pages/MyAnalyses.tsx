@@ -16,11 +16,24 @@ const MyAnalyses = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [orderBy, setOrderBy] = useState<'created_at' | 'updated_at' | 'titulo'>('created_at');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+    type SearchType = 'all' | 'team' | 'match' | 'player' | 'coach';
+    const [searchType, setSearchType] = useState<SearchType>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    const getSearchPlaceholder = (type: SearchType): string => {
+        const placeholders: Record<SearchType, string> = {
+            all: 'Buscar análise...',
+            team: 'Buscar por time...',
+            match: 'Buscar por partida...',
+            player: 'Buscar por jogador...',
+            coach: 'Buscar por técnico...'
+        };
+        return placeholders[type];
+    };
 
     useEffect(() => {
         loadAnalyses();
-    }, [searchQuery, orderBy]);
+    }, [searchQuery, orderBy, searchType]);
 
     async function loadAnalyses() {
         setLoading(true);
@@ -28,6 +41,7 @@ const MyAnalyses = () => {
             const filters: AnalysisFilters = {
                 status: 'todas',
                 search: searchQuery || undefined,
+                searchType,
                 orderBy,
                 orderDirection: 'desc'
             };
@@ -113,15 +127,31 @@ const MyAnalyses = () => {
 
                     <div className="flex items-center gap-3">
                         {/* Search */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar análise..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-green-500 focus:outline-none"
-                            />
+                        <div className="flex items-center gap-2">
+                            {/* Dropdown de tipo de busca */}
+                            <select
+                                value={searchType}
+                                onChange={(e) => setSearchType(e.target.value as SearchType)}
+                                className="px-3 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                            >
+                                <option value="all">Todos</option>
+                                <option value="team">Time</option>
+                                <option value="match">Partida</option>
+                                <option value="player">Jogador</option>
+                                <option value="coach">Técnico</option>
+                            </select>
+
+                            {/* Input de busca */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder={getSearchPlaceholder(searchType)}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10 pr-4 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-green-500 focus:outline-none"
+                                />
+                            </div>
                         </div>
 
                         {/* New Analysis Button */}

@@ -28,8 +28,6 @@ export interface AnalysisData {
     awayTeamLogo?: string;
     homeScore?: number;
     awayScore?: number;
-    gameNotes: string;
-
     // Detailed Notes (Legacy/Specific)
     notasCasa: string;
     notasCasaUpdatedAt?: string;
@@ -44,19 +42,13 @@ export interface AnalysisData {
     awayOffensiveNotes: string;
     awayBenchNotes: string;
 
-    // Deprecated Global Notes
+    // Deprecated Global Notes (Keeping for type safety during migration)
     defensiveNotes?: string;
     offensiveNotes?: string;
 
     // Colors
     homeTeamColor: string;
     awayTeamColor: string;
-
-    // Legacy/Phase notes
-    homeTeamNotes: string;
-    homeOffNotes: string;
-    awayTeamNotes: string;
-    awayOffNotes: string;
 
     // Players
     homePlayersDef: Player[];
@@ -115,6 +107,7 @@ export interface AnalysisFilters {
     fixtureId?: number;
     orderBy?: 'created_at' | 'updated_at' | 'titulo';
     orderDirection?: 'asc' | 'desc';
+    searchType?: 'all' | 'team' | 'match' | 'player' | 'coach';
 }
 
 export const analysisService = {
@@ -147,7 +140,6 @@ export const analysisService = {
                 away_team_logo: data.awayTeamLogo,
                 home_score: data.homeScore,
                 away_score: data.awayScore,
-                game_notes: data.gameNotes,
 
                 // Old notes
                 notas_casa: data.notasCasa,
@@ -167,15 +159,6 @@ export const analysisService = {
                 // Legacy global fields
                 defensive_notes: data.defensiveNotes || '',
                 offensive_notes: data.offensiveNotes || '',
-
-                home_team_color: data.homeTeamColor,
-                away_team_color: data.awayTeamColor,
-
-                // Legacy mapping
-                home_team_notes: data.homeTeamNotes,
-                home_off_notes: data.homeOffNotes,
-                away_team_notes: data.awayTeamNotes,
-                away_off_notes: data.awayOffNotes,
 
                 home_coach: data.homeCoach,
                 away_coach: data.awayCoach,
@@ -313,8 +296,39 @@ export const analysisService = {
             query = query.eq('fixture_id', filters.fixtureId);
         }
 
-        if (filters?.search) {
-            query = query.or(`titulo.ilike.%${filters.search}%,home_team_name.ilike.%${filters.search}%,away_team_name.ilike.%${filters.search}%,home_coach.ilike.%${filters.search}%,away_coach.ilike.%${filters.search}%`);
+        if (filters?.search && filters.search.trim() !== '') {
+            const searchTerm = filters.search.trim();
+            const searchType = filters.searchType || 'all';
+
+            switch (searchType) {
+                case 'team':
+                    query = query.or(`home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%`);
+                    break;
+                case 'match':
+                    query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%`);
+                    break;
+                case 'coach':
+                    query = query.or(`home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
+                    break;
+                case 'player':
+                    // Player search requires a subquery or separate lookup
+                    const { data: players } = await supabase
+                        .from('analysis_players')
+                        .select('analysis_id')
+                        .ilike('name', `%${searchTerm}%`);
+
+                    if (players && players.length > 0) {
+                        const ids = players.map(p => p.analysis_id);
+                        query = query.in('id', ids);
+                    } else {
+                        return [];
+                    }
+                    break;
+                case 'all':
+                default:
+                    query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%,home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
+                    break;
+            }
         }
 
         const orderBy = filters?.orderBy || 'created_at';
@@ -442,7 +456,6 @@ export const analysisService = {
             awayTeamLogo: analysis.away_team_logo,
             homeScore: analysis.home_score,
             awayScore: analysis.away_score,
-            gameNotes: analysis.game_notes || '',
 
             notasCasa: analysis.notas_casa || '',
             notasCasaUpdatedAt: analysis.notas_casa_updated_at,
@@ -460,11 +473,6 @@ export const analysisService = {
             offensiveNotes: analysis.offensive_notes || '',
             homeTeamColor: analysis.home_team_color || '#EF4444',
             awayTeamColor: analysis.away_team_color || '#3B82F6',
-
-            homeTeamNotes: analysis.home_team_notes || '',
-            homeOffNotes: analysis.home_off_notes || '',
-            awayTeamNotes: analysis.away_team_notes || '',
-            awayOffNotes: analysis.away_off_notes || '',
 
             homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
             homeSubstitutes, awaySubstitutes,
@@ -621,13 +629,8 @@ export const analysisService = {
             status: 'rascunho',
             homeTeam: 'Time Casa',
             awayTeam: 'Time Visitante',
-            gameNotes: '',
             notasCasa: '',
             notasVisitante: '',
-            homeTeamNotes: '',
-            homeOffNotes: '',
-            awayTeamNotes: '',
-            awayOffNotes: '',
 
             homeDefensiveNotes: '',
             homeOffensiveNotes: '',
@@ -777,7 +780,6 @@ export const analysisService = {
             awayTeamLogo: analysis.away_team_logo,
             homeScore: analysis.home_score,
             awayScore: analysis.away_score,
-            gameNotes: analysis.game_notes || '',
 
             notasCasa: analysis.notas_casa || '',
             notasCasaUpdatedAt: analysis.notas_casa_updated_at,
@@ -795,11 +797,6 @@ export const analysisService = {
             offensiveNotes: analysis.offensive_notes || '',
             homeTeamColor: analysis.home_team_color || '#EF4444',
             awayTeamColor: analysis.away_team_color || '#3B82F6',
-
-            homeTeamNotes: analysis.home_team_notes || '',
-            homeOffNotes: analysis.home_off_notes || '',
-            awayTeamNotes: analysis.away_team_notes || '',
-            awayOffNotes: analysis.away_off_notes || '',
 
             homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
             homeSubstitutes, awaySubstitutes,

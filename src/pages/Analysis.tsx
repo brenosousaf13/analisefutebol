@@ -109,8 +109,6 @@ function Analysis() {
     const [awayScore, setAwayScore] = useState<number>(locationState?.score?.away ?? 0);
 
     // Notes
-    const [gameNotes, setGameNotes] = useState('');
-
     // Expanded Notes State
     const [notasCasa, setNotasCasa] = useState('');
     const [notasCasaUpdatedAt, setNotasCasaUpdatedAt] = useState<string | undefined>(undefined);
@@ -351,7 +349,6 @@ function Analysis() {
                     setHomeBallOff(data.homeBallOff || { x: 50, y: 50 });
                     setAwayBallDef(data.awayBallDef || { x: 50, y: 50 });
                     setAwayBallOff(data.awayBallOff || { x: 50, y: 50 });
-                    setGameNotes(data.gameNotes || '');
 
                     setNotasCasa(data.notasCasa || '');
                     setNotasCasaUpdatedAt(data.notasCasaUpdatedAt);
@@ -523,10 +520,11 @@ function Analysis() {
                 awayTeam: matchInfo.awayTeam,
                 homeTeamLogo: matchInfo.homeTeamLogo,
                 awayTeamLogo: matchInfo.awayTeamLogo,
-                homeScore,
-                awayScore,
-                gameNotes,
-                notasCasa,
+                home_score: homeScore,
+                away_score: awayScore,
+
+                // Detailed Notes (Legacy/Specific)
+                notasCasa: notasCasa,
                 notasCasaUpdatedAt,
                 notasVisitante,
                 notasVisitanteUpdatedAt,
@@ -585,7 +583,7 @@ function Analysis() {
             toast.error('Erro ao salvar análise');
         }
     }, [currentAnalysisId, homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-        homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes, notasCasa, notasVisitante,
+        homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, notasCasa, notasVisitante,
         homeScore, awayScore, events, matchInfo, homeTeamNotes,
         notasCasaUpdatedAt, notasVisitanteUpdatedAt,
         notasCasaUpdatedAt, notasVisitanteUpdatedAt,
@@ -610,7 +608,6 @@ function Analysis() {
                     setHomeBallOff(data.homeBallOff || { x: 50, y: 50 });
                     setAwayBallDef(data.awayBallDef || { x: 50, y: 50 });
                     setAwayBallOff(data.awayBallOff || { x: 50, y: 50 });
-                    setGameNotes(data.gameNotes);
 
                     if (data.shareToken) {
                         setShareToken(data.shareToken);
@@ -974,7 +971,7 @@ function Analysis() {
         setHasUnsavedChanges(true);
     }, [
         homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-        homeSubstitutes, awaySubstitutes, homeArrows, awayArrows, gameNotes,
+        homeSubstitutes, awaySubstitutes, homeArrows, awayArrows,
         notasCasa, notasVisitante, events
     ]);
 
