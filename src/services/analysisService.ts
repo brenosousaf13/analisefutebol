@@ -78,6 +78,12 @@ export interface AnalysisData {
     awayRectanglesDef: Rectangle[];
     awayRectanglesOff: Rectangle[];
 
+    // Ball Positions
+    homeBallDef?: { x: number, y: number };
+    homeBallOff?: { x: number, y: number };
+    awayBallDef?: { x: number, y: number };
+    awayBallOff?: { x: number, y: number };
+
     // Events (stored as JSONB)
     events?: any[];
 
@@ -173,6 +179,13 @@ export const analysisService = {
 
                 home_coach: data.homeCoach,
                 away_coach: data.awayCoach,
+
+                // Ball Positions
+                home_ball_def: data.homeBallDef,
+                home_ball_off: data.homeBallOff,
+                away_ball_def: data.awayBallDef,
+                away_ball_off: data.awayBallOff,
+
                 events: data.events || [],
                 updated_at: new Date().toISOString()
             };
@@ -460,7 +473,13 @@ export const analysisService = {
             events: analysis.events || [],
             homeCoach: analysis.home_coach,
             awayCoach: analysis.away_coach,
-            tags: []
+            tags: [],
+
+            // Ball Positions
+            homeBallDef: analysis.home_ball_def,
+            homeBallOff: analysis.home_ball_off,
+            awayBallDef: analysis.away_ball_def,
+            awayBallOff: analysis.away_ball_off
         };
     },
 

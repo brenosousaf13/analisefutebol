@@ -58,6 +58,11 @@ function FullAnalysisPage() {
     const [awayPlayersDef, setAwayPlayersDef] = useState<Player[]>([]);
     const [awayPlayersOff, setAwayPlayersOff] = useState<Player[]>([]);
 
+    const [homeBallDef, setHomeBallDef] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+    const [homeBallOff, setHomeBallOff] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+    const [awayBallDef, setAwayBallDef] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+    const [awayBallOff, setAwayBallOff] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+
     const [homeSubstitutes, setHomeSubstitutes] = useState<Player[]>([]);
     const [awaySubstitutes, setAwaySubstitutes] = useState<Player[]>([]);
 
@@ -137,6 +142,10 @@ function FullAnalysisPage() {
                     setAwayPlayersOff(data.awayPlayersOff);
                     setHomeSubstitutes(data.homeSubstitutes || []);
                     setAwaySubstitutes(data.awaySubstitutes || []);
+                    setHomeBallDef(data.homeBallDef || { x: 50, y: 50 });
+                    setHomeBallOff(data.homeBallOff || { x: 50, y: 50 });
+                    setAwayBallDef(data.awayBallDef || { x: 50, y: 50 });
+                    setAwayBallOff(data.awayBallOff || { x: 50, y: 50 });
 
                     setHomeScore(data.homeScore || 0);
                     setAwayScore(data.awayScore || 0);
@@ -186,6 +195,14 @@ function FullAnalysisPage() {
             : (phase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
 
         updateFn(prev => prev.map(p => p.id === id ? { ...p, position: pos } : p));
+        setHasUnsavedChanges(true);
+    };
+
+    const handleBallMove = (pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+        const updateFn = team === 'home'
+            ? (phase === 'defensive' ? setHomeBallDef : setHomeBallOff)
+            : (phase === 'defensive' ? setAwayBallDef : setAwayBallOff);
+        updateFn(pos);
         setHasUnsavedChanges(true);
     };
 
@@ -303,6 +320,10 @@ function FullAnalysisPage() {
                 awayPlayersOff,
                 homeSubstitutes,
                 awaySubstitutes,
+                homeBallDef,
+                homeBallOff,
+                awayBallDef,
+                awayBallOff,
 
                 homeArrowsDef: homeArrows['full_home'],
                 homeArrowsOff: [],
@@ -451,6 +472,14 @@ function FullAnalysisPage() {
                     awayCoachName={awayCoach}
                     onHomeCoachChange={(name) => { setHomeCoach(name); setHasUnsavedChanges(true); }}
                     onAwayCoachChange={(name) => { setAwayCoach(name); setHasUnsavedChanges(true); }}
+
+                    ballPositions={{
+                        homeDef: homeBallDef,
+                        homeOff: homeBallOff,
+                        awayDef: awayBallDef,
+                        awayOff: awayBallOff
+                    }}
+                    onBallMove={handleBallMove}
 
                     onPlayerMove={handlePlayerMove}
                     onPlayerClick={(p) => { setSelectedPlayerId(p.id); }}

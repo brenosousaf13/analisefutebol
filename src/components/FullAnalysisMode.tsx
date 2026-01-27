@@ -34,7 +34,16 @@ interface FullAnalysisModeProps {
     awayArrows: Record<string, Arrow[]>;
     awayRectangles: Record<string, Rectangle[]>;
 
+    // Ball Data
+    ballPositions?: {
+        homeDef?: { x: number, y: number };
+        homeOff?: { x: number, y: number };
+        awayDef?: { x: number, y: number };
+        awayOff?: { x: number, y: number };
+    };
+
     // Handlers
+    onBallMove?: (pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => void;
     onPlayerMove: (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => void;
     onPlayerClick: (player: Player) => void;
     onPlayerDoubleClick: (player: Player) => void;
@@ -85,6 +94,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     awaySubstitutes,
     awayArrows,
     awayRectangles,
+    ballPositions,
+    onBallMove,
     onPlayerMove,
     onPlayerClick,
     onPlayerDoubleClick,
@@ -340,6 +351,9 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 playerScale={0.85}
                                 readOnly={readOnly}
                                 playerNotes={playerNotes}
+                                ballPosition={possession === 'home' ? ballPositions?.homeOff : ballPositions?.awayOff}
+                                onBallMove={(pos) => onBallMove?.(pos, possession, 'offensive')}
+                                ballScale={0.7}
                             />
                         </div>
                     </div>

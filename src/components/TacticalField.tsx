@@ -33,6 +33,11 @@ interface TacticalFieldProps {
     readOnly?: boolean;
     orientation?: 'vertical' | 'horizontal';
     playerScale?: number;
+
+    // Ball
+    ballPosition?: { x: number, y: number };
+    onBallMove?: (pos: { x: number, y: number }) => void;
+    ballScale?: number;
 }
 
 // ... (FieldLines component logic was updated in previous step via overwrite, but we need to match the previous tool call's expectation or just strictly follow the lines here)
@@ -136,11 +141,16 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     compact = false,
     readOnly = false,
     orientation = 'vertical',
-    playerScale = 1
+    playerScale = 1,
+    ballPosition,
+    onBallMove,
+    ballScale = 1
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
+    const [draggingBall, setDraggingBall] = useState(false);
     const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
+    const [tempBallPosition, setTempBallPosition] = useState<{ x: number; y: number } | null>(null);
 
     // Arrow Drawing State
     const [isDrawing, setIsDrawing] = useState(false);
@@ -238,6 +248,62 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             document.removeEventListener('touchcancel', handleEnd);
         };
     }, [draggingPlayer, onPlayerMove, getFieldPosition]);
+
+    // === BALL DRAGGING ===
+    const handleBallMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+        if (readOnly || mode !== 'move' || !onBallMove) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingBall(true);
+    };
+
+    useEffect(() => {
+        if (!draggingBall) return;
+
+        const handleMove = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const coords = getEventCoords(e);
+            if (!coords) return;
+
+            const pos = getFieldPosition(coords.clientX, coords.clientY);
+            if (pos) {
+                setTempBallPosition({
+                    x: Math.max(1, Math.min(99, pos.x)),
+                    y: Math.max(1, Math.min(99, pos.y))
+                });
+            }
+        };
+
+        const handleEnd = (e: MouseEvent | TouchEvent) => {
+            const coords = getEventCoords(e);
+            if (coords && onBallMove) {
+                const pos = getFieldPosition(coords.clientX, coords.clientY);
+                if (pos) {
+                    onBallMove({
+                        x: Math.max(1, Math.min(99, pos.x)),
+                        y: Math.max(1, Math.min(99, pos.y))
+                    });
+                }
+            }
+            setDraggingBall(false);
+            setTempBallPosition(null);
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
+            document.removeEventListener('touchcancel', handleEnd);
+        };
+    }, [draggingBall, onBallMove, getFieldPosition]);
 
     // === ARROW DRAWING ===
     const handleDrawStart = useCallback((clientX: number, clientY: number) => {
@@ -526,6 +592,32 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             >
                 {/* Field Lines */}
                 <FieldLines orientation={orientation} />
+
+                {/* BALL */}
+                {(ballPosition || tempBallPosition) && (
+                    <div
+                        className="absolute z-20 cursor-move"
+                        style={{
+                            left: `${(tempBallPosition || ballPosition)?.x}%`,
+                            top: `${(tempBallPosition || ballPosition)?.y}%`,
+                            width: `${2.5 * ballScale}%`, // Scaled size
+                            aspectRatio: '1/1',
+                            transform: 'translate(-50%, -50%)'
+                        }}
+                        onMouseDown={handleBallMouseDown}
+                        onTouchStart={handleBallMouseDown}
+                    >
+                        {/* SVG Soccer Ball */}
+                        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+                            <circle cx="50" cy="50" r="48" fill="white" stroke="black" strokeWidth="4" />
+                            <path d="M50 50 L50 20 M50 50 L78 65 M50 50 L22 65" stroke="black" strokeWidth="4" fill="none" />
+                            <circle cx="50" cy="50" r="10" fill="black" />
+                            <circle cx="50" cy="20" r="5" fill="black" />
+                            <circle cx="78" cy="65" r="5" fill="black" />
+                            <circle cx="22" cy="65" r="5" fill="black" />
+                        </svg>
+                    </div>
+                )}
 
                 {/* Arrows and Rectangles Layer - Using SVG */}
                 {/* SVG itself has pointer-events: none to allow clicks to pass through to players */}

@@ -145,6 +145,12 @@ function Analysis() {
         'full_away': []
     });
 
+    // Ball Positions State
+    const [homeBallDef, setHomeBallDef] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+    const [homeBallOff, setHomeBallOff] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+    const [awayBallDef, setAwayBallDef] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+    const [awayBallOff, setAwayBallOff] = useState<{ x: number, y: number }>({ x: 50, y: 50 });
+
     // --- FULL ANALYSIS MODE INDEPENDENT STATE ---
     // Initialize with same defaults but separate state to allow independent movement
     const [fullHomePlayersDef, setFullHomePlayersDef] = useState<Player[]>(
@@ -341,6 +347,10 @@ function Analysis() {
 
                     setHomeSubstitutes(data.homeSubstitutes || []);
                     setAwaySubstitutes(data.awaySubstitutes || []);
+                    setHomeBallDef(data.homeBallDef || { x: 50, y: 50 });
+                    setHomeBallOff(data.homeBallOff || { x: 50, y: 50 });
+                    setAwayBallDef(data.awayBallDef || { x: 50, y: 50 });
+                    setAwayBallOff(data.awayBallOff || { x: 50, y: 50 });
                     setGameNotes(data.gameNotes || '');
 
                     setNotasCasa(data.notasCasa || '');
@@ -445,6 +455,22 @@ function Analysis() {
         updateFn(prev => prev.map(p => p.id === id ? { ...p, position: pos } : p));
     };
 
+    const handleBallMove = (pos: { x: number, y: number }, phase: 'defensive' | 'offensive') => {
+        const updateFn = viewTeam === 'home'
+            ? (phase === 'defensive' ? setHomeBallDef : setHomeBallOff)
+            : (phase === 'defensive' ? setAwayBallDef : setAwayBallOff);
+        updateFn(pos);
+        setHasUnsavedChanges(true);
+    };
+
+    const handleFullBallMove = (pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+        const updateFn = team === 'home'
+            ? (phase === 'defensive' ? setHomeBallDef : setHomeBallOff)
+            : (phase === 'defensive' ? setAwayBallDef : setAwayBallOff);
+        updateFn(pos);
+        setHasUnsavedChanges(true);
+    };
+
     const handleFullPlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
         const updateFn = team === 'home'
             ? (phase === 'defensive' ? setFullHomePlayersDef : setFullHomePlayersOff)
@@ -531,6 +557,10 @@ function Analysis() {
                 homeRectanglesOff: homeRectangles.offensive,
                 awayRectanglesDef: awayRectangles.defensive,
                 awayRectanglesOff: awayRectangles.offensive,
+                homeBallDef,
+                homeBallOff,
+                awayBallDef,
+                awayBallOff,
                 homeCoach,
                 awayCoach,
                 events: events,
@@ -576,6 +606,10 @@ function Analysis() {
                     setAwayPlayersOff(data.awayPlayersOff);
                     setHomeSubstitutes(data.homeSubstitutes);
                     setAwaySubstitutes(data.awaySubstitutes);
+                    setHomeBallDef(data.homeBallDef || { x: 50, y: 50 });
+                    setHomeBallOff(data.homeBallOff || { x: 50, y: 50 });
+                    setAwayBallDef(data.awayBallDef || { x: 50, y: 50 });
+                    setAwayBallOff(data.awayBallOff || { x: 50, y: 50 });
                     setGameNotes(data.gameNotes);
 
                     if (data.shareToken) {
@@ -998,6 +1032,12 @@ function Analysis() {
                             awayTeamColor={awayTeamColor}
 
                             // Independent Data
+                            ballPositions={{
+                                homeDef: homeBallDef,
+                                homeOff: homeBallOff,
+                                awayDef: awayBallDef,
+                                awayOff: awayBallOff
+                            }}
                             homePlayersDef={fullHomePlayersDef}
                             homePlayersOff={fullHomePlayersOff}
                             homeSubstitutes={homeSubstitutes}
@@ -1011,6 +1051,7 @@ function Analysis() {
                             awayRectangles={awayRectangles}
 
                             // Independent Player Handlers
+                            onBallMove={handleFullBallMove}
                             onPlayerMove={handleFullPlayerMove}
                             onBenchPlayerClick={handleFullBenchPlayerClick}
                             onPlayerClick={handlePlayerClick}
@@ -1161,6 +1202,8 @@ function Analysis() {
                                             isEraserMode={activeTool === 'eraser'}
                                             rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                             playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            ballPosition={viewTeam === 'home' ? homeBallDef : awayBallDef}
+                                            onBallMove={(pos) => handleBallMove(pos, 'defensive')}
                                         />
                                     </div>
 
@@ -1189,6 +1232,8 @@ function Analysis() {
                                             isEraserMode={activeTool === 'eraser'}
                                             rectangleColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
                                             playerColor={viewTeam === 'home' ? homeTeamColor : awayTeamColor}
+                                            ballPosition={viewTeam === 'home' ? homeBallOff : awayBallOff}
+                                            onBallMove={(pos) => handleBallMove(pos, 'offensive')}
                                         />
                                     </div>
                                 </div>
