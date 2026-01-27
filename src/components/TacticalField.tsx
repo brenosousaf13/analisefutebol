@@ -745,7 +745,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             <div
                                 key={player.id}
                                 className={`
-                                    absolute select-none
+                                    absolute select-none flex flex-col items-center justify-center
                                     ${isDragging ? 'z-50' : 'z-10'}
                                     ${readOnly
                                         ? `pointer-events-auto ${playerNotes?.[player.id] ? 'cursor-pointer' : 'cursor-default'}`
@@ -763,33 +763,37 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
                                 onDoubleClick={() => onPlayerDoubleClick?.(player)}
                             >
-                                <div
-                                    className={`
-                                        rounded-full 
-                                        flex items-center justify-center text-gray-900 font-bold
-                                        shadow-lg transition-transform duration-75
-                                        ${isDragging ? 'scale-110 ring-2 ring-white' : (readOnly ? '' : 'hover:scale-105')}
-                                        ${selectedPlayerId === player.id ? 'ring-2 ring-green-400' : ''}
-                                    `}
-                                    style={{
-                                        width: compact ? 24 : playerSize,
-                                        height: compact ? 24 : playerSize,
-                                        fontSize: compact ? 10 : fontSizes.number,
-                                        backgroundColor: player.color || playerColor
-                                    }}
-                                >
-                                    {player.number}
+                                <div className="relative w-fit">
+                                    <div
+                                        className={`
+                                            rounded-full 
+                                            flex items-center justify-center text-gray-900 font-bold
+                                            shadow-lg transition-transform duration-75
+                                            ${isDragging ? 'scale-110 ring-2 ring-white' : (readOnly ? '' : 'hover:scale-105')}
+                                            ${selectedPlayerId === player.id ? 'ring-2 ring-green-400' : ''}
+                                        `}
+                                        style={{
+                                            width: compact ? 24 : playerSize,
+                                            height: compact ? 24 : playerSize,
+                                            fontSize: compact ? 10 : fontSizes.number,
+                                            backgroundColor: player.color || playerColor
+                                        }}
+                                    >
+                                        {player.number}
+                                    </div>
+
+                                    {/* Note Indicator - Now relative to the circle container */}
+                                    {playerNotes[player.id] && (
+                                        <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />
+                                    )}
                                 </div>
+
                                 <div
                                     className="text-white text-center mt-0.5 whitespace-nowrap font-medium drop-shadow-md pointer-events-none"
                                     style={{ fontSize: Math.max(8, fontSizes.name) }}
                                 >
                                     {player.name}
                                 </div>
-                                {/* Note Indicator */}
-                                {playerNotes[player.id] && (
-                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-white" />
-                                )}
                             </div>
                         );
                     })}
