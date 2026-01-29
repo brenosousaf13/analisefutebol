@@ -7,18 +7,34 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import NewAnalysisModal from '../components/NewAnalysisModal';
+import { useAuth } from '../contexts/AuthContext';
+import { useDebounce } from '../hooks/useDebounceHook';
+import { searchAnalyses } from '../services/searchService';
+import type { SearchResult } from '../types/search';
+import { PlayerDossierCard } from '../components/search/PlayerDossierCard';
+import { TeamDossierCard } from '../components/search/TeamDossierCard';
+import { CoachDossierCard } from '../components/search/CoachDossierCard';
 
 const MyAnalyses = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    // Data State
     const [analyses, setAnalyses] = useState<SavedAnalysisSummary[]>([]);
     const [loading, setLoading] = useState(true);
-    // const [activeTab, setActiveTab] = useState<StatusFilter>('todas'); // Removed
+
+    // Filter State
     const [searchQuery, setSearchQuery] = useState('');
     const [orderBy, setOrderBy] = useState<'created_at' | 'updated_at' | 'titulo'>('created_at');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+
     type SearchType = 'all' | 'team' | 'match' | 'player' | 'coach';
     const [searchType, setSearchType] = useState<SearchType>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // Modular Search State
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const debouncedSearch = useDebounce(searchQuery, 500);
 
     const getSearchPlaceholder = (type: SearchType): string => {
         const placeholders: Record<SearchType, string> = {
@@ -31,17 +47,41 @@ const MyAnalyses = () => {
         return placeholders[type];
     };
 
+    // Main Load Effect (Standard List)
     useEffect(() => {
-        loadAnalyses();
-    }, [searchQuery, orderBy, searchType]);
+        if (!debouncedSearch) {
+            loadAnalyses();
+        }
+    }, [orderBy, debouncedSearch]); // Reload when search is cleared
+
+    // Search Effect (Modular Search)
+    useEffect(() => {
+        if (!debouncedSearch || debouncedSearch.length < 2) {
+            setSearchResults([]);
+            return;
+        }
+
+        async function performSearch() {
+            if (!user) return;
+            setLoading(true);
+            try {
+                const results = await searchAnalyses(searchType, debouncedSearch, user.id);
+                setSearchResults(results);
+            } catch (error) {
+                console.error('Search error:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        performSearch();
+    }, [debouncedSearch, searchType, user]);
 
     async function loadAnalyses() {
         setLoading(true);
         try {
             const filters: AnalysisFilters = {
                 status: 'todas',
-                search: searchQuery || undefined,
-                searchType,
                 orderBy,
                 orderDirection: 'desc'
             };
@@ -61,6 +101,8 @@ const MyAnalyses = () => {
         try {
             await analysisService.deleteAnalysis(id);
             setAnalyses(prev => prev.filter(a => a.id !== id));
+            // Also update search results if present
+            setSearchResults(prev => prev.filter(r => r.type !== 'match' || r.analysis.id !== id));
         } catch (err) {
             console.error('Error deleting:', err);
             alert('Erro ao excluir análise');
@@ -71,19 +113,8 @@ const MyAnalyses = () => {
         e.stopPropagation();
         try {
             await analysisService.duplicateAnalysis(id);
-            // We should check type, but duplicate usually keeps type.
-            // Ideally we'd know the type to redirect correctly or just fetch it.
-            // For now, let's assume it routes to standard, but if we want perfection we need to know type.
-            // A simple fix is just to reload or let user click. 
-            // But let's try to be smart.
-            // Actually, `duplicateAnalysis` returns ID. We might not know type without fetching.
-            // Let's just navigate to generic and let a redirect handler handle it? 
-            // Or better: Navigate to /minhas-analises triggers reload.
-            // But user wants to go to analysis.
-            // Let's use a helper or just check the *current* analysis type if we had it.
-            // We have it in the list! We can pass type to handleDuplicate.
             alert('Análise duplicada! Encontre-a na lista.');
-            loadAnalyses(); // Reload list
+            loadAnalyses();
         } catch (err) {
             console.error('Error duplicating:', err);
             alert('Erro ao duplicar análise');
@@ -112,7 +143,81 @@ const MyAnalyses = () => {
         return formatDate(dateString);
     };
 
-    // const tabs removed
+    const navigateToAnalysis = (id: string, type?: string) => {
+        const route = type === 'analise_completa'
+            ? `/analysis-complete/saved/${id}`
+            : `/analysis/saved/${id}`;
+        navigate(route);
+    };
+
+    // Helper to render a single analysis card (reused for both list and search results)
+    const renderAnalysisCard = (analysis: SavedAnalysisSummary) => (
+        <div
+            key={analysis.id}
+            onClick={() => navigateToAnalysis(analysis.id, analysis.tipo)}
+            className="group bg-[#1a1f2e] rounded-xl border border-gray-800 hover:border-gray-700 overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:shadow-black/20"
+        >
+            {/* Thumbnail */}
+            <div className="aspect-video bg-[#0d1117] relative overflow-hidden">
+                {analysis.thumbnail_url ? (
+                    <img
+                        src={analysis.thumbnail_url}
+                        alt={analysis.titulo}
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                        <div className="flex gap-4 items-center">
+                            {analysis.home_team_logo && <img src={analysis.home_team_logo} className="w-12 h-12" />}
+                            <span className="text-2xl font-bold text-gray-600">VS</span>
+                            {analysis.away_team_logo && <img src={analysis.away_team_logo} className="w-12 h-12" />}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Content */}
+            <div className="p-5">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-white group-hover:text-green-400 transition-colors line-clamp-1">
+                            {analysis.titulo}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                            <Calendar className="w-4 h-4" />
+                            {formatDate(analysis.created_at)}
+                            <span>•</span>
+                            <Clock className="w-3 h-3" />
+                            {formatRelativeTime(analysis.updated_at)}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => handleDuplicate(e, analysis.id)}
+                            title="Duplicar"
+                            className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                        >
+                            <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={(e) => handleDelete(e, analysis.id)}
+                            title="Excluir"
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div className="flex items-center text-green-500 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                        Abrir Análise
+                        <ExternalLink className="w-4 h-4 ml-1" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#0d1117] flex flex-col">
@@ -167,14 +272,12 @@ const MyAnalyses = () => {
 
                 {/* Filters Row */}
                 <div className="flex items-center justify-between mb-6 bg-[#1a1f2e] rounded-xl p-2">
-                    {/* Status Tabs - Changed to just static 'Todas' label as requested */}
                     <div className="flex gap-1">
                         <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-500 text-white cursor-default">
                             Todas
                         </span>
                     </div>
 
-                    {/* Order & View Toggle */}
                     <div className="flex items-center gap-4">
                         <div className="relative">
                             <select
@@ -206,125 +309,103 @@ const MyAnalyses = () => {
                     </div>
                 </div>
 
-                {/* Results Count */}
-                <p className="text-sm text-gray-500 mb-4">
-                    📊 {analyses.length} análise{analyses.length !== 1 ? 's' : ''} encontrada{analyses.length !== 1 ? 's' : ''}
-                </p>
-
-                {/* Content */}
+                {/* Results Count & Content */}
                 {loading ? (
-                    <div className="flex justify-center items-center h-64">
-                        <Loader2 className="animate-spin text-green-500" size={48} />
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-4 text-green-500" />
+                        <p>Carregando análises...</p>
                     </div>
-                ) : analyses.length === 0 ? (
-                    /* Empty State */
-                    <div className="flex flex-col items-center justify-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
-                        <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                            <FileText className="w-10 h-10 text-gray-600" />
+                ) : debouncedSearch && searchQuery.length >= 2 ? (
+                    /* Search Results View */
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Search className="w-5 h-5 text-green-500" />
+                            <h2 className="text-xl font-bold text-white">
+                                Resultados para "{searchQuery}"
+                            </h2>
+                            <span className="text-gray-500 text-sm ml-2">({searchResults.length} encontrados)</span>
                         </div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Nenhuma análise encontrada</h3>
-                        <p className="text-gray-400 mb-6 text-center max-w-md">
-                            Comece criando sua primeira análise tática. Você pode analisar partidas ao vivo,
-                            criar modelos táticos ou estudar adversários.
-                        </p>
-                        <button
-                            onClick={() => setIsNewModalOpen(true)}
-                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Criar Primeira Análise
-                        </button>
+
+                        {searchResults.length === 0 ? (
+                            <div className="text-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
+                                <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-white mb-2">Nenhum resultado encontrado</h3>
+                                <p className="text-gray-400">
+                                    Não encontramos nada para "{searchQuery}" com o filtro selecionado.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {searchResults.map((result, idx) => {
+                                    if (result.type === 'player') {
+                                        return (
+                                            <PlayerDossierCard
+                                                key={`player-${idx}`}
+                                                dossier={result}
+                                                onEntryClick={(id) => navigateToAnalysis(id, 'analise_completa')}
+                                            />
+                                        );
+                                    }
+                                    if (result.type === 'team') {
+                                        return (
+                                            <TeamDossierCard
+                                                key={`team-${idx}`}
+                                                dossier={result}
+                                                onEntryClick={(id) => navigateToAnalysis(id, 'analise_completa')}
+                                            />
+                                        );
+                                    }
+                                    if (result.type === 'coach') {
+                                        return (
+                                            <CoachDossierCard
+                                                key={`coach-${idx}`}
+                                                dossier={result}
+                                                onEntryClick={(id) => navigateToAnalysis(id, 'analise_completa')}
+                                            />
+                                        );
+                                    }
+                                    // Match Type
+                                    return renderAnalysisCard(result.analysis);
+                                })}
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    /* Grid View */
-                    <div className={viewMode === 'grid'
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                        : "flex flex-col gap-4"
-                    }>
-                        {analyses.map((analysis) => (
-                            <div
-                                key={analysis.id}
-                                onClick={() => {
-                                    const route = analysis.tipo === 'analise_completa'
-                                        ? `/analysis-complete/saved/${analysis.id}`
-                                        : `/analysis/saved/${analysis.id}`;
-                                    navigate(route);
-                                }}
-                                className="bg-[#1a1f2e] rounded-xl overflow-hidden border border-gray-700 hover:border-green-500/50 transition-all group cursor-pointer"
-                            >
-                                {/* Thumbnail */}
-                                <div className="relative h-40 bg-[#2d5a3d] overflow-hidden">
-                                    {analysis.thumbnail_url ? (
-                                        <img src={analysis.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#2d5a3d] to-[#1a3a2a]">
-                                            <FileText className="w-12 h-12 text-green-500/30" />
-                                        </div>
-                                    )}
+                    /* Default All My Analyses View */
+                    <>
+                        <p className="text-sm text-gray-500 mb-4">
+                            📊 {analyses.length} análise{analyses.length !== 1 ? 's' : ''} encontrada{analyses.length !== 1 ? 's' : ''}
+                        </p>
 
-                                    {/* Status Badge Removed */}
-
-                                    {/* Hover Actions */}
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                        <button
-                                            className="p-3 bg-green-500 rounded-full hover:bg-green-600 transition-colors"
-                                            title="Abrir"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const route = analysis.tipo === 'analise_completa'
-                                                    ? `/analysis-complete/saved/${analysis.id}`
-                                                    : `/analysis/saved/${analysis.id}`;
-                                                navigate(route);
-                                            }}
-                                        >
-                                            <ExternalLink className="w-5 h-5 text-white" />
-                                        </button>
-                                        <button
-                                            className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
-                                            title="Duplicar"
-                                            onClick={(e) => handleDuplicate(e, analysis.id)}
-                                        >
-                                            <Copy className="w-5 h-5 text-white" />
-                                        </button>
-                                        <button
-                                            className="p-3 bg-red-500/80 rounded-full hover:bg-red-500 transition-colors"
-                                            title="Excluir"
-                                            onClick={(e) => handleDelete(e, analysis.id)}
-                                        >
-                                            <Trash2 className="w-5 h-5 text-white" />
-                                        </button>
-                                    </div>
+                        {analyses.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
+                                <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                                    <FileText className="w-10 h-10 text-gray-600" />
                                 </div>
-
-                                {/* Info */}
-                                <div className="p-4">
-                                    {/* Title */}
-                                    <h3 className="font-semibold text-white truncate">{analysis.titulo}</h3>
-
-                                    {/* Teams */}
-                                    <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
-                                        <span>{analysis.home_team_name}</span>
-                                        <span className="text-gray-600">vs</span>
-                                        <span>{analysis.away_team_name}</span>
-                                    </div>
-
-                                    {/* Meta info */}
-                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-700">
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            <span>{formatDate(analysis.created_at)}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                            <Clock className="w-3.5 h-3.5" />
-                                            <span>{formatRelativeTime(analysis.updated_at)}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">Nenhuma análise encontrada</h3>
+                                <p className="text-gray-400 mb-6 text-center max-w-md">
+                                    Comece criando sua primeira análise tática. Você pode analisar partidas ao vivo,
+                                    criar modelos táticos ou estudar adversários.
+                                </p>
+                                <button
+                                    onClick={() => setIsNewModalOpen(true)}
+                                    className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Criar Primeira Análise
+                                </button>
                             </div>
-                        ))}
-                    </div>
+                        ) : (
+                            <div className={viewMode === 'grid'
+                                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                : "flex flex-col gap-4"
+                            }>
+                                {analyses.map(renderAnalysisCard)}
+                            </div>
+                        )}
+                    </>
                 )}
+
                 <NewAnalysisModal
                     isOpen={isNewModalOpen}
                     onClose={() => setIsNewModalOpen(false)}

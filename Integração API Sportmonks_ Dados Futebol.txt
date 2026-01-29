@@ -1,0 +1,618 @@
+Análise Técnica Exaustiva da API
+Sportmonks v3 para Integração de
+Dashboards de Futebol Profissional
+A evolução tecnológica no fornecimento de dados esportivos atingiu um novo patamar de
+maturidade com o lançamento da versão 3 da API Sportmonks. Esta infraestrutura,
+desenhada especificamente para atender às demandas de desenvolvedores e analistas que
+buscam precisão absoluta e baixa latência, representa uma mudança estrutural profunda em
+relação às iterações anteriores, como a v2.1 O foco central desta análise reside na
+desconstrução dos componentes necessários para a montagem de um dashboard de futebol
+de classe mundial, cobrindo desde os metadados fundamentais das partidas até a
+complexidade tática das escalações e a identidade visual das equipes através de seus
+escudos e cores.2
+A arquitetura da API v3 é fundamentada no conceito de enriquecimento dinâmico via
+inclusões. Ao contrário de modelos tradicionais que entregam payloads fixos e muitas vezes
+excessivos, o sistema da Sportmonks permite que o integrador molde a resposta de acordo
+com a necessidade específica da interface do usuário, utilizando o parâmetro include para
+agregar recursos relacionados a uma entidade base, como a partida (fixture).2 Esta
+flexibilidade é crucial para dashboards que precisam equilibrar a riqueza de informações com
+a velocidade de carregamento, permitindo que dados de estádios, árbitros, eventos de jogo e
+estatísticas avançadas sejam consolidados em uma única chamada de rede.2
+
+Fundamentos Arquiteturais e Protocolos de Acesso
+O acesso à API Sportmonks v3 é realizado através de uma base URL unificada para o esporte
+futebol, localizada no domínio https://api.sportmonks.com/v3/football.4 A segurança e o
+controle de acesso são geridos por tokens de API únicos, que podem ser transmitidos como
+parâmetros de query ou cabeçalhos de autorização, garantindo versatilidade na
+implementação de diferentes back-ends ou clientes de dados.4 A estrutura de resposta segue
+estritamente o formato JSON, com uma tipagem forte que elimina ambiguidades, facilitando o
+parse automático em linguagens como Python, PHP, Java, Node.js e Ruby.1
+
+Parâmetro de Requisição
+
+Função Técnica
+
+Aplicação Prática
+
+api_token
+
+Autenticação obrigatória
+
+Identificação do plano e
+limites de taxa.4
+
+include
+
+Enriquecimento relacional
+
+Adição de times,
+escalações e placares.2
+
+select
+
+Filtragem de campos
+
+Redução de payload
+focando apenas no
+necessário.4
+
+filters
+
+Lógica condicional
+
+Restrição por liga, data ou
+tipo de evento.6
+
+sortBy
+
+Ordenação de dados
+
+Organização por horário de
+início ou ID.6
+
+locale
+
+Internacionalização
+
+Tradução de nomes de
+times e ligas.5
+
+A governança de dados na v3 introduz o conceito de limites de taxa baseados em entidades.
+Cada plano padrão oferece, por exemplo, 3.000 chamadas por hora por entidade, o que
+significa que requisições para diferentes endpoints que consultam a mesma entidade (como
+"teams") compartilham esse limite.9 Esta abordagem incentiva o uso eficiente de inclusões e
+filtros, minimizando o desperdício de chamadas e otimizando a performance do dashboard.
+
+Detalhamento das Partidas: O Objeto Fixture
+A entidade Fixture é o pilar central sobre o qual o dashboard é construído. Uma partida na v3
+não é apenas um registro de horário e local, mas um nó complexo que conecta ligas,
+temporadas, estágios, rodadas e participantes.6 A precisão temporal é garantida pelo campo
+starting_at, um objeto de data e hora que permite a conversão para fusos horários locais,
+essencial para dashboards globais.11
+
+Campos Fundamentais da Partida
+A análise dos campos da fixture revela a profundidade do contexto fornecido. O id único
+serve como a chave primária para todas as relações subsequentes, enquanto o sport_id
+(fixado em 1 para futebol) mantém a consistência multiesportiva da plataforma.7 Para a
+organização visual do dashboard, os IDs de liga (league_id) e temporada (season_id)
+permitem que as partidas sejam agrupadas por competição e ano, respectivamente.11
+
+Campo da Fixture
+
+Tipo de Dado
+
+Descrição Técnica
+
+id
+
+Integer
+
+Identificador único e
+
+persistente da partida.11
+starting_at
+
+DateTime
+
+Timestamp do início oficial
+do evento.11
+
+venue_id
+
+Integer
+
+Referência para o estádio
+onde ocorre o jogo.7
+
+state_id
+
+Integer
+
+Status dinâmico da partida
+(Agendada, Ao Vivo,
+Finalizada).11
+
+result_info
+
+String
+
+Resumo textual do
+desfecho do jogo.11
+
+leg
+
+String
+
+Identificação da mão (1ª
+mão, 2ª mão) em
+mata-matas.11
+
+details
+
+String
+
+Notas adicionais sobre o
+andamento do confronto.11
+
+length
+
+Integer
+
+Duração total da partida
+em minutos.7
+
+A gestão do local da partida é realizada através do venue_id. Para exibir o nome do estádio e
+sua localização no dashboard, a aplicação deve utilizar o include=venue.7 Isso traz metadados
+adicionais como cidade, capacidade e superfície do campo, permitindo uma contextualização
+rica para o usuário.13
+
+Estados e Ciclo de Vida do Jogo
+Um dashboard eficiente deve refletir o estado exato de cada partida em tempo real. A v3
+categoriza as partidas através de estados (states), que vão muito além do binário "em
+andamento" ou "encerrado".1 Existem estados específicos para atrasos (DELA), partidas
+adiadas, interrompidas ou que aguardam disputa de pênaltis.1 Esta granularidade permite que
+a interface do usuário forneça alertas precisos, como "Jogo suspenso por condições
+climáticas" ou "Partida atrasada", aumentando a confiabilidade da plataforma aos olhos do
+torcedor ou apostador.1
+Os placares, anteriormente campos fixos na v2, agora são acessados via inclusão scores.1
+Esta mudança permite recuperar o histórico de gols por período (1º tempo, 2º tempo,
+prorrogação) de forma estruturada, facilitando a criação de gráficos de evolução do placar e
+
+cronologias detalhadas.1
+
+Identidade Visual: Times, Escudos e Participantes
+A representação visual das equipes é o que torna um dashboard intuitivo e atraente. Na
+versão 3, a Sportmonks abandonou a terminologia fixa de localTeam e visitorTeam em favor
+de um array de participants.1 Esta decisão arquitetônica permite que a API suporte esportes
+ou formatos de competição onde a distinção de mandante e visitante é menos rígida ou onde
+existem múltiplos participantes por evento.1
+
+Integração de Escudos (Logotipos)
+Cada participante incluído em uma fixture contém o campo image_path, que fornece a URL
+absoluta para o escudo oficial da equipe hospedado na infraestrutura de CDN da
+Sportmonks.13 Esta URL é estruturada para alta performance, garantindo que o dashboard
+possa carregar centenas de logotipos simultaneamente sem degradação na velocidade de
+navegação.5
+
+Atributo do Time
+
+Significado para o
+Dashboard
+
+Campo API
+
+Nome Oficial
+
+Nome completo para
+exibição em cabeçalhos.13
+
+name
+
+Short Code
+
+Abreviação de 3 letras (ex:
+"MUN", "RIV") para
+placares móveis.5
+
+short_code
+
+Escudo
+
+URL para o logo em alta
+definição.5
+
+image_path
+
+Localização
+
+Diferenciação entre casa
+(home) e fora (away).13
+
+meta.location
+
+Vencedor
+
+Indicador booleano de
+vitória para destaque
+visual.13
+
+meta.winner
+
+Ano de Fundação
+
+Informação histórica para
+perfis de clubes.5
+
+founded
+
+A correta identificação de quem joga em casa é feita através do objeto meta dentro do
+
+participante. O campo meta.location retornará "home" ou "away", e a aplicação deve usar
+este valor para posicionar o escudo no lado esquerdo ou direito da interface,
+respectivamente.13 Ignorar este metadado e basear a posição na ordem do array pode levar a
+erros graves de exibição, pois a ordem dos elementos no JSON não é garantida como
+indicativo de mando de campo.13
+
+Metadados e Perfis de Clubes
+Para dashboards que oferecem páginas dedicadas a cada time, a API permite o
+include=statistics e include=players, fornecendo um mergulho profundo no desempenho da
+temporada e no elenco atual.5 Informações como a data da última partida jogada
+(last_played_at) e se o time é uma seleção nacional ou um clube doméstico (type) permitem
+uma categorização automática e inteligente do conteúdo.5 Além disso, o campo placeholder é
+vital para gerir torneios de mata-mata, indicando se o participante já é uma equipe definida
+ou se ainda aguarda o vencedor de um confronto anterior (TBD - To Be Determined).13
+
+Engenharia de Escalações e Visualização Tática
+O módulo de escalações (lineups) é, sem dúvida, um dos componentes mais complexos e
+ricos em dados da v3. Através da inclusão lineups, o dashboard recebe uma lista completa de
+jogadores que participaram da partida, incluindo titulares, reservas e o treinador.15
+
+O Grid de Posicionamento (Formation Field)
+Para reconstruir visualmente a tática em um campo de futebol virtual, a Sportmonks fornece o
+campo formation_field.15 Este campo utiliza um sistema de coordenadas em grade (ex: "3:2"),
+onde o primeiro dígito representa a linha tática (defesa, meio, ataque) e o segundo
+representa a posição lateral.16 Esta abordagem permite que o dashboard desenhe
+automaticamente as formações (4-3-3, 3-5-2, etc.) sem a necessidade de lógica de
+posicionamento customizada e propensa a erros.16
+A numeração segue um fluxo lógico da direita para a esquerda, começando pela linha
+defensiva e avançando em direção ao ataque.15 O goleiro é tipicamente posicionado na
+coordenada de base (geralmente linha 1), enquanto os atacantes ocupam as linhas
+superiores.16 Dashboards de alta fidelidade utilizam estes dados para criar animações táticas
+e mapas de calor simplificados baseados na posição média inicial dos atletas.
+
+Tipos de Participação e Confirmação de Lineup
+A diferenciação entre os jogadores é feita pelo type_id. O integrador deve filtrar por type_id:
+11 para identificar os onze iniciais e type_id: 12 para os suplentes.15 Esta separação é crítica
+para a interface do usuário, que geralmente exibe os titulares em um diagrama de campo e os
+reservas em uma lista lateral.
+
+Elemento da Escalação
+
+Importância Tática
+
+Campo/Include API
+
+Nome do Jogador
+
+Identificação imediata.15
+
+player_name
+
+Número da Camisa
+
+Essencial para
+identificação visual no
+campo.15
+
+jersey_number
+
+Posição Detalhada
+
+Especificação do papel (ex:
+Lateral Esquerdo,
+Volante).15
+
+lineups.detailedPosition
+
+Estatísticas de Jogo
+
+Gols, cartões e minutos
+jogados por atleta.15
+
+lineups.details.type
+
+Status de Confirmação
+
+Indica se a escalação é
+oficial ou prevista.16
+
+metadata.lineup_confirmed
+
+A questão da confirmação é um ponto de destaque na v3. Através do metadado
+lineup_confirmed, o dashboard pode informar ao usuário se a escalação apresentada é oficial
+(divulgada pelo clube geralmente uma hora antes do jogo) ou se é uma predição baseada em
+algoritmos e histórico.16 Quando o status é false, os dados refletem a melhor estimativa
+disponível; uma vez que o clube oficializa a lista, o valor muda para true e os dados são
+atualizados para refletir a realidade do campo.16
+
+Resultados Passados e Análise Histórica
+Para dashboards que oferecem ferramentas de comparação de performance e histórico de
+confrontos (Head-to-Head), a API disponibiliza endpoints robustos de recuperação de dados
+históricos.6 O acesso a partidas passadas é vital para calcular tendências, como a sequência
+de resultados (forma) de uma equipe ou o histórico de vitórias entre dois rivais.
+
+Recuperação por Intervalo de Datas
+O endpoint GET Fixtures by Date Range permite que a aplicação solicite todas as partidas
+ocorridas em um intervalo de até 100 dias.12 Esta limitação temporal visa garantir a
+performance da consulta, mas pode ser iterada para construir bancos de dados históricos
+completos. Os dados retornados incluem o placar final estruturado e o result_info, que
+fornece o contexto do encerramento (ex: "Vencido na prorrogação").11
+Além disso, é possível filtrar partidas por time específico utilizando o endpoint GET Fixtures
+by Date Range for Team.8 Esta rota é ideal para dashboards focados em clubes, permitindo a
+
+exibição de calendários de resultados recentes e agendas futuras de forma segregada. A
+ordenação dos resultados pode ser controlada pelo parâmetro order=desc, colocando as
+partidas mais recentes no topo da lista.7
+
+Filtros Avançados para Resultados
+A v3 oferece uma gama de filtros estáticos e dinâmicos para refinar a busca por resultados
+passados. É possível, por exemplo, solicitar apenas partidas de uma liga específica que
+terminaram com um determinado estado (ex: apenas partidas concluídas) para evitar o
+processamento de jogos cancelados ou adiados.6
+
+Filtro de Histórico
+
+Aplicação Técnica
+
+Exemplo de Sintaxe
+
+fixtureLeagues
+
+Restringe resultados a
+competições específicas.6
+
+&filters=fixtureLeagues:501
+,271
+
+participantSearch
+
+Busca partidas de um time
+pelo nome.6
+
+&filters=participantSearch:
+Celtic
+
+fixtureStates
+
+Filtra por partidas
+finalizadas (FT).6
+
+&filters=fixtureStates:3
+
+venues
+
+Lista jogos ocorridos em
+um estádio específico.7
+
+&filters=venues:10
+
+todayDate
+
+Filtra exclusivamente as
+partidas do dia atual.6
+
+&filters=todayDate
+
+Esta capacidade de filtragem no lado do servidor reduz drasticamente a necessidade de
+lógica de processamento no dashboard, permitindo que a aplicação receba exatamente o
+que precisa renderizar.
+
+O Ecossistema do Futebol Brasileiro na v3
+Para o mercado de língua portuguesa, especificamente o Brasil, a Sportmonks v3 oferece
+uma cobertura exaustiva da Série A, tratando-a com o mesmo rigor estatístico das principais
+ligas europeias.18 A integração de dados do Brasileirão permite dashboards que acompanham
+a elite do futebol nacional com atualizações em tempo real e profundidade histórica.18
+
+Cobertura da Série A e Trial Gratuito
+A Sportmonks promove uma política de "Developer First", oferecendo um período de teste
+
+gratuito de 14 dias que permite acesso total aos dados da Série A brasileira.18 Durante este
+período, desenvolvedores podem validar a precisão dos livescores, a rapidez das notificações
+de gol e a integridade das estatísticas de jogadores como artilharia e assistências.19
+A relevância do Brasileirão na plataforma é evidenciada pela disponibilidade de squads
+completos e perfis detalhados de atletas renomados que atuam ou atuaram na liga, como
+Pelé, Ronaldinho Gaúcho e Neymar Jr..21 Dashboards voltados ao público brasileiro podem
+explorar estas figuras históricas para criar conteúdos de "No dia de hoje" ou comparações
+entre gerações, utilizando os dados de temporadas passadas disponíveis na API.21
+
+Funcionalidades Específicas para o Mercado Brasileiro
+Além dos dados básicos, a API oferece add-ons que enriquecem a experiência do dashboard
+para o público brasileiro, como o Prediction API e o Expected Goals (xG).9 O xG, em particular,
+tornou-se uma métrica padrão na análise de futebol moderno no Brasil, e a v3 entrega esses
+valores tanto a nível de partida quanto a nível de jogador através das inclusões xGFixture e
+lineups.xGLineup.9
+
+Recurso para o
+Brasileirão
+
+Descrição de Valor
+
+Disponibilidade
+
+Livescores Tempo Real
+
+Atualizações segundo a
+segundo de gols e
+cartões.18
+
+Standard.19
+
+Tabela de Classificação
+
+Monitoramento da luta pelo
+título e contra o
+rebaixamento.20
+
+Standard.20
+
+Estatísticas Individuais
+
+Saves de goleiros, passes e
+interceptações.19
+
+Standard.19
+
+Notícias Pré-Match
+
+Contexto jornalístico sobre
+desfalques e preparativos.9
+
+Add-on.9
+
+Probabilidades
+
+Dados para análise de
+apostas e desempenho
+esperado.9
+
+Add-on.9
+
+Para empresas de mídia e startups de iGaming no Brasil, a estabilidade de 99,9% de uptime
+prometida pela Sportmonks é um fator decisivo, especialmente durante rodadas críticas do
+
+campeonato onde o volume de acessos ao dashboard tende a crescer exponencialmente.25
+
+Estratégias de Otimização e Performance de Dados
+A construção de um dashboard que suporte milhares de usuários simultâneos exige uma
+gestão cuidadosa dos recursos da API. A versão 3 fornece ferramentas avançadas para
+minimizar o consumo de banda e maximizar a responsividade da interface.2
+
+Seleção de Campos e Redução de Payload
+O parâmetro &select= é uma das adições mais poderosas da v3. Ele permite que o
+desenvolvedor especifique quais campos da entidade base deseja receber.4 Se um
+dashboard de "Próximos Jogos" precisa apenas dos nomes das equipes e do horário, não há
+razão para baixar IDs de estágios, rodadas ou descrições detalhadas.4
+Exemplo de otimização:
+https://api.sportmonks.com/v3/football/fixtures?select=name,starting_at&include=participants
+:name,image_path
+Neste exemplo, a API retornará um objeto extremamente leve, contendo apenas o essencial
+para a renderização da lista inicial, economizando tempo de processamento tanto no servidor
+quanto no cliente.4
+
+Paginação e Sincronização de Banco de Dados
+Para aplicações que precisam sincronizar grandes volumes de dados (como carregar todos
+os resultados de uma década), a v3 introduz o parâmetro IdAfter e limites de paginação
+estendidos.1 Enquanto o limite padrão é de 50 resultados por página, filtros específicos de
+sincronização permitem até 1.000 resultados, reduzindo drasticamente o número de
+requisições necessárias para popular uma base de dados local.1
+É importante notar que, ao utilizar limites de paginação muito altos, algumas inclusões podem
+ser desativadas pelo servidor para prevenir sobrecarga.1 Portanto, a estratégia recomendada
+é utilizar a paginação estendida para dados estruturais e chamadas pontuais com inclusões
+para o detalhamento em tempo real.1
+
+Tratamento de Ausência de Dados
+Diferente da v2, onde campos de estatísticas retornavam zero quando não havia ocorrência, a
+v3 simplesmente omite campos ausentes da resposta.1 Se um jogador não recebeu cartões
+amarelos, a propriedade yellowcards não estará presente no JSON.1 O dashboard deve ser
+programado para lidar com essa ausência, interpretando-a como valor zero, em vez de gerar
+erros de referência nula.1 Esta mudança limpa o payload e garante que apenas dados
+
+validados e registrados sejam transmitidos.1
+
+Conclusões sobre a Integração de Dashboards
+A análise detalhada da documentação e das capacidades da API Sportmonks v3 confirma que
+esta é uma solução de ponta para a criação de ecossistemas digitais de futebol. A transição
+de um modelo de dados estático para um modelo relacional baseado em inclusões e seleções
+permite um nível de personalização que era anteriormente inalcançável.
+Para um dashboard de sucesso, a recomendação técnica é seguir uma abordagem de
+carregamento progressivo:
+1.​ Utilizar o endpoint de livescores ou fixtures por data com seleções de campos mínimas
+para a visão geral.
+2.​ Implementar cache persistente para entidades estáticas como logotipos de times e
+nomes de ligas.
+3.​ Carregar detalhes pesados como escalações táticas e estatísticas de xG apenas sob
+demanda, quando o usuário seleciona uma partida específica.
+4.​ Monitorar o status lineup_confirmed para educar o usuário sobre a confiabilidade dos
+dados pré-jogo.
+Com a cobertura abrangente da Série A do Brasil e a robustez da infraestrutura global, a
+Sportmonks v3 posiciona-se não apenas como um fornecedor de dados, mas como um
+parceiro estratégico para qualquer plataforma que aspire à liderança no mercado de
+informações esportivas. A facilidade de integração, aliada à profundidade tática e visual
+oferecida, reduz significativamente o tempo de go-to-market para novos produtos,
+permitindo que a inovação ocorra na camada de experiência do usuário, enquanto a
+integridade dos dados é garantida pela API.
+
+Referências citadas
+1.​ API Changes - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+
+https://docs.sportmonks.com/v3/welcome/differences-between-api-2-and-api-3/
+api-changes
+2.​ Includes - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/tutorials-and-guides/tutorials/includes
+3.​ Includes - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/api/request-options/includes
+4.​ Making your first request - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/welcome/making-your-first-request
+5.​ GET Team by ID | API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/teams/get-tea
+m-by-id
+6.​ GET Fixtures by Head To Head - API 3.0 - Sportmonks, acessado em janeiro 27,
+2026,
+
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/fixtures/get-fi
+xtures-by-head-to-head
+7.​ GET All Fixtures - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/fixtures/get-al
+l-fixtures
+8.​ GET Fixtures by Date Range for Team - API 3.0 - Sportmonks, acessado em
+janeiro 27, 2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/fixtures/get-fi
+xtures-by-date-range-for-team
+9.​ Football API | 2500+ Leagues & Live Data | Sportmonks, acessado em janeiro 27,
+2026, https://www.sportmonks.com/football-api/
+10.​FAQ - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/faq/api-3.0
+11.​ Fixture - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/entities/fixture
+12.​GET Fixtures by Date Range - API 3.0 - Sportmonks, acessado em janeiro 27,
+2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/fixtures/get-fi
+xtures-by-date-range
+13.​Participants | API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/tutorials-and-guides/tutorials/includes/participa
+nts
+14.​Teams - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/tutorials-and-guides/tutorials/teams-players-co
+aches-and-referees/teams
+15.​Lineups - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/tutorials-and-guides/tutorials/includes/lineups
+16.​Lineups and formations - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/tutorials-and-guides/tutorials/lineups-and-form
+ations
+17.​GET Expected Lineups by Player - API 3.0 - Sportmonks, acessado em janeiro 27,
+2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/premium-exp
+ected-lineups/get-expected-lineups-by-player
+18.​All Brazilian Serie A Data available in our Football API - Sportmonks, acessado em
+janeiro 27, 2026, https://www.sportmonks.com/football-api/serie-a-api-brazil/
+19.​All Brazilian Serie A stats available in our Football API - Sportmonks, acessado em
+janeiro 27, 2026,
+https://www.sportmonks.com/football-api/serie-a-api-brazil/statistics/
+20.​Brazilian Serie A standings - Football API - Sportmonks, acessado em janeiro 27,
+2026, https://www.sportmonks.com/football-api/serie-a-api-brazil/standings/
+21.​With Sportmonks API you can access all Brazilian Serie A players, acessado em
+janeiro 27, 2026,
+https://www.sportmonks.com/football-api/serie-a-api-brazil/players/
+22.​What can you do with Sportmonks' data? - API 3.0, acessado em janeiro 27, 2026,
+
+https://docs.sportmonks.com/v3/welcome/what-can-you-do-with-sportmonks-d
+ata
+23.​Includes | BETA Documentation - API 3.0 - Sportmonks, acessado em janeiro 27,
+2026,
+https://docs.sportmonks.com/v3/beta-documentation/expected-goals/includes
+24.​Endpoints - API 3.0 - Sportmonks, acessado em janeiro 27, 2026,
+https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints
+25.​Sportmonks: Sports Data – Fast, Reliable & Dev-Friendly, acessado em janeiro 27,
+2026, https://www.sportmonks.com/
+
+
