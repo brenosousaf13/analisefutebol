@@ -10,7 +10,7 @@ import type {
     CoachDossierEntry,
     MatchResult
 } from '../types/search';
-import type { SavedAnalysisSummary } from './analysisService';
+
 
 // =====================================================
 // BUSCA PRINCIPAL (dispatcher)
