@@ -584,8 +584,12 @@ function FullAnalysisPage() {
                 isOpen={!!editingPlayer}
                 onClose={() => setEditingPlayer(null)}
                 onSave={(p) => {
-                    // Quick update
-                    const update = (list: Player[]) => list.map(orig => orig.id === p.id ? { ...orig, ...p } : orig);
+                    // Quick update - Preserve position of the target list, only update metadata
+                    const update = (list: Player[]) => list.map(orig =>
+                        orig.id === p.id
+                            ? { ...orig, name: p.name, number: p.number, note: p.note }
+                            : orig
+                    );
                     setHomePlayersDef(update); setHomePlayersOff(update);
                     setAwayPlayersDef(update); setAwayPlayersOff(update);
                     setHomeSubstitutes(update); setAwaySubstitutes(update);
