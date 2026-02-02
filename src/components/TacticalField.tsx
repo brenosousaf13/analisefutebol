@@ -149,6 +149,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
     const [draggingBall, setDraggingBall] = useState(false);
+    const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
     const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
     const [tempBallPosition, setTempBallPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -194,14 +195,26 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         if (mode === 'draw') return;
         if ('button' in e && e.button !== 0) return;
 
+        const coords = getEventCoords(e);
+        if (!coords) return;
+
+        const mousePos = getFieldPosition(coords.clientX, coords.clientY);
+        if (!mousePos) return;
+
         e.preventDefault();
         e.stopPropagation();
+
+        // Calculate offset: difference between player's center and mouse position
+        setDragOffset({
+            x: player.position.x - mousePos.x,
+            y: player.position.y - mousePos.y
+        });
         setDraggingPlayer(player);
     };
 
     // Global listeners for player dragging
     useEffect(() => {
-        if (!draggingPlayer) return;
+        if (!draggingPlayer || !dragOffset) return;
 
         const handleMove = (e: MouseEvent | TouchEvent) => {
             e.preventDefault();
@@ -210,10 +223,14 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
             const pos = getFieldPosition(coords.clientX, coords.clientY);
             if (pos) {
+                // Apply offset to get original center position relative to new mouse pos
+                const newX = pos.x + dragOffset.x;
+                const newY = pos.y + dragOffset.y;
+
                 // Clamp within 3-97% to keep player visible
                 setTempPosition({
-                    x: Math.max(3, Math.min(97, pos.x)),
-                    y: Math.max(3, Math.min(97, pos.y))
+                    x: Math.max(3, Math.min(97, newX)),
+                    y: Math.max(3, Math.min(97, newY))
                 });
             }
         };
@@ -223,14 +240,24 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             if (coords && draggingPlayer) {
                 const pos = getFieldPosition(coords.clientX, coords.clientY);
                 if (pos) {
-                    onPlayerMove(draggingPlayer.id, {
-                        x: Math.max(3, Math.min(97, pos.x)),
-                        y: Math.max(3, Math.min(97, pos.y))
-                    });
+                    const newX = pos.x + dragOffset.x;
+                    const newY = pos.y + dragOffset.y;
+
+                    const finalX = Math.max(3, Math.min(97, newX));
+                    const finalY = Math.max(3, Math.min(97, newY));
+
+                    // Only update if position actually changed significantly
+                    if (Math.abs(finalX - draggingPlayer.position.x) > 0.01 || Math.abs(finalY - draggingPlayer.position.y) > 0.01) {
+                        onPlayerMove(draggingPlayer.id, {
+                            x: finalX,
+                            y: finalY
+                        });
+                    }
                 }
             }
 
             setDraggingPlayer(null);
+            setDragOffset(null);
             setTempPosition(null);
         };
 
@@ -247,7 +274,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             document.removeEventListener('touchend', handleEnd);
             document.removeEventListener('touchcancel', handleEnd);
         };
-    }, [draggingPlayer, onPlayerMove, getFieldPosition]);
+    }, [draggingPlayer, dragOffset, onPlayerMove, getFieldPosition]);
 
     // === BALL DRAGGING ===
     const handleBallMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
