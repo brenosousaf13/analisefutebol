@@ -6,7 +6,7 @@ import BenchArea from './BenchArea';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Menu, X } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
 
 interface FullAnalysisModeProps {
@@ -121,6 +121,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 }) => {
     // State
     const [possession, setPossession] = useState<'home' | 'away'>('home');
+    const [isToolbarOpen, setIsToolbarOpen] = useState(false);
 
     // Visibility Toggles
     const [showHomePlayers, setShowHomePlayers] = useState(true);
@@ -297,36 +298,77 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             {/* CENTER: FIELD */}
             <div className="flex flex-col flex-1 h-full relative" style={{ width: '64%' }}>
 
-                {/* Switcher & Header */}
-                <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-10 shrink-0">
+                {/* Switcher & Header & Toolbar Trigger */}
+                <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-30 shrink-0 relative">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
                         Posse de Bola
                     </span>
 
-                    <div className="flex items-center bg-gray-800 rounded-full p-1 border border-gray-700">
-                        <button
-                            onClick={() => setPossession('home')}
-                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'home'
-                                ? 'bg-white text-gray-900 shadow-lg scale-105'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
-                        >
-                            {homeTeamName}
-                        </button>
-                        <button
-                            onClick={() => setPossession('away')}
-                            className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'away'
-                                ? 'bg-white text-gray-900 shadow-lg scale-105'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
-                        >
-                            {awayTeamName}
-                        </button>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center bg-gray-800 rounded-full p-1 border border-gray-700">
+                            <button
+                                onClick={() => setPossession('home')}
+                                className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'home'
+                                    ? 'bg-white text-gray-900 shadow-lg scale-105'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                {homeTeamName}
+                            </button>
+                            <button
+                                onClick={() => setPossession('away')}
+                                className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'away'
+                                    ? 'bg-white text-gray-900 shadow-lg scale-105'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                {awayTeamName}
+                            </button>
+                        </div>
+
+                        {/* Toolbar Toggle Button */}
+                        {!readOnly && (
+                            <button
+                                onClick={() => setIsToolbarOpen(!isToolbarOpen)}
+                                className={`
+                                p-2 rounded-full border transition-all duration-200
+                                ${isToolbarOpen
+                                        ? 'bg-white border-white text-black shadow-lg rotate-90'
+                                        : 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                                    }
+                            `}
+                                title="Ferramentas"
+                            >
+                                {isToolbarOpen ? <X size={18} /> : <Menu size={18} />}
+                            </button>
+                        )}
                     </div>
+
+                    {/* Floating Toolbar */}
+                    {isToolbarOpen && !readOnly && (
+                        <div className="absolute top-full mt-2 z-50 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <FullAnalysisToolbar
+                                activeTool={activeTool}
+                                onToolChange={(tool) => {
+                                    onToolChange(tool);
+                                    setIsToolbarOpen(false); // Close on select
+                                }}
+                                onOpenColorPicker={() => { onOpenColorPicker(); setIsToolbarOpen(false); }}
+                                onOpenAnalysis={() => { onOpenAnalysis(); setIsToolbarOpen(false); }}
+                                onOpenEvents={() => { onOpenEvents(); setIsToolbarOpen(false); }}
+                                onSave={onSave}
+                                onExport={onExport}
+                                onAddPlayer={() => { onAddPlayer(); setIsToolbarOpen(false); }}
+                                isSaving={isSaving}
+                                hasUnsavedChanges={hasUnsavedChanges}
+                                onShare={onShare}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Field Area */}
-                <div className="flex-1 w-full p-2 flex items-center justify-center relative overflow-hidden pb-16">
+                <div className="flex-1 w-full p-2 flex items-center justify-center relative overflow-hidden pb-4">
                     <div className="w-full h-full relative" style={{ maxWidth: '100%', maxHeight: '100%', aspectRatio: '105/68' }}>
                         {/* Wrapper to maintain aspect ratio but scale down if needed */}
                         <div className="absolute inset-0 shadow-2xl rounded-lg overflow-hidden border border-white/10">
@@ -359,24 +401,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     </div>
                 </div>
 
-                {/* TOOLBAR - Bottom Center absolute */}
-                {!readOnly && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 transform scale-90 origin-bottom">
-                        <FullAnalysisToolbar
-                            activeTool={activeTool}
-                            onToolChange={onToolChange}
-                            onOpenColorPicker={onOpenColorPicker}
-                            onOpenAnalysis={onOpenAnalysis}
-                            onOpenEvents={onOpenEvents}
-                            onSave={onSave}
-                            onExport={onExport}
-                            onAddPlayer={onAddPlayer}
-                            isSaving={isSaving}
-                            hasUnsavedChanges={hasUnsavedChanges}
-                            onShare={onShare}
-                        />
-                    </div>
-                )}
+
 
             </div>
 
