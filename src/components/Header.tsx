@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, FolderOpen, LogOut, User, Menu, X } from 'lucide-react';
+import { Calendar, FolderOpen, LogOut, User, Menu, X, PlusCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface MatchInfo {
@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
     };
 
     const menuItems = [
-        { icon: Calendar, label: 'Partidas', path: '/' },
+        { icon: PlusCircle, label: 'Criar Análise', path: '/' },
         { icon: FolderOpen, label: 'Minhas Análises', path: '/minhas-analises' },
     ];
 

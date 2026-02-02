@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import MatchSelection from './pages/MatchSelection';
+import CreateAnalysis from './pages/CreateAnalysis';
 import Analysis from './pages/Analysis';
 import MyAnalyses from './pages/MyAnalyses';
 import Login from './pages/Login';
@@ -20,7 +20,7 @@ function App() {
 
           <Route path="/" element={
             <ProtectedRoute>
-              <MatchSelection />
+              <CreateAnalysis />
             </ProtectedRoute>
           } />
 
