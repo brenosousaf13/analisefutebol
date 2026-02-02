@@ -29,7 +29,7 @@ export default function PlayerEditModal({
     const [number, setNumber] = useState(1);
     const [note, setNote] = useState('');
     const [positionName, setPositionName] = useState('Meia');
-    const [activeTab, setActiveTab] = useState<'edit' | 'substitute' | 'notes'>('edit');
+    const [activeTab, setActiveTab] = useState<'edit' | 'substitute' | 'notes'>('notes');
 
     // Reset values when player changes
     useEffect(() => {
@@ -39,7 +39,7 @@ export default function PlayerEditModal({
             setNote(player.note || '');
             // Use player name as position if no dedicated field (adjust if you add 'position' field to Player)
             setPositionName('Meia');
-            setActiveTab('edit'); // Always start on edit
+            setActiveTab('notes'); // Always start on notes
         }
     }, [player]);
 
@@ -92,15 +92,6 @@ export default function PlayerEditModal({
                 {/* Tabs */}
                 <div className="flex border-b border-gray-700 px-6">
                     <button
-                        onClick={() => setActiveTab('edit')}
-                        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'edit'
-                            ? 'border-green-500 text-green-500'
-                            : 'border-transparent text-gray-400 hover:text-white'
-                            }`}
-                    >
-                        Editar Informações
-                    </button>
-                    <button
                         onClick={() => setActiveTab('notes')}
                         className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes'
                             ? 'border-green-500 text-green-500'
@@ -118,6 +109,15 @@ export default function PlayerEditModal({
                             }`}
                     >
                         Substituição
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('edit')}
+                        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'edit'
+                            ? 'border-green-500 text-green-500'
+                            : 'border-transparent text-gray-400 hover:text-white'
+                            }`}
+                    >
+                        Editar Informações
                     </button>
                 </div>
 
