@@ -95,7 +95,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                 <div className="px-6 pt-4 pb-0 flex gap-2 border-b border-gray-700">
                     <button
                         onClick={() => setActiveTab('home')}
-                        className={`flex - 1 py - 3 text - sm font - bold uppercase tracking - wide rounded - t - lg transition - colors border - t border - l border - r ${activeTab === 'home'
+                        className={`flex-1 py-3 px-6 text-sm font-bold uppercase tracking-wide rounded-t-lg transition-colors border-t border-l border-r ${activeTab === 'home'
                             ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
                             : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
                             } `}
@@ -105,7 +105,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     </button>
                     <button
                         onClick={() => setActiveTab('away')}
-                        className={`flex - 1 py - 3 text - sm font - bold uppercase tracking - wide rounded - t - lg transition - colors border - t border - l border - r ${activeTab === 'away'
+                        className={`flex-1 py-3 px-6 text-sm font-bold uppercase tracking-wide rounded-t-lg transition-colors border-t border-l border-r ${activeTab === 'away'
                             ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
                             : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
                             } `}
