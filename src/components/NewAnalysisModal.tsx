@@ -174,7 +174,6 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
                 name: item.name,
                 number: item.number || 0,
                 position: pos.position,
-                note: `Pos: ${item.position}`,
                 photo: item.photo
             };
         });
@@ -184,8 +183,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
             name: item.name,
             number: item.number || 0,
             position: { x: 0, y: 0 },
-            photo: item.photo,
-            note: `Pos: ${item.position}`
+            photo: item.photo
         }));
 
         return { starters, subs };
