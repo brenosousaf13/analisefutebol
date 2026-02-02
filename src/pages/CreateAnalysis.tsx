@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Maximize, ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle } from 'lucide-react';
 import Header from '../components/Header';
 import MatchBuilder from '../components/MatchBuilder';
 import { analysisService } from '../services/analysisService';
 import { apiFootballService } from '../services/apiFootballService';
 import type { ApiSquadPlayer } from '../types/api-football';
 
+// Images
+import montagemTaticaBg from '../assets/montagem-tatica.avif';
+import partidaPersonalizadaBg from '../assets/partida-personalizada.avif';
+
 interface OptionCard {
     type: 'partida_api' | 'analise_personalizada';
-    icon: React.ReactNode;
     title: string;
     description: string;
     available: boolean;
     fullWidth?: boolean;
+    bgImage: string;
 }
 
 const CreateAnalysisLinesPage: React.FC = () => {
@@ -30,17 +34,17 @@ const CreateAnalysisLinesPage: React.FC = () => {
     const options: OptionCard[] = [
         {
             type: 'partida_api',
-            icon: <Settings className="w-10 h-10" />,
             title: 'Montar Partida',
-            description: 'Selecione a liga e os times para analisar',
-            available: true
+            description: 'Selecione a liga e os times com elencos reais para analisar',
+            available: true,
+            bgImage: montagemTaticaBg
         },
         {
             type: 'analise_personalizada',
-            icon: <Maximize className="w-10 h-10" />,
             title: 'Análise Personalizada',
-            description: 'Personalize times e jogadores manualmente',
-            available: true
+            description: 'Crie times manuais e personalize como quiser',
+            available: true,
+            bgImage: partidaPersonalizadaBg
         }
     ];
 
@@ -215,23 +219,35 @@ const CreateAnalysisLinesPage: React.FC = () => {
                                     onClick={() => handleSelect(option.type)}
                                     disabled={!option.available || isCreating}
                                     className={`
-                                        flex flex-col items-center justify-center p-10 rounded-2xl border-2 transition-all text-center
-                                        bg-panel-dark hover:shadow-2xl hover:-translate-y-1
+                                        relative group overflow-hidden rounded-2xl h-[500px] w-full border-2 border-transparent transition-all
                                         ${option.available
-                                            ? 'border-gray-700 hover:border-accent-green cursor-pointer'
-                                            : 'border-gray-800 opacity-50 cursor-not-allowed'
+                                            ? 'cursor-pointer hover:border-accent-green hover:shadow-2xl hover:scale-[1.01]'
+                                            : 'cursor-not-allowed opacity-60 grayscale'
                                         }
                                     `}
                                 >
-                                    <div className={`mb-6 p-4 rounded-full bg-gray-800 ${option.available ? 'text-accent-green' : 'text-gray-600'}`}>
-                                        {option.icon}
+                                    {/* Background Image */}
+                                    <div className="absolute inset-0 bg-gray-900">
+                                        <img
+                                            src={option.bgImage}
+                                            alt={option.title}
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-80"
+                                        />
                                     </div>
-                                    <h3 className={`text-xl font-bold mb-2 ${option.available ? 'text-white' : 'text-gray-500'}`}>
-                                        {option.title}
-                                    </h3>
-                                    <p className="text-gray-400">
-                                        {option.description}
-                                    </p>
+
+                                    {/* Overlay Gradient */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-80 transition-opacity duration-300" />
+
+                                    {/* Content - Bottom Left */}
+                                    <div className="absolute bottom-0 left-0 w-full p-8 text-left translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+
+                                        <h3 className="text-3xl font-bold text-white mb-2 uppercase tracking-wide">
+                                            {option.title}
+                                        </h3>
+                                        <p className="text-gray-300 text-lg max-w-md leading-relaxed">
+                                            {option.description}
+                                        </p>
+                                    </div>
                                 </button>
                             ))}
                         </div>
