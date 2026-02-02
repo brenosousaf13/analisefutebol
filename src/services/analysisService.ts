@@ -9,7 +9,7 @@ export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico'
 
 export interface AnalysisData {
     id?: string;
-    matchId?: number;
+    matchId?: number | null;
     matchDate?: string;
     matchTime?: string;
     shareToken?: string;
@@ -127,7 +127,7 @@ export const analysisService = {
 
             const analysisPayload = {
                 user_id: user.id,
-                fixture_id: data.matchId,
+                fixture_id: data.matchId || null,
                 match_date: data.matchDate,
                 match_time: data.matchTime,
                 titulo,

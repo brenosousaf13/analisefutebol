@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
-import { getLiveFixtures, getFixturesByDate, type Fixture } from '../services/apiFootball';
+// import { getLiveFixtures, getFixturesByDate, type Fixture } from '../services/apiFootball';
+import type { ApiFixture as Fixture } from '../types/api-football'; // Use type from types file if possible or just keep Fixture
 import { Calendar, Trophy, Layers, Edit3 } from 'lucide-react';
 import MatchDetailsModal from '../components/MatchDetailsModal';
 import NewAnalysisModal from '../components/NewAnalysisModal';
@@ -19,7 +20,7 @@ const MatchesPage: React.FC = () => {
     const [isNewAnalysisModalOpen, setIsNewAnalysisModalOpen] = useState(false);
 
     // Get today's date in YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
+    // const today = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
         fetchMatches();
@@ -27,6 +28,10 @@ const MatchesPage: React.FC = () => {
     }, [activeFilter]);
 
     const fetchMatches = async () => {
+        // Disabled to save API calls as per user request
+        setLoading(false);
+        setMatches([]);
+        /*
         setLoading(true);
         try {
             let data: Fixture[] = [];
@@ -43,6 +48,7 @@ const MatchesPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
+        */
     };
 
     const formatTime = (dateString: string) => {

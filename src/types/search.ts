@@ -13,9 +13,9 @@ export interface PlayerDossier {
 export interface PlayerDossierEntry {
     analysis_id: string;
     match_title: string; // "América MG vs Atlético"
-    match_date: string;
+    match_date?: string;
     team_played_for: 'home' | 'away';
-    team_name: string;
+    team_name?: string;
     jersey_number?: number;
     position?: string;
     note: string | null; // A anotação do analista sobre ele

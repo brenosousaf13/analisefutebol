@@ -8,7 +8,7 @@ import {
 import Header from '../components/Header';
 import NewAnalysisModal from '../components/NewAnalysisModal';
 import { useAuth } from '../contexts/AuthContext';
-import { useDebounce } from '../hooks/useDebounceHook';
+import { useDebounce } from '../hooks/useDebounce';
 import { searchAnalyses } from '../services/searchService';
 import type { SearchResult } from '../types/search';
 import { PlayerDossierCard } from '../components/search/PlayerDossierCard';

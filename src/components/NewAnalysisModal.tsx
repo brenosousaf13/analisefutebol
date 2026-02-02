@@ -1,7 +1,10 @@
-import { X, Calendar, FileEdit, Upload, PlusCircle, ArrowLeft, Maximize } from 'lucide-react';
+import { X, FileEdit, Upload, PlusCircle, ArrowLeft, Maximize, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { analysisService } from '../services/analysisService';
 import { useState } from 'react';
+import MatchBuilder from './MatchBuilder';
+import { apiFootballService } from '../services/apiFootballService';
+import type { ApiSquadPlayer } from '../types/api-football';
 
 interface NewAnalysisModalProps {
     isOpen: boolean;
@@ -20,7 +23,8 @@ interface OptionCard {
 export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalProps) {
     const navigate = useNavigate();
     const [isCreating, setIsCreating] = useState(false);
-    const [view, setView] = useState<'selection' | 'custom_form'>('selection');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [view, setView] = useState<'selection' | 'custom_form' | 'match_builder'>('selection');
     const [selectedType, setSelectedType] = useState<'prancheta_livre' | 'analise_completa'>('prancheta_livre');
 
     // Custom Form State
@@ -34,9 +38,9 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
     const options: OptionCard[] = [
         {
             type: 'partida_api',
-            icon: <Calendar className="w-10 h-10" />,
-            title: 'Partida ao Vivo',
-            description: 'Selecione uma partida da API para analisar',
+            icon: <Settings className="w-10 h-10" />,
+            title: 'Montar Partida',
+            description: 'Selecione a liga e os times para analisar',
             available: true
         },
         {
@@ -65,8 +69,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
 
     const handleSelect = async (type: OptionCard['type']) => {
         if (type === 'partida_api') {
-            navigate('/');
-            onClose();
+            setView('match_builder');
             return;
         }
 
@@ -80,16 +83,118 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
         }
     };
 
+    const handleMatchBuilderCreate = async (data: any) => {
+        setIsCreating(true);
+        try {
+            const { homeTeam, awayTeam, matchDate, matchTime } = data;
+
+            // Prepare Initial Data Structure
+            const initialData: any = {
+                matchId: null, // Custom match builder does not have a real fixture ID
+                matchDate: matchDate,
+                matchTime: matchTime,
+                titulo: `${homeTeam.team.name} vs ${awayTeam.team.name}`,
+                homeTeam: homeTeam.team.name,
+                awayTeam: awayTeam.team.name,
+                homeTeamLogo: homeTeam.team.logo,
+                awayTeamLogo: awayTeam.team.logo,
+                homeScore: 0,
+                awayScore: 0
+            };
+
+            // Fetch Squads
+            try {
+                console.log(`[UI] Fetching squads for Home: ${homeTeam.team.id}, Away: ${awayTeam.team.id}`);
+                const homeSquad = await apiFootballService.getSquad(homeTeam.team.id);
+                console.log(`[UI] Home Squad fetched: ${homeSquad.length} players`);
+
+                const awaySquad = await apiFootballService.getSquad(awayTeam.team.id);
+                console.log(`[UI] Away Squad fetched: ${awaySquad.length} players`);
+
+                if (homeSquad.length > 0) {
+                    const mapped = mapSquadToApp(homeSquad, true);
+                    initialData.homePlayersDef = mapped.starters;
+                    initialData.homePlayersOff = mapped.starters.map(p => ({ ...p }));
+                    initialData.homeSubstitutes = mapped.subs;
+                    console.log('[UI] Home players mapped successfully');
+                } else {
+                    alert(`Atenção: Elenco do time mandante (${homeTeam.team.name}) não encontrado. Serão usados jogadores genéricos.`);
+                }
+
+                if (awaySquad.length > 0) {
+                    const mapped = mapSquadToApp(awaySquad, false);
+                    initialData.awayPlayersDef = mapped.starters;
+                    initialData.awayPlayersOff = mapped.starters.map(p => ({ ...p }));
+                    initialData.awaySubstitutes = mapped.subs;
+                    console.log('[UI] Away players mapped successfully');
+                } else {
+                    alert(`Atenção: Elenco do time visitante (${awayTeam.team.name}) não encontrado. Serão usados jogadores genéricos.`);
+                }
+
+            } catch (err) {
+                console.error('[UI] Error fetching squads:', err);
+                alert('Erro ao buscar elencos. Jogadores genéricos serão utilizados.');
+            }
+
+            // Always create as 'analise_completa'
+            const analysisId = await analysisService.createBlankAnalysis('analise_completa', initialData);
+            navigate(`/analysis-complete/saved/${analysisId}`);
+            onClose();
+
+        } catch (error) {
+            console.error('Error creating analysis:', error);
+            alert('Erro ao criar análise.');
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    // Helper to map API Squad to Players
+    const mapSquadToApp = (squad: ApiSquadPlayer[], isHome: boolean) => {
+        const baseId = isHome ? 1000 : 2000;
+        const defaultPositions = analysisService.generateFullModePlayers(isHome);
+
+        // Simple heuristic: Try to find Goalkeepers first for position 0
+        const goalkeepers = squad.filter(p => p.position === 'Goalkeeper');
+        const outfielders = squad.filter(p => p.position !== 'Goalkeeper');
+
+        // Reassemble: 1 GK + 10 outfielders for starters
+        // Warning: This is arbitrary. Real lineups are better, but squad is what requested.
+        const likelyStarters = [
+            ...(goalkeepers[0] ? [goalkeepers[0]] : []),
+            ...outfielders.slice(0, 10 + (goalkeepers[0] ? 0 : 1))
+        ].slice(0, 11);
+
+        const remainingSquad = squad.filter(p => !likelyStarters.includes(p));
+
+        const starters = likelyStarters.map((item, index) => {
+            const pos = defaultPositions[index] || { position: { x: 50, y: 50 } };
+            return {
+                id: item.id || (baseId + index),
+                name: item.name,
+                number: item.number || 0,
+                position: pos.position,
+                note: `Pos: ${item.position}`,
+                photo: item.photo
+            };
+        });
+
+        const subs = remainingSquad.map((item, index) => ({
+            id: item.id || (baseId + 100 + index),
+            name: item.name,
+            number: item.number || 0,
+            position: { x: 0, y: 0 },
+            photo: item.photo,
+            note: `Pos: ${item.position}`
+        }));
+
+        return { starters, subs };
+    };
+
     const handleCreateCustom = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             setIsCreating(true);
-            // If analise_completa, pass that type. Else default to partisa (or maybe prancheta type?)
-            // The service uses 'partida' default. 
-            // If prancheta_livre, we might map to 'modelo_tatico' or keep 'partida' with blank data.
-            // Let's keep existing behavior for prancheta (default 'partida' or whatever uses). 
-            // Wait, createBlankAnalysis defaults to 'partida'. 
-            // I should use 'analise_completa' if selectedType is analise_completa.
 
             const typeToCreate = selectedType === 'analise_completa' ? 'analise_completa' : 'partida';
 
@@ -100,8 +205,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
                 matchDate: customDate,
                 matchTime: customTime
             });
-            // Append mode=full if it's analise_completa to ensure redirection opens in full mode
-            // Analysis.tsx needs to handle reading the TYPE from DB eventually, but URL param helps.
+
             if (selectedType === 'analise_completa') {
                 navigate(`/analysis-complete/saved/${analysisId}`);
             } else {
@@ -122,17 +226,18 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-[#1a1f2e] rounded-xl w-full max-w-xl border border-gray-700 shadow-2xl">
+            <div className="bg-[#1a1f2e] rounded-xl w-full max-w-5xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] min-h-[600px]">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                <div className="flex items-center justify-between p-6 border-b border-gray-700 shrink-0">
                     <div className="flex items-center gap-3">
-                        {view === 'custom_form' && (
+                        {(view === 'custom_form' || view === 'match_builder') && (
                             <button onClick={handleBack} className="p-1 hover:bg-gray-700 rounded-full transition">
                                 <ArrowLeft className="w-5 h-5 text-gray-400" />
                             </button>
                         )}
                         <h2 className="text-xl font-bold text-white">
-                            {view === 'selection' ? 'Criar Nova Análise' : 'Configurar Partida'}
+                            {view === 'selection' ? 'Criar Nova Análise' :
+                                view === 'match_builder' ? 'Montar Partida' : 'Configurar Partida'}
                         </h2>
                     </div>
                     <button
@@ -144,7 +249,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
                 </div>
 
                 {/* Content */}
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                     {view === 'selection' ? (
                         <>
                             <p className="text-gray-400 mb-6">Escolha como deseja começar:</p>
@@ -208,6 +313,14 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
                                 </button>
                             ))}
                         </>
+                    ) : view === 'match_builder' ? (
+                        <div className="h-full min-h-[400px]">
+                            <MatchBuilder
+                                onCreate={handleMatchBuilderCreate}
+                                onCancel={handleBack}
+                                isCreating={isCreating}
+                            />
+                        </div>
                     ) : (
                         <form onSubmit={handleCreateCustom} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">

@@ -70,7 +70,7 @@ export function PlayerDossierCard({ dossier, onEntryClick }: Props) {
     );
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | undefined): string {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', {
