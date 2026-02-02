@@ -531,22 +531,61 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         }
     };
 
-    // Calculate player size based on field width (responsive)
-    const [fieldWidth, setFieldWidth] = useState(0);
+    // Responsive Sizing Logic
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        const updateSize = () => {
-            if (containerRef.current) {
-                setFieldWidth(containerRef.current.offsetWidth);
+        const updateDimensions = () => {
+            if (wrapperRef.current) {
+                const parent = wrapperRef.current;
+                const parentWidth = parent.clientWidth;
+                const parentHeight = parent.clientHeight;
+
+                const isVertical = orientation === 'vertical';
+                const targetRatio = isVertical ? 68 / 105 : 105 / 68;
+                const parentRatio = parentWidth / parentHeight;
+
+                let newWidth, newHeight;
+
+                if (parentRatio > targetRatio) {
+                    // Parent is wider than target -> constraint by height
+                    newHeight = parentHeight;
+                    newWidth = newHeight * targetRatio;
+                } else {
+                    // Parent is taller than target -> constraint by width
+                    newWidth = parentWidth;
+                    newHeight = newWidth / targetRatio;
+                }
+
+                // Add a small buffer/padding to prevent exact edge touching if desired
+                setDimensions({
+                    width: newWidth * 0.96,
+                    height: newHeight * 0.96
+                });
+
             }
         };
-        updateSize();
-        window.addEventListener('resize', updateSize);
-        return () => window.removeEventListener('resize', updateSize);
-    }, []);
 
-    const playerSize = getPlayerSize(fieldWidth) * (playerScale || 1);
+        // Initial calc
+        updateDimensions();
+
+        const observer = new ResizeObserver(updateDimensions);
+        if (wrapperRef.current) {
+            observer.observe(wrapperRef.current);
+        }
+
+        window.addEventListener('resize', updateDimensions);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', updateDimensions);
+        };
+    }, [orientation]);
+
+    // Use calculated dimensions or fallback
+    const playerSize = getPlayerSize(dimensions.width || 500) * (playerScale || 1);
     const fontSizes = getFontSize(playerSize);
-
 
 
     // Double tap detection for touch
@@ -570,7 +609,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center p-2">
+        <div ref={wrapperRef} className="w-full h-full flex items-center justify-center p-2 overflow-hidden">
             <div
                 ref={containerRef}
                 className={`
@@ -582,10 +621,13 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     ${mode === 'move' && !isEraserMode ? 'cursor-default' : ''}
                 `}
                 style={{
-                    aspectRatio: orientation === 'vertical' ? '68 / 105' : '105 / 68',
-                    width: '100%',
-                    maxWidth: orientation === 'vertical' ? '450px' : '900px', // Allow wider for horizontal
-                    touchAction: 'none' // CRITICAL: Prevents browser gestures during interaction
+                    width: dimensions.width ? `${dimensions.width}px` : '100%',
+                    height: dimensions.height ? `${dimensions.height}px` : 'auto',
+                    // Fallback Aspect Ratio if JS fails or loads slow
+                    aspectRatio: !dimensions.width ? (orientation === 'vertical' ? '68 / 105' : '105 / 68') : undefined,
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    touchAction: 'none'
                 }}
                 onMouseDown={handleFieldMouseDown}
                 onTouchStart={handleFieldTouchStart}
