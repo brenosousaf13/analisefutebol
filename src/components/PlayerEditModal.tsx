@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ArrowRightLeft, LogOut, StickyNote } from 'lucide-react';
+import { X, ArrowRightLeft, LogOut, StickyNote, Search } from 'lucide-react';
 import type { Player } from '../types/Player';
 
 interface PlayerEditModalProps {
@@ -29,6 +29,7 @@ export default function PlayerEditModal({
     const [number, setNumber] = useState(1);
     const [note, setNote] = useState('');
     const [positionName, setPositionName] = useState('Meia');
+    const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'edit' | 'substitute' | 'notes'>('notes');
 
     // Reset values when player changes
@@ -243,29 +244,54 @@ export default function PlayerEditModal({
                                     {substituteListTitle}
                                 </h3>
 
+                                {/* Search Input */}
+                                <div className="relative mb-4">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        placeholder="Buscar por nome ou número..."
+                                        className="w-full bg-[#11141d] text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700 focus:outline-none focus:border-green-500 transition-colors text-sm placeholder:text-gray-500"
+                                    />
+                                </div>
+
                                 {benchPlayers.length === 0 ? (
                                     <div className="text-center py-8 text-gray-500 italic bg-[#242938] rounded-lg border border-gray-700">
                                         Banco de reservas vazio
                                     </div>
                                 ) : (
                                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                                        {benchPlayers.map(benchPlayer => (
-                                            <button
-                                                key={benchPlayer.id}
-                                                onClick={() => handleSubClick(benchPlayer)}
-                                                className="w-full flex items-center justify-between p-3 bg-[#242938] hover:bg-gray-700 border border-gray-700 rounded-lg transition-all group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold text-sm">
-                                                        {benchPlayer.number}
+                                        {benchPlayers
+                                            .filter(p =>
+                                                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                p.number.toString().includes(searchTerm)
+                                            )
+                                            .map(benchPlayer => (
+                                                <button
+                                                    key={benchPlayer.id}
+                                                    onClick={() => handleSubClick(benchPlayer)}
+                                                    className="w-full flex items-center justify-between p-3 bg-[#242938] hover:bg-gray-700 border border-gray-700 rounded-lg transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold text-sm">
+                                                            {benchPlayer.number}
+                                                        </div>
+                                                        <span className="text-gray-200 group-hover:text-white font-medium">
+                                                            {benchPlayer.name}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-gray-200 group-hover:text-white font-medium">
-                                                        {benchPlayer.name}
-                                                    </span>
+                                                    <ArrowRightLeft className="text-gray-500 group-hover:text-green-400 w-4 h-4" />
+                                                </button>
+                                            ))}
+                                        {benchPlayers.filter(p =>
+                                            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                            p.number.toString().includes(searchTerm)
+                                        ).length === 0 && (
+                                                <div className="text-center py-4 text-gray-500 text-sm">
+                                                    Nenhum jogador encontrado
                                                 </div>
-                                                <ArrowRightLeft className="text-gray-500 group-hover:text-green-400 w-4 h-4" />
-                                            </button>
-                                        ))}
+                                            )}
                                     </div>
                                 )}
                             </div>
