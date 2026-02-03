@@ -437,6 +437,8 @@ function FullAnalysisPage() {
         setIsAddEventModalOpen(false);
     };
 
+
+
     return (
         <AnalysisLayout
             matchInfo={matchInfo}

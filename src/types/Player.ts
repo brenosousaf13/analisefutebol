@@ -9,4 +9,5 @@ export interface Player {
     isManual?: boolean;
     note?: string;
     color?: string;
+    isStarter?: boolean;
 }
