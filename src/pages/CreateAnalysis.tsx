@@ -185,7 +185,7 @@ const CreateAnalysisLinesPage: React.FC = () => {
     };
 
     return (
-        <div className="h-screen overflow-y-auto bg-gray-900 text-white flex flex-col">
+        <div className="h-screen overflow-y-auto w-full text-white flex flex-col bg-gray-900">
             <Header />
 
             <div className="pt-24 px-4 sm:px-8 pb-8 flex-1 flex flex-col items-center justify-start">

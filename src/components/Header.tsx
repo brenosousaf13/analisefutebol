@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FolderOpen, LogOut, User, Menu, X, PlusCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 interface MatchInfo {
     homeTeam: string;
@@ -47,8 +48,10 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
     // Dynamic Menu Items
 
 
+    const isAnalysisPage = location.pathname.includes('/analysis') || location.pathname.includes('/analise');
+
     return (
-        <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 bg-nav-dark border-b border-gray-700 flex items-center justify-between px-2 sm:px-6 z-50 shadow-md">
+        <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 border-b border-gray-700 flex items-center justify-between px-2 sm:px-6 z-50 shadow-md bg-nav-dark">
             {/* Left: Hamburger Menu */}
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <button
@@ -109,8 +112,8 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                 </div>
             )}
 
-            {/* Right: Team Switcher or Empty */}
-            <div className="flex items-center justify-end w-auto sm:w-48 shrink-0">
+            {/* Right: Team Switcher & Theme Toggle */}
+            <div className="flex items-center justify-end w-auto sm:w-auto shrink-0 gap-4">
                 {matchInfo && activeTeam && onTeamChange && (
                     <div className="bg-gray-800/50 sm:bg-gray-800 rounded-lg p-0.5 sm:p-1 flex items-center">
                         <button
@@ -133,6 +136,9 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                         </button>
                     </div>
                 )}
+
+                {/* Theme Toggle - Only on Analysis Pages */}
+                {isAnalysisPage && <ThemeToggle />}
             </div>
 
             {/* Sidebar Overlay */}
@@ -145,7 +151,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                     />
 
                     {/* Sidebar Drawer */}
-                    <div className="absolute top-0 left-0 bottom-0 w-[280px] sm:w-72 bg-panel-dark border-r border-gray-700 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+                    <div className="absolute top-0 left-0 bottom-0 w-[280px] sm:w-72 bg-nav-dark border-r border-gray-700 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
                         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
                             <h2 className="text-white font-bold text-lg">Menu</h2>
                             <button

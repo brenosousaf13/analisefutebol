@@ -197,7 +197,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         coachName?: string,
         onCoachChange?: (name: string) => void
     }) => (
-        <div className="h-full bg-nav-dark flex flex-col border-r border-l border-gray-800" style={{ width: '18%' }}>
+        <div className="h-full flex flex-col border-r border-l border-gray-800 bg-nav-dark" style={{ width: '18%' }}>
             {/* Header */}
             <div className="p-4 border-b border-gray-700">
                 <h3 className={`text-white font-bold uppercase text-sm tracking-wider mb-1 px-1 border-l-4 ${align === 'right' ? 'text-right border-l-0 border-r-4' : ''}`} style={{ borderColor: color }}>
@@ -280,7 +280,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const playerNotes = playersToRender.reduce((acc, p) => (p as any).note ? ({ ...acc, [p.id]: (p as any).note }) : acc, {} as Record<number, string>);
 
     return (
-        <div className="flex flex-1 h-full overflow-hidden bg-panel-dark relative" style={{ height: 'calc(100vh - 64px)' }}>
+        <div className="flex flex-1 h-full overflow-hidden relative bg-panel-dark" style={{ height: 'calc(100vh - 64px)' }}>
 
             {/* LEFT COLUMN: HOME */}
             <TeamColumn

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
@@ -635,13 +636,19 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         }
     };
 
+    // Theme
+    const { theme } = useTheme();
+
     return (
         <div ref={wrapperRef} className="w-full h-full flex items-center justify-center p-2 overflow-hidden">
             <div
                 ref={containerRef}
                 className={`
                     relative 
-                    bg-gradient-to-b from-field-green to-[#3d6a4d] 
+                    ${theme === 'dark'
+                        ? 'bg-[#1a1a1a]'
+                        : 'bg-gradient-to-b from-field-green to-[#3d6a4d]'
+                    }
                     rounded-lg shadow-2xl overflow-hidden select-none
                     ${mode === 'draw' || mode === 'rectangle' ? 'cursor-crosshair' : ''}
                     ${isEraserMode ? 'cursor-pointer' : ''}
