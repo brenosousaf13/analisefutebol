@@ -155,10 +155,10 @@ const MyAnalyses = () => {
         <div
             key={analysis.id}
             onClick={() => navigateToAnalysis(analysis.id, analysis.tipo)}
-            className="group bg-[#1a1f2e] rounded-xl border border-gray-800 hover:border-gray-700 overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:shadow-black/20"
+            className="group bg-[#161618] rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-transparent hover:border-[#27D888]/30"
         >
             {/* Thumbnail */}
-            <div className="aspect-video bg-[#0d1117] relative overflow-hidden">
+            <div className="aspect-video bg-[#0D0D0D] relative overflow-hidden">
                 {analysis.thumbnail_url ? (
                     <img
                         src={analysis.thumbnail_url}
@@ -180,7 +180,7 @@ const MyAnalyses = () => {
             <div className="p-5">
                 <div className="flex justify-between items-start mb-4">
                     <div>
-                        <h3 className="text-lg font-bold text-white group-hover:text-green-400 transition-colors line-clamp-1">
+                        <h3 className="text-lg font-bold text-white group-hover:text-[#27D888] transition-colors line-clamp-1">
                             {analysis.titulo}
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
@@ -210,7 +210,7 @@ const MyAnalyses = () => {
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
-                    <div className="flex items-center text-green-500 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                    <div className="flex items-center text-[#27D888] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
                         Abrir Análise
                         <ExternalLink className="w-4 h-4 ml-1" />
                     </div>
@@ -220,7 +220,7 @@ const MyAnalyses = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#0d1117] flex flex-col">
+        <div className="min-h-screen bg-[#0D0D0D] flex flex-col">
             <Header />
             <div className="pt-20 p-6 md:p-8 max-w-7xl mx-auto w-full flex-1 mt-16">
                 {/* Header */}
@@ -237,7 +237,7 @@ const MyAnalyses = () => {
                             <select
                                 value={searchType}
                                 onChange={(e) => setSearchType(e.target.value as SearchType)}
-                                className="px-3 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                                className="px-3 py-2 bg-[#161618] border border-gray-700 rounded-lg text-white focus:border-[#27D888] focus:outline-none"
                             >
                                 <option value="all">Todos</option>
                                 <option value="team">Time</option>
@@ -254,7 +254,7 @@ const MyAnalyses = () => {
                                     placeholder={getSearchPlaceholder(searchType)}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-[#242938] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-green-500 focus:outline-none"
+                                    className="pl-10 pr-4 py-2 bg-[#161618] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-[#27D888] focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -262,7 +262,7 @@ const MyAnalyses = () => {
                         {/* New Analysis Button */}
                         <button
                             onClick={() => setIsNewModalOpen(true)}
-                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                            className="flex items-center gap-2 bg-gradient-to-r from-[#27D888] to-[#ACFA70] text-[#0D0D0D] hover:shadow-[0_0_20px_rgba(39,216,136,0.3)] px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20"
                         >
                             <Plus className="w-5 h-5" />
                             Nova Análise

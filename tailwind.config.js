@@ -12,9 +12,14 @@ export default {
         'field-green': '#2d5a3d',
         'accent-green': '#22c55e',
         'accent-yellow': '#eab308',
+        // New Design System
+        'app-bg': '#0D0D0D',
+        'card-bg': '#161618',
+        'brand-primary': '#27D888',
+        'brand-secondary': '#ACFA70',
       },
       fontFamily: {
-        sans: ['"Zalando Sans"', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
       }
     },
   },

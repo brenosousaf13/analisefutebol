@@ -11,19 +11,14 @@ export function PlayerDossierCard({ dossier, onEntryClick }: Props) {
     const entriesWithNotes = dossier.entries.filter(e => e.note && e.note.trim() !== '');
 
     return (
-        <div className="bg-[#1a1f2e] rounded-lg border border-gray-800 overflow-hidden mb-4">
+        <div className="bg-[#161618] rounded-lg border border-transparent overflow-hidden mb-4 shadow-sm hover:shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-all">
             {/* Header do Dossiê */}
-            <div className="p-4 border-b border-gray-800 bg-[#242938]">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <User className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div>
-                        <h3 className="text-white font-semibold">{dossier.player_name}</h3>
-                        <p className="text-gray-400 text-sm">
-                            {entriesWithNotes.length} anotação(ões) em {dossier.total_appearances} partida(s)
-                        </p>
-                    </div>
+            <div className="p-4 border-b border-gray-800 bg-[#1f2425]">
+                <div className="flex flex-col items-start gap-1">
+                    <h3 className="text-white font-bold text-lg">{dossier.player_name}</h3>
+                    <p className="text-gray-400 text-sm">
+                        {entriesWithNotes.length} anotação(ões) em {dossier.total_appearances} partida(s)
+                    </p>
                 </div>
             </div>
 
@@ -38,10 +33,10 @@ export function PlayerDossierCard({ dossier, onEntryClick }: Props) {
                         <div
                             key={idx}
                             onClick={() => onEntryClick(entry.analysis_id)}
-                            className="p-4 hover:bg-[#242938] cursor-pointer transition-colors"
+                            className="p-4 hover:bg-[#242938]/50 cursor-pointer transition-colors"
                         >
                             {/* Info da Partida */}
-                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2 font-mono">
                                 <Calendar className="w-3 h-3" />
                                 <span>{formatDate(entry.match_date)}</span>
                                 <span className="mx-1">•</span>
@@ -56,7 +51,7 @@ export function PlayerDossierCard({ dossier, onEntryClick }: Props) {
 
                             {/* Anotação */}
                             <div className="flex items-start gap-2">
-                                <FileText className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                                <FileText className="w-4 h-4 text-[#27D888] mt-0.5 flex-shrink-0" />
                                 <p className="text-gray-300 text-sm line-clamp-3">
                                     {entry.note}
                                 </p>
