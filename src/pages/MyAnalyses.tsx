@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { analysisService, type SavedAnalysisSummary, type AnalysisFilters } from '../services/analysisService';
 import {
     Loader2, Trash2, Calendar, FileText, Plus, Search,
-    ExternalLink, Copy, Clock, Grid, List, ChevronDown
+    Copy, Clock, Grid, List, ChevronDown
 } from 'lucide-react';
 import Header from '../components/Header';
 import NewAnalysisModal from '../components/NewAnalysisModal';
