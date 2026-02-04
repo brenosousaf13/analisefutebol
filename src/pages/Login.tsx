@@ -11,6 +11,7 @@ const Login: React.FC = () => {
 
     // Step state for registration wizard
     const [step, setStep] = useState(1);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
     // Password visibility states
     const [showPassword, setShowPassword] = useState(false);
@@ -168,7 +169,8 @@ const Login: React.FC = () => {
 
                     if (error) throw error;
 
-                    navigate('/');
+                    // SHOW CONFIRMATION SCREEN instead of redirecting
+                    setShowConfirmation(true);
                 } catch (error: any) {
                     console.error("Registration error:", error);
                     setAuthError(error.message || "Erro ao criar conta. Tente novamente.");
@@ -208,6 +210,7 @@ const Login: React.FC = () => {
         setStep(1);
         setErrors({});
         setAuthError(null);
+        setShowConfirmation(false);
     };
 
     return (
@@ -245,351 +248,385 @@ const Login: React.FC = () => {
             </div>
 
             {/* Right Panel: Login Form */}
-            <div className="flex-1 flex flex-col justify-center items-center p-6 bg-[#fafafa] relative overflow-y-auto">
+            <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 bg-[#fafafa] relative overflow-y-auto overflow-x-hidden">
                 {/* Mobile decorative background logic */}
                 <div className="absolute inset-0 bg-white lg:bg-[#f4f7f7] -z-10"></div>
 
                 {/* Abstract decorative elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
-                <div className="w-full max-w-[440px] flex flex-col gap-8 bg-white lg:p-10 lg:rounded-2xl lg:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] border border-transparent lg:border-slate-100 my-auto">
+                <div className="w-full max-w-[440px] flex flex-col gap-8 bg-white lg:p-10 lg:rounded-2xl lg:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] border border-transparent lg:border-slate-100 my-auto animate-in fade-in zoom-in-95 duration-500">
                     {/* Header */}
                     <div className="flex flex-col gap-2">
                         <div className="flex justify-center mb-6">
-                            <img src="/ZonaLogoOficial.png" alt="Zona 14" className="h-[50px] w-auto object-contain" />
+                            <img src="/ZonaLogoOficial.png" alt="Zona 14" className="h-[40px] sm:h-[50px] w-auto object-contain" />
                         </div>
-                        <p className="text-slate-500 text-sm">
-                            {isRegistering
-                                ? (step === 1 ? "Etapa 1: Dados Pessoais" : "Etapa 2: Credenciais de Acesso")
-                                : "Entre com suas credenciais para acessar o painel."}
-                        </p>
                     </div>
 
-                    {/* Auth Error Alert */}
-                    {authError && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm animate-in fade-in slide-in-from-top-2">
-                            <AlertCircle size={16} />
-                            <span>{authError}</span>
+                    {showConfirmation ? (
+                        // SUCCESS CONFIRMATION SCREEN
+                        <div className="flex flex-col items-center text-center gap-6 animate-in fade-in slide-in-from-right duration-300">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-2">
+                                <Mail className="w-10 h-10 text-emerald-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifique seu E-mail</h2>
+                                <p className="text-gray-600 leading-relaxed">
+                                    Enviamos um link de confirmação para <br />
+                                    <span className="font-semibold text-gray-900">{formData.email}</span>.
+                                </p>
+                                <p className="text-sm text-gray-500 mt-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                                    Por favor, confirme seu cadastro clicando no link enviado antes de fazer login.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowConfirmation(false);
+                                    setIsRegistering(false);
+                                    setStep(1);
+                                }}
+                                className="w-full py-3 bg-emerald-950 text-white rounded-lg font-bold hover:bg-emerald-900 transition-colors"
+                            >
+                                Voltar para o Login
+                            </button>
                         </div>
-                    )}
+                    ) : (
+                        // LOGIN / REGISTER FORM
+                        <>
+                            <div className="text-center">
+                                <p className="text-slate-500 text-sm">
+                                    {isRegistering
+                                        ? (step === 1 ? "Etapa 1: Dados Pessoais" : "Etapa 2: Credenciais de Acesso")
+                                        : "Entre com suas credenciais para acessar o painel."}
+                                </p>
+                            </div>
 
-                    {/* Form */}
-                    <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+                            {/* Auth Error Alert */}
+                            {authError && (
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm animate-in fade-in slide-in-from-top-2">
+                                    <AlertCircle size={16} />
+                                    <span>{authError}</span>
+                                </div>
+                            )}
 
-                        {/* REGISTER STEP 1: PERSONAL DATA */}
-                        {isRegistering && step === 1 && (
-                            <>
-                                {/* Name */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nome</span>
-                                    </div>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                            <User size={20} />
-                                        </div>
-                                        <input
-                                            name="firstName"
-                                            value={formData.firstName}
-                                            onChange={handleChange}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.firstName ? 'border-red-500' : 'border-slate-200'}`}
-                                            placeholder="João"
-                                            type="text"
-                                        />
-                                    </div>
-                                    {errors.firstName && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.firstName}</span>}
-                                </label>
+                            <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
 
-                                {/* Surname */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Sobrenome</span>
-                                    </div>
-                                    <input
-                                        name="lastName"
-                                        value={formData.lastName}
-                                        onChange={handleChange}
-                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 px-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.lastName ? 'border-red-500' : 'border-slate-200'}`}
-                                        placeholder="Silva"
-                                        type="text"
-                                    />
-                                    {errors.lastName && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.lastName}</span>}
-                                </label>
+                                {/* REGISTER STEP 1: PERSONAL DATA */}
+                                {isRegistering && step === 1 && (
+                                    <>
+                                        {/* Name */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nome</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <User size={20} />
+                                                </div>
+                                                <input
+                                                    name="firstName"
+                                                    value={formData.firstName}
+                                                    onChange={handleChange}
+                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.firstName ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder="João"
+                                                    type="text"
+                                                />
+                                            </div>
+                                            {errors.firstName && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.firstName}</span>}
+                                        </label>
 
-                                {/* Birth Date */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nascimento</span>
-                                    </div>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                            <Calendar size={20} />
-                                        </div>
-                                        <input
-                                            name="birthDate"
-                                            value={formData.birthDate}
-                                            onChange={handleChange}
-                                            maxLength={10}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.birthDate ? 'border-red-500' : 'border-slate-200'}`}
-                                            placeholder="DD/MM/AAAA"
-                                            type="text"
-                                        />
-                                    </div>
-                                    {errors.birthDate && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.birthDate}</span>}
-                                </label>
-
-                                {/* CPF */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">CPF</span>
-                                    </div>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                            <FileText size={20} />
-                                        </div>
-                                        <input
-                                            name="cpf"
-                                            value={formData.cpf}
-                                            onChange={handleChange}
-                                            maxLength={14}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.cpf ? 'border-red-500' : 'border-slate-200'}`}
-                                            placeholder="000.000.000-00"
-                                            type="text"
-                                        />
-                                    </div>
-                                    {errors.cpf && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.cpf}</span>}
-                                </label>
-
-                                {/* Phone */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Celular</span>
-                                    </div>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                                        </div>
-                                        <input
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleChange}
-                                            maxLength={15}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-slate-200'}`}
-                                            placeholder="(11) 99999-9999"
-                                            type="text"
-                                        />
-                                    </div>
-                                    {errors.phone && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.phone}</span>}
-                                </label>
-                            </>
-                        )}
-
-                        {/* REGISTER STEP 2 or LOGIN */}
-                        {(!isRegistering || step === 2) && (
-                            <>
-                                {/* Credential ID / Email */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">E-mail</span>
-                                    </div>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                            <Mail size={20} />
-                                        </div>
-                                        <input
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
-                                            placeholder="analista@clube.com"
-                                            type="email"
-                                        />
-                                    </div>
-                                    {errors.email && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.email}</span>}
-                                </label>
-
-                                {/* Confirm Email (Register Step 2 only) */}
-                                {isRegistering && step === 2 && (
-                                    <label className="flex flex-col gap-1.5 group">
-                                        <div className="flex justify-between">
-                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar E-mail</span>
-                                        </div>
-                                        <div className="relative flex items-center">
-                                            <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                                <Check size={20} />
+                                        {/* Surname */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Sobrenome</span>
                                             </div>
                                             <input
-                                                name="confirmEmail"
-                                                value={formData.confirmEmail}
+                                                name="lastName"
+                                                value={formData.lastName}
                                                 onChange={handleChange}
-                                                onBlur={handleBlur}
-                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.confirmEmail ? 'border-red-500' : 'border-slate-200'}`}
-                                                placeholder="Confirme seu e-mail"
-                                                type="email"
+                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 px-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.lastName ? 'border-red-500' : 'border-slate-200'}`}
+                                                placeholder="Silva"
+                                                type="text"
                                             />
-                                        </div>
-                                        {errors.confirmEmail && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.confirmEmail}</span>}
-                                    </label>
+                                            {errors.lastName && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.lastName}</span>}
+                                        </label>
+
+                                        {/* Birth Date */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nascimento</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <Calendar size={20} />
+                                                </div>
+                                                <input
+                                                    name="birthDate"
+                                                    value={formData.birthDate}
+                                                    onChange={handleChange}
+                                                    maxLength={10}
+                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.birthDate ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder="DD/MM/AAAA"
+                                                    type="text"
+                                                />
+                                            </div>
+                                            {errors.birthDate && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.birthDate}</span>}
+                                        </label>
+
+                                        {/* CPF */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">CPF</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <FileText size={20} />
+                                                </div>
+                                                <input
+                                                    name="cpf"
+                                                    value={formData.cpf}
+                                                    onChange={handleChange}
+                                                    maxLength={14}
+                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.cpf ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder="000.000.000-00"
+                                                    type="text"
+                                                />
+                                            </div>
+                                            {errors.cpf && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.cpf}</span>}
+                                        </label>
+
+                                        {/* Phone */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Celular</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                                </div>
+                                                <input
+                                                    name="phone"
+                                                    value={formData.phone}
+                                                    onChange={handleChange}
+                                                    maxLength={15}
+                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder="(11) 99999-9999"
+                                                    type="text"
+                                                />
+                                            </div>
+                                            {errors.phone && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.phone}</span>}
+                                        </label>
+                                    </>
                                 )}
 
-                                {/* Secure Key / Password */}
-                                <label className="flex flex-col gap-1.5 group">
-                                    <div className="flex justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Senha</span>
-                                        {!isRegistering && (
-                                            <a href="#" className="text-[11px] font-bold text-slate-400 hover:text-[#0f2124] transition-colors">ESQUECEU A SENHA?</a>
+                                {/* REGISTER STEP 2 or LOGIN */}
+                                {(!isRegistering || step === 2) && (
+                                    <>
+                                        {/* Credential ID / Email */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">E-mail</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <Mail size={20} />
+                                                </div>
+                                                <input
+                                                    name="email"
+                                                    value={formData.email}
+                                                    onChange={handleChange}
+                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder="analista@clube.com"
+                                                    type="email"
+                                                />
+                                            </div>
+                                            {errors.email && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.email}</span>}
+                                        </label>
+
+                                        {/* Confirm Email (Register Step 2 only) */}
+                                        {isRegistering && step === 2 && (
+                                            <label className="flex flex-col gap-1.5 group">
+                                                <div className="flex justify-between">
+                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar E-mail</span>
+                                                </div>
+                                                <div className="relative flex items-center">
+                                                    <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                        <Check size={20} />
+                                                    </div>
+                                                    <input
+                                                        name="confirmEmail"
+                                                        value={formData.confirmEmail}
+                                                        onChange={handleChange}
+                                                        onBlur={handleBlur}
+                                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.confirmEmail ? 'border-red-500' : 'border-slate-200'}`}
+                                                        placeholder="Confirme seu e-mail"
+                                                        type="email"
+                                                    />
+                                                </div>
+                                                {errors.confirmEmail && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.confirmEmail}</span>}
+                                            </label>
                                         )}
-                                    </div>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                            <Lock size={20} />
+
+                                        {/* Secure Key / Password */}
+                                        <label className="flex flex-col gap-1.5 group">
+                                            <div className="flex justify-between">
+                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Senha</span>
+                                                {!isRegistering && (
+                                                    <a href="#" className="text-[11px] font-bold text-slate-400 hover:text-[#0f2124] transition-colors">ESQUECEU A SENHA?</a>
+                                                )}
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <Lock size={20} />
+                                                </div>
+                                                <input
+                                                    name="password"
+                                                    value={formData.password}
+                                                    onChange={handleChange}
+                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.password ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder="••••••••"
+                                                    type={showPassword ? "text" : "password"}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
+                                                >
+                                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                                </button>
+                                            </div>
+                                            {errors.password && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.password}</span>}
+                                        </label>
+
+                                        {/* Confirm Password (Register Step 2 only) */}
+                                        {isRegistering && step === 2 && (
+                                            <label className="flex flex-col gap-1.5 group">
+                                                <div className="flex justify-between">
+                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar Senha</span>
+                                                </div>
+                                                <div className="relative flex items-center">
+                                                    <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                        <Check size={20} />
+                                                    </div>
+                                                    <input
+                                                        name="confirmPassword"
+                                                        value={formData.confirmPassword}
+                                                        onChange={handleChange}
+                                                        onBlur={handleBlur}
+                                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.confirmPassword ? 'border-red-500' : 'border-slate-200'}`}
+                                                        placeholder="••••••••"
+                                                        type={showConfirmPassword ? "text" : "password"}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                        className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
+                                                    >
+                                                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                                    </button>
+                                                </div>
+                                                {errors.confirmPassword && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.confirmPassword}</span>}
+                                            </label>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Navigation Buttons for Register Flow */}
+                                {isRegistering && step === 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleNextStep}
+                                        className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10"
+                                    >
+                                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
+                                        <div className="relative flex items-center gap-2 z-10">
+                                            <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Próximo</span>
+                                            <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
                                         </div>
-                                        <input
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleChange}
-                                            className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.password ? 'border-red-500' : 'border-slate-200'}`}
-                                            placeholder="••••••••"
-                                            type={showPassword ? "text" : "password"}
-                                        />
+                                    </button>
+                                )}
+
+                                {/* Navigation Buttons for Step 2 */}
+                                {isRegistering && step === 2 && (
+                                    <div className="flex gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
+                                            onClick={handlePrevStep}
+                                            className="h-12 w-12 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
                                         >
-                                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            <ArrowLeft size={20} className="text-slate-600" />
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isLoading}
+                                            className="relative flex-1 group overflow-hidden h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
+                                            <div className="relative flex items-center gap-2 z-10">
+                                                {isLoading ? (
+                                                    <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
+                                                ) : (
+                                                    <>
+                                                        <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Efetuar Cadastro</span>
+                                                        <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
+                                                    </>
+                                                )}
+                                            </div>
                                         </button>
                                     </div>
-                                    {errors.password && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.password}</span>}
-                                </label>
-
-                                {/* Confirm Password (Register Step 2 only) */}
-                                {isRegistering && step === 2 && (
-                                    <label className="flex flex-col gap-1.5 group">
-                                        <div className="flex justify-between">
-                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar Senha</span>
-                                        </div>
-                                        <div className="relative flex items-center">
-                                            <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
-                                                <Check size={20} />
-                                            </div>
-                                            <input
-                                                name="confirmPassword"
-                                                value={formData.confirmPassword}
-                                                onChange={handleChange}
-                                                onBlur={handleBlur}
-                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.confirmPassword ? 'border-red-500' : 'border-slate-200'}`}
-                                                placeholder="••••••••"
-                                                type={showConfirmPassword ? "text" : "password"}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
-                                            >
-                                                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                            </button>
-                                        </div>
-                                        {errors.confirmPassword && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {errors.confirmPassword}</span>}
-                                    </label>
                                 )}
-                            </>
-                        )}
 
-                        {/* Navigation Buttons for Register Flow */}
-                        {isRegistering && step === 1 && (
-                            <button
-                                type="button"
-                                onClick={handleNextStep}
-                                className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10"
-                            >
-                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
-                                <div className="relative flex items-center gap-2 z-10">
-                                    <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Próximo</span>
-                                    <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
-                                </div>
-                            </button>
-                        )}
+                                {/* Login Button (Only when NOT registering) */}
+                                {!isRegistering && (
+                                    <>
+                                        <div className="flex items-center gap-3 py-1">
+                                            <div className="relative flex items-center">
+                                                <input
+                                                    id="remember"
+                                                    type="checkbox"
+                                                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-emerald-600 checked:bg-emerald-600 transition-all hover:border-emerald-600/50 focus:ring-2 focus:ring-emerald-600/20 focus:ring-offset-1"
+                                                />
+                                                <Check className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" size={14} strokeWidth={4} />
+                                            </div>
+                                            <label htmlFor="remember" className="text-sm font-medium text-slate-600 cursor-pointer select-none">
+                                                Mantenha-me conectado
+                                            </label>
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={isLoading}
+                                            className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-10 bg-emerald-950/50 transition-opacity duration-300"></div>
+                                            <div className="relative flex items-center gap-2 z-10">
+                                                {isLoading ? (
+                                                    <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
+                                                ) : (
+                                                    <>
+                                                        <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Iniciar Sessão</span>
+                                                        <ArrowRight className="text-white group-hover:text-emerald-500 transition-colors" size={20} />
+                                                    </>
+                                                )}
+                                            </div>
+                                        </button>
+                                    </>
+                                )}
+                            </form>
 
-                        {/* Navigation Buttons for Step 2 */}
-                        {isRegistering && step === 2 && (
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handlePrevStep}
-                                    className="h-12 w-12 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                                >
-                                    <ArrowLeft size={20} className="text-slate-600" />
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="relative flex-1 group overflow-hidden h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 transition-opacity duration-300"></div>
-                                    <div className="relative flex items-center gap-2 z-10">
-                                        {isLoading ? (
-                                            <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
-                                        ) : (
-                                            <>
-                                                <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Efetuar Cadastro</span>
-                                                <ArrowRight className="text-[#00e1ff] group-hover:text-emerald-950 transition-colors" size={20} />
-                                            </>
-                                        )}
-                                    </div>
-                                </button>
+                            {/* Footer Request */}
+                            <div className="text-center mt-2">
+                                <p className="text-sm text-slate-500">
+                                    {isRegistering ? "Já tem uma conta de analista? " : "Não tem uma conta de analista? "}
+                                    <button
+                                        onClick={toggleMode}
+                                        className="text-[#0f2124] font-bold hover:text-emerald-600 transition-colors underline decoration-2 decoration-transparent hover:decoration-[#00e1ff] underline-offset-4"
+                                    >
+                                        {isRegistering ? "Iniciar Sessão" : "Criar Conta"}
+                                    </button>
+                                </p>
                             </div>
-                        )}
-
-                        {/* Login Button (Only when NOT registering) */}
-                        {!isRegistering && (
-                            <>
-                                <div className="flex items-center gap-3 py-1">
-                                    <div className="relative flex items-center">
-                                        <input
-                                            id="remember"
-                                            type="checkbox"
-                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-emerald-600 checked:bg-emerald-600 transition-all hover:border-emerald-600/50 focus:ring-2 focus:ring-emerald-600/20 focus:ring-offset-1"
-                                        />
-                                        <Check className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" size={14} strokeWidth={4} />
-                                    </div>
-                                    <label htmlFor="remember" className="text-sm font-medium text-slate-600 cursor-pointer select-none">
-                                        Mantenha-me conectado
-                                    </label>
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="relative group overflow-hidden w-full h-12 rounded-lg bg-emerald-950 hover:bg-emerald-900 transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-10 bg-emerald-950/50 transition-opacity duration-300"></div>
-                                    <div className="relative flex items-center gap-2 z-10">
-                                        {isLoading ? (
-                                            <Loader2 className="animate-spin text-[#00e1ff]" size={20} />
-                                        ) : (
-                                            <>
-                                                <span className="text-white group-hover:text-emerald-950 font-bold tracking-wide text-sm uppercase transition-colors">Iniciar Sessão</span>
-                                                <ArrowRight className="text-white group-hover:text-emerald-500 transition-colors" size={20} />
-                                            </>
-                                        )}
-                                    </div>
-                                </button>
-                            </>
-                        )}
-                    </form>
-
-                    {/* Footer Request */}
-                    <div className="text-center mt-2">
-                        <p className="text-sm text-slate-500">
-                            {isRegistering ? "Já tem uma conta de analista? " : "Não tem uma conta de analista? "}
-                            <button
-                                onClick={toggleMode}
-                                className="text-[#0f2124] font-bold hover:text-emerald-600 transition-colors underline decoration-2 decoration-transparent hover:decoration-[#00e1ff] underline-offset-4"
-                            >
-                                {isRegistering ? "Iniciar Sessão" : "Criar Conta"}
-                            </button>
-                        </p>
-                    </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Bottom decorative */}
