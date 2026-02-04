@@ -1,4 +1,4 @@
-import { User, Calendar, FileText, ChevronRight } from 'lucide-react';
+import { Calendar, FileText, ChevronRight } from 'lucide-react';
 import type { PlayerDossier } from '../../types/search';
 
 interface Props {
