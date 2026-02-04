@@ -156,72 +156,102 @@ const MyAnalyses = () => {
         <div
             key={analysis.id}
             onClick={() => navigateToAnalysis(analysis.id, analysis.tipo)}
-            className="group bg-[#161618] rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-transparent hover:border-[#27D888]/30"
+            className="group bg-dashboard-card rounded-2xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl hover:shadow-black/50 border border-transparent hover:border-gray-700/50 flex flex-col"
         >
-            {/* Thumbnail */}
-            <div className="aspect-video bg-[#0D0D0D] relative overflow-hidden">
+            {/* Top Section: Gradient & Logos */}
+            <div className={`relative h-40 w-full overflow-hidden ${analysis.thumbnail_url ? '' : 'bg-gradient-to-br from-[#1e293b] to-[#0f172a]'}`}>
                 {analysis.thumbnail_url ? (
-                    <img
-                        src={analysis.thumbnail_url}
-                        alt={analysis.titulo}
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                    />
+                    <div className="absolute inset-0">
+                        <img
+                            src={analysis.thumbnail_url}
+                            alt={analysis.titulo}
+                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-dashboard-card via-transparent to-transparent opacity-90" />
+                    </div>
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                        <div className="flex gap-4 items-center">
-                            {analysis.home_team_logo && <img src={analysis.home_team_logo} className="w-12 h-12" />}
-                            <span className="text-2xl font-bold text-gray-600">VS</span>
-                            {analysis.away_team_logo && <img src={analysis.away_team_logo} className="w-12 h-12" />}
+                    <div className="absolute inset-0 flex items-center justify-center p-6">
+                        {/* Logos Container */}
+                        <div className="flex items-center justify-center gap-6 w-full transform transition-transform duration-300 group-hover:scale-105">
+                            {/* Home Team */}
+                            <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                                {analysis.home_team_logo ? (
+                                    <img
+                                        src={analysis.home_team_logo}
+                                        className="w-16 h-16 object-contain drop-shadow-lg"
+                                        alt={analysis.home_team_name}
+                                    />
+                                ) : (
+                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                        <div className="h-8 w-8 rounded bg-red-500/80" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* VS */}
+                            <span className="text-2xl font-black text-white/90 italic tracking-wider drop-shadow-md">VS</span>
+
+                            {/* Away Team */}
+                            <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                                {analysis.away_team_logo ? (
+                                    <img
+                                        src={analysis.away_team_logo}
+                                        className="w-16 h-16 object-contain drop-shadow-lg"
+                                        alt={analysis.away_team_name}
+                                    />
+                                ) : (
+                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                        <div className="h-8 w-8 rounded bg-blue-500/80" />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Content */}
-            <div className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 className="text-lg font-bold text-white group-hover:text-[#27D888] transition-colors line-clamp-1">
-                            {analysis.titulo}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                            <Calendar className="w-4 h-4" />
+            {/* Bottom Section: Info & Actions */}
+            <div className="p-5 flex flex-col gap-3 flex-1 relative bg-dashboard-card">
+                <div className="flex-1 space-y-1">
+                    <h3 className="text-xl font-bold text-white group-hover:text-brand-primary transition-colors line-clamp-1 leading-tight">
+                        {analysis.titulo}
+                    </h3>
+
+                    <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
+                        <div className="flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4 text-gray-600" />
                             {formatDate(analysis.created_at)}
-                            <span>•</span>
-                            <Clock className="w-3 h-3" />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-gray-600" />
                             {formatRelativeTime(analysis.updated_at)}
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-800">
-                    <div className="flex gap-2">
-                        <button
-                            onClick={(e) => handleDuplicate(e, analysis.id)}
-                            title="Duplicar"
-                            className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                        >
-                            <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={(e) => handleDelete(e, analysis.id)}
-                            title="Excluir"
-                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="flex items-center text-[#27D888] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
-                        Abrir Análise
-                        <ExternalLink className="w-4 h-4 ml-1" />
-                    </div>
+                {/* Actions Row */}
+                <div className="flex items-center justify-end gap-2 mt-2 pt-2">
+                    <button
+                        onClick={(e) => handleDuplicate(e, analysis.id)}
+                        title="Duplicar"
+                        className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-all border border-gray-700 hover:border-gray-600 shadow-sm"
+                    >
+                        <Copy className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={(e) => handleDelete(e, analysis.id)}
+                        title="Excluir"
+                        className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-gray-700 hover:border-red-900/30 shadow-sm"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
                 </div>
             </div>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#0D0D0D] flex flex-col">
+        <div className="min-h-screen bg-dashboard-page flex flex-col">
             <Header />
             <div className="pt-20 p-6 md:p-8 max-w-7xl mx-auto w-full flex-1 mt-16">
                 {/* Header */}
@@ -238,7 +268,7 @@ const MyAnalyses = () => {
                             <select
                                 value={searchType}
                                 onChange={(e) => setSearchType(e.target.value as SearchType)}
-                                className="px-3 py-2 bg-[#161618] border border-gray-700 rounded-lg text-white focus:border-[#27D888] focus:outline-none"
+                                className="px-3 py-2 bg-dashboard-card border border-gray-700 rounded-lg text-white focus:border-[#27D888] focus:outline-none"
                             >
                                 <option value="all">Todos</option>
                                 <option value="team">Time</option>
@@ -256,7 +286,7 @@ const MyAnalyses = () => {
                                     placeholder={getSearchPlaceholder(searchType)}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-[#161618] border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-[#27D888] focus:outline-none"
+                                    className="pl-10 pr-4 py-2 bg-dashboard-card border border-gray-700 rounded-lg text-white placeholder-gray-500 w-64 focus:border-[#27D888] focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -273,7 +303,7 @@ const MyAnalyses = () => {
                 </div>
 
                 {/* Filters Row */}
-                <div className="flex items-center justify-between mb-6 bg-[#1a1f2e] rounded-xl p-2">
+                <div className="flex items-center justify-between mb-6 bg-dashboard-card/50 rounded-xl p-2">
                     <div className="flex gap-1">
                         <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-500 text-white cursor-default">
                             Todas
@@ -329,7 +359,7 @@ const MyAnalyses = () => {
                         </div>
 
                         {searchResults.length === 0 ? (
-                            <div className="text-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
+                            <div className="text-center py-20 bg-dashboard-card rounded-xl border border-gray-700">
                                 <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                                 <h3 className="text-xl font-bold text-white mb-2">Nenhum resultado encontrado</h3>
                                 <p className="text-gray-400">
@@ -380,7 +410,7 @@ const MyAnalyses = () => {
                         </p>
 
                         {analyses.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 bg-[#1a1f2e] rounded-xl border border-gray-700">
+                            <div className="flex flex-col items-center justify-center py-20 bg-dashboard-card rounded-xl border border-gray-700">
                                 <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
                                     <FileText className="w-10 h-10 text-gray-600" />
                                 </div>

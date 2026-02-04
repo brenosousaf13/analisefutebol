@@ -17,6 +17,8 @@ export default {
         'card-bg': '#161618',
         'brand-primary': '#27D888',
         'brand-secondary': '#ACFA70',
+        'dashboard-page': '#1a1f2e',
+        'dashboard-card': '#242938',
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'sans-serif'],
