@@ -1,4 +1,4 @@
-import { X, FileEdit, Upload, PlusCircle, ArrowLeft, Maximize, Settings } from 'lucide-react';
+import { X, Upload, PlusCircle, ArrowLeft, Maximize, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { analysisService } from '../services/analysisService';
 import { useState } from 'react';
@@ -12,7 +12,7 @@ interface NewAnalysisModalProps {
 }
 
 interface OptionCard {
-    type: 'partida_api' | 'prancheta_livre' | 'importar' | 'analise_completa';
+    type: 'partida_api' | 'analise_completa' | 'importar';
     icon: React.ReactNode;
     title: string;
     description: string;
@@ -25,7 +25,6 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
     const [isCreating, setIsCreating] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [view, setView] = useState<'selection' | 'custom_form' | 'match_builder'>('selection');
-    const [selectedType, setSelectedType] = useState<'prancheta_livre' | 'analise_completa'>('prancheta_livre');
 
     // Custom Form State
     const [customHome, setCustomHome] = useState('');
@@ -41,13 +40,6 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
             icon: <Settings className="w-10 h-10" />,
             title: 'Montar Partida',
             description: 'Selecione a liga e os times para analisar',
-            available: true
-        },
-        {
-            type: 'prancheta_livre',
-            icon: <FileEdit className="w-10 h-10" />,
-            title: 'Prancheta Livre',
-            description: 'Campo em branco para criar sua análise',
             available: true
         },
         {
@@ -77,8 +69,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
             return;
         }
 
-        if (type === 'prancheta_livre' || type === 'analise_completa') {
-            setSelectedType(type);
+        if (type === 'analise_completa') {
             setView('custom_form');
         }
     };
@@ -194,7 +185,8 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
         try {
             setIsCreating(true);
 
-            const typeToCreate = selectedType === 'analise_completa' ? 'analise_completa' : 'partida';
+            // Always Full Mode now
+            const typeToCreate = 'analise_completa';
 
             const analysisId = await analysisService.createBlankAnalysis(typeToCreate, {
                 homeTeam: customHome,
@@ -204,11 +196,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
                 matchTime: customTime
             });
 
-            if (selectedType === 'analise_completa') {
-                navigate(`/analysis-complete/saved/${analysisId}`);
-            } else {
-                navigate(`/analysis/saved/${analysisId}`);
-            }
+            navigate(`/analysis-complete/saved/${analysisId}`);
 
             onClose();
         } catch (error) {
