@@ -34,6 +34,10 @@ export async function searchAnalyses(
             return searchByCoach(term, userId);
         case 'match':
             return searchByMatch(term, userId);
+        case 'tag':
+            // Tag search is handled via standard analysis search (getMyAnalyses logic)
+            // But we need to return MatchResult[]
+            return searchByMatch(term, userId);
         case 'all':
         default:
             return searchAll(term, userId);
@@ -299,10 +303,10 @@ async function searchByMatch(term: string, userId: string): Promise<MatchResult[
         id, titulo, descricao, tipo, status,
         home_team_name, away_team_name, home_team_logo, away_team_logo,
         home_team_color, away_team_color,
-        home_score, away_score, created_at, updated_at, thumbnail_url
+        home_score, away_score, created_at, updated_at, thumbnail_url, tags
     `)
         .eq('user_id', userId)
-        .or(`titulo.ilike.%${term}%,home_team_name.ilike.%${term}%,away_team_name.ilike.%${term}%`)
+        .or(`titulo.ilike.%${term}%,home_team_name.ilike.%${term}%,away_team_name.ilike.%${term}%,tags.cs.{${term}}`)
         .order('created_at', { ascending: false }); // Matches analysisService default order
 
     if (error || !data) return [];

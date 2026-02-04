@@ -67,6 +67,9 @@ function Analysis() {
     // Team View State: 'home' | 'away' - Toggle to see which team's tactic
     const [viewTeam, setViewTeam] = useState<'home' | 'away'>('home');
 
+    // Tags State
+    const [tags, setTags] = useState<string[]>([]);
+
     // Data State
     // Initial players should be empty if we are starting a new analysis (API)
     // Use defaults for CUSTOM matches
@@ -562,7 +565,7 @@ function Analysis() {
                 homeCoach,
                 awayCoach,
                 events: events,
-                tags: []
+                tags: tags
             };
 
             const savedId = await analysisService.saveAnalysis(data);
@@ -629,6 +632,7 @@ function Analysis() {
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
 
                     setEvents(data.events || []);
+                    setTags(data.tags || []);
 
                     setHomeArrows({
                         defensive: data.homeArrowsDef || [],
@@ -1355,10 +1359,15 @@ function Analysis() {
 
                         awayDefensiveNotes={awayDefensiveNotes}
                         awayOffensiveNotes={awayOffensiveNotes}
-                        onAwayDefensiveNotesChange={setAwayDefensiveNotes}
-                        onAwayOffensiveNotesChange={setAwayOffensiveNotes}
-
-                        autoSaveStatus="idle"
+                        onAwayDefensiveNotesChange={(val) => { setAwayDefensiveNotes(val); setHasUnsavedChanges(true); }}
+                        onAwayOffensiveNotesChange={(val) => { setAwayOffensiveNotes(val); setHasUnsavedChanges(true); }}
+                        tags={tags || []} // Ensure tags is never undefined
+                        onTagsChange={(newTags) => {
+                            console.log('Analysis.tsx: onTagsChange triggered', newTags);
+                            setTags(newTags);
+                            setHasUnsavedChanges(true);
+                        }}
+                        autoSaveStatus={saveStatus === 'success' ? 'saved' : saveStatus === 'loading' ? 'saving' : saveStatus === 'idle' ? 'idle' : 'error'}
                     />
 
                     {/* Events Sidebar (slides from left) */}

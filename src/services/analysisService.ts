@@ -107,7 +107,7 @@ export interface AnalysisFilters {
     fixtureId?: number;
     orderBy?: 'created_at' | 'updated_at' | 'titulo';
     orderDirection?: 'asc' | 'desc';
-    searchType?: 'all' | 'team' | 'match' | 'player' | 'coach';
+    searchType?: 'all' | 'team' | 'match' | 'player' | 'coach' | 'tag';
 }
 
 export const analysisService = {
@@ -170,6 +170,7 @@ export const analysisService = {
                 away_ball_off: data.awayBallOff,
 
                 events: data.events || [],
+                tags: data.tags || [],
                 updated_at: new Date().toISOString()
             };
 
@@ -329,9 +330,14 @@ export const analysisService = {
                         return [];
                     }
                     break;
+                case 'tag':
+                    query = query.contains('tags', [searchTerm]);
+                    break;
                 case 'all':
                 default:
                     query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%,home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
+                    // Note: querying tags in "OR" with ilike is hard in Supabase/PostgREST without generic text search
+                    // but we can try basic text match if needed, or leave tags for explicit search
                     break;
             }
         }
@@ -486,13 +492,13 @@ export const analysisService = {
             events: analysis.events || [],
             homeCoach: analysis.home_coach,
             awayCoach: analysis.away_coach,
-            tags: [],
 
             // Ball Positions
             homeBallDef: analysis.home_ball_def,
             homeBallOff: analysis.home_ball_off,
             awayBallDef: analysis.away_ball_def,
-            awayBallOff: analysis.away_ball_off
+            awayBallOff: analysis.away_ball_off,
+            tags: analysis.tags || []
         };
     },
 

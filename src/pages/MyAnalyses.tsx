@@ -28,7 +28,7 @@ const MyAnalyses = () => {
     const [orderBy, setOrderBy] = useState<'created_at' | 'updated_at' | 'titulo'>('created_at');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
-    type SearchType = 'all' | 'team' | 'match' | 'player' | 'coach';
+    type SearchType = 'all' | 'team' | 'match' | 'player' | 'coach' | 'tag';
     const [searchType, setSearchType] = useState<SearchType>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -42,7 +42,8 @@ const MyAnalyses = () => {
             team: 'Buscar por time...',
             match: 'Buscar por partida...',
             player: 'Buscar por jogador...',
-            coach: 'Buscar por técnico...'
+            coach: 'Buscar por técnico...',
+            tag: 'Buscar por tag...'
         };
         return placeholders[type];
     };
@@ -244,6 +245,7 @@ const MyAnalyses = () => {
                                 <option value="match">Partida</option>
                                 <option value="player">Jogador</option>
                                 <option value="coach">Técnico</option>
+                                <option value="tag">Tag</option>
                             </select>
 
                             {/* Input de busca */}

@@ -100,6 +100,7 @@ function FullAnalysisPage() {
     const [homeTeamColor, setHomeTeamColor] = useState('#EF4444');
     const [awayTeamColor, setAwayTeamColor] = useState('#3B82F6');
     const [shareToken, setShareToken] = useState<string | undefined>(undefined);
+    const [tags, setTags] = useState<string[]>([]); // Added state for tags
 
     // Modals
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -179,6 +180,8 @@ function FullAnalysisPage() {
                     setAwayArrows({ 'full_away': aArrowsDef });
                     setHomeRectangles({ 'full_home': hRectsDef });
                     setAwayRectangles({ 'full_away': aRectsDef });
+
+                    setTags(data.tags || []); // Load tags
 
                     setHasUnsavedChanges(false);
                 }
@@ -333,7 +336,7 @@ function FullAnalysisPage() {
                 awayRectanglesDef: awayRectangles['full_away'],
                 awayRectanglesOff: [],
                 events,
-                tags: []
+                tags: tags || [] // Include tags
             };
 
             const savedId = await analysisService.saveAnalysis(data);
@@ -541,6 +544,11 @@ function FullAnalysisPage() {
                 onAwayDefensiveNotesChange={(v) => { setAwayDefensiveNotes(v); setHasUnsavedChanges(true); }}
                 onAwayOffensiveNotesChange={(v) => { setAwayOffensiveNotes(v); setHasUnsavedChanges(true); }}
                 autoSaveStatus="idle"
+                tags={tags || []}
+                onTagsChange={(newTags) => {
+                    setTags(newTags);
+                    setHasUnsavedChanges(true);
+                }}
             />
             <EventsSidebar
                 isOpen={isEventsSidebarOpen}

@@ -1,5 +1,5 @@
 // Tipos de busca disponíveis
-export type SearchType = 'all' | 'team' | 'match' | 'player' | 'coach';
+export type SearchType = 'all' | 'team' | 'match' | 'player' | 'coach' | 'tag';
 
 // Resultado de busca por JOGADOR (Dossiê do Jogador)
 export interface PlayerDossier {

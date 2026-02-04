@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Shield, Swords } from 'lucide-react';
+import { X, Shield, Swords, Tag } from 'lucide-react';
+import { TagInput } from './TagInput';
 
 interface AnalysisSidebarProps {
     isOpen: boolean;
@@ -23,6 +24,10 @@ interface AnalysisSidebarProps {
 
     autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
     readOnly?: boolean;
+
+    // Tags
+    tags: string[];
+    onTagsChange: (tags: string[]) => void;
 }
 
 const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
@@ -42,9 +47,13 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
     onAwayOffensiveNotesChange,
 
 
+
     autoSaveStatus = 'idle',
-    readOnly = false
-}) => {
+    readOnly = false,
+
+    tags,
+    onTagsChange
+}: AnalysisSidebarProps) => {
     const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
 
     const getStatusText = () => {
@@ -89,6 +98,20 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     >
                         <X className="w-5 h-5" />
                     </button>
+                </div>
+
+                {/* Tags Section */}
+                <div className="px-6 py-4 border-b border-gray-700 bg-panel-dark/50">
+                    <h3 className="text-gray-400 font-bold text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <Tag className="w-3 h-3" />
+                        Tags da Análise
+                    </h3>
+                    <TagInput
+                        tags={tags}
+                        onTagsChange={onTagsChange}
+                        placeholder="Adicionar tag (ex: Pressão Alta)..."
+                        readOnly={readOnly}
+                    />
                 </div>
 
                 {/* Team Switcher Tabs */}
