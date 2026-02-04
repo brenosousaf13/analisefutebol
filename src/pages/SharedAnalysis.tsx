@@ -205,6 +205,8 @@ export default function SharedAnalysis() {
                             onAwayOffensiveNotesChange={() => { }}
                             autoSaveStatus="idle"
                             readOnly={true}
+                            tags={data.tags || []} // Pass loaded tags
+                            onTagsChange={() => { }} // Read-only, do nothing
                         />
                         <EventsSidebar
                             isOpen={isEventsSidebarOpen}
