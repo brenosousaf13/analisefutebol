@@ -279,6 +279,10 @@ export const analysisService = {
     },
 
     async getMyAnalyses(filters?: AnalysisFilters): Promise<SavedAnalysisSummary[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) throw new Error("Usuário não autenticado");
+
         let query = supabase
             .from('analyses')
             .select(`
@@ -286,7 +290,8 @@ export const analysisService = {
                 home_team_name, away_team_name, home_team_logo, away_team_logo,
                 home_team_color, away_team_color,
                 home_score, away_score, created_at, updated_at, thumbnail_url
-            `);
+            `)
+            .eq('user_id', user.id); // STRICT FILTER: Only show my own analyses
 
         if (filters?.status && filters.status !== 'todas') {
             query = query.eq('status', filters.status);
