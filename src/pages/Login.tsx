@@ -3,11 +3,21 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Check, Shield, User, Calendar, Fil
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
+import { useAuth } from '../contexts/AuthContext';
+
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { user, loading } = useAuth();
     const [isRegistering, setIsRegistering] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
+
+    // Redirect if already logged in
+    React.useEffect(() => {
+        if (!loading && user) {
+            navigate('/', { replace: true });
+        }
+    }, [user, loading, navigate]);
 
     // Step state for registration wizard
     const [step, setStep] = useState(1);
