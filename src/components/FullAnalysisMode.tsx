@@ -271,9 +271,13 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const currentPhaseKey = possession === 'home' ? 'full_home' : 'full_away';
 
     // We access the records passed via props
-    const currentArrows = possession === 'home' ? homeArrows['full_home'] : awayArrows['full_away'];
+    const currentArrows = possession === 'home'
+        ? (showHomePlayers ? homeArrows['full_home'] : [])
+        : (showAwayPlayers ? awayArrows['full_away'] : []);
 
-    const currentRects = possession === 'home' ? homeRectangles['full_home'] : awayRectangles['full_away'];
+    const currentRects = possession === 'home'
+        ? (showHomePlayers ? homeRectangles['full_home'] : [])
+        : (showAwayPlayers ? awayRectangles['full_away'] : []);
 
     // Map player notes for indicator
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
