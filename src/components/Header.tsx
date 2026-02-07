@@ -18,9 +18,10 @@ interface HeaderProps {
     matchInfo?: MatchInfo;
     activeTeam?: 'home' | 'away';
     onTeamChange?: (team: 'home' | 'away') => void;
+    onHeaderTeamClick?: (team: 'home' | 'away') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) => {
+const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
@@ -51,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
     const isAnalysisPage = location.pathname.includes('/analysis') || location.pathname.includes('/analise');
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 border-b border-gray-700 flex items-center justify-between px-2 sm:px-6 z-50 shadow-md bg-nav-dark">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-nav-dark/50 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between shrink-0 z-50">
             {/* Left: Hamburger Menu */}
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <button
@@ -67,7 +68,13 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center max-w-[50%] sm:max-w-none">
                     <div className="flex items-center gap-2 sm:gap-6">
                         {/* Home Team */}
-                        <div className="flex items-center gap-1 sm:gap-3 justify-end min-w-0">
+                        <div
+                            className="flex items-center gap-1 sm:gap-3 justify-end min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => {
+
+                                onHeaderTeamClick && onHeaderTeamClick('home');
+                            }}
+                        >
                             <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.homeTeam}
                             </span>
@@ -79,7 +86,13 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange }) 
                         <span className="text-gray-600 text-xs sm:text-sm font-bold shrink-0">VS</span>
 
                         {/* Away Team */}
-                        <div className="flex items-center gap-1 sm:gap-3 justify-start min-w-0">
+                        <div
+                            className="flex items-center gap-1 sm:gap-3 justify-start min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => {
+
+                                onHeaderTeamClick && onHeaderTeamClick('away');
+                            }}
+                        >
                             {matchInfo.awayTeamLogo && (
                                 <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-5 h-5 sm:w-8 sm:h-8 object-contain shrink-0" />
                             )}

@@ -10,50 +10,56 @@ import { Eye, EyeOff, Menu, X } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
 
 interface FullAnalysisModeProps {
-    // Teams Info
     homeTeamName: string;
     awayTeamName: string;
     homeTeamColor: string;
     awayTeamColor: string;
-    homeCoachName?: string;
-    awayCoachName?: string;
+    homeCoachName: string;
+    awayCoachName: string;
     onHomeCoachChange?: (name: string) => void;
     onAwayCoachChange?: (name: string) => void;
 
-    // Data - Home
+    // Independent Data
+    ballPositions: {
+        homeDef: { x: number; y: number };
+        homeOff: { x: number; y: number };
+        awayDef: { x: number; y: number };
+        awayOff: { x: number; y: number };
+    };
     homePlayersDef: Player[];
     homePlayersOff: Player[];
     homeSubstitutes: Player[];
     homeArrows: Record<string, Arrow[]>;
     homeRectangles: Record<string, Rectangle[]>;
 
-    // Data - Away
     awayPlayersDef: Player[];
     awayPlayersOff: Player[];
     awaySubstitutes: Player[];
     awayArrows: Record<string, Arrow[]>;
     awayRectangles: Record<string, Rectangle[]>;
 
-    // Ball Data
-    ballPositions?: {
-        homeDef?: { x: number, y: number };
-        homeOff?: { x: number, y: number };
-        awayDef?: { x: number, y: number };
-        awayOff?: { x: number, y: number };
-    };
-
-    // Handlers
-    onBallMove?: (pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => void;
-    onPlayerMove: (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => void;
+    // Independent Player Handlers
+    onBallMove: (pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => void;
+    onPlayerMove: (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => void;
+    onBenchPlayerClick: (player: Player, team: 'home' | 'away') => void;
     onPlayerClick: (player: Player) => void;
     onPlayerDoubleClick: (player: Player) => void;
-    onBenchPlayerClick: (player: Player) => void;
 
     // Toolbar & Drawing Handlers
     activeTool: ToolType;
     onToolChange: (tool: ToolType) => void;
+    onOpenColorPicker: () => void;
+    onOpenAnalysis: () => void;
+    onOpenEvents: () => void;
+    onSave: () => void;
+    onExport: () => void;
+    onAddPlayer: () => void;
+    isSaving: boolean;
+    hasUnsavedChanges: boolean;
+    onShare: () => void;
+    onHeaderTeamClick?: (team: 'home' | 'away') => void;
 
-    // Drawing Handlers - accept Omit<..., 'id'> as per TacticalField
+    // Drawing Adapters
     onAddArrow: (arrow: Omit<Arrow, 'id'>, team: 'home' | 'away', phase: string) => void;
     onRemoveArrow: (id: string, team: 'home' | 'away', phase: string) => void;
     onMoveArrow: (id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => void;
@@ -62,16 +68,6 @@ interface FullAnalysisModeProps {
     onRemoveRectangle: (id: string, team: 'home' | 'away', phase: string) => void;
     onMoveRectangle: (id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => void;
 
-    // Toolbar Actions
-    onOpenColorPicker: () => void;
-    onOpenAnalysis: () => void;
-    onOpenEvents: () => void;
-    onSave: () => void;
-    onExport: () => void;
-    onAddPlayer: () => void;
-    isSaving?: boolean;
-    hasUnsavedChanges?: boolean;
-    onShare?: () => void;
     readOnly?: boolean;
 }
 
@@ -84,30 +80,28 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     awayCoachName,
     onHomeCoachChange,
     onAwayCoachChange,
+
+    ballPositions,
     homePlayersDef,
     homePlayersOff,
     homeSubstitutes,
     homeArrows,
     homeRectangles,
+
     awayPlayersDef,
     awayPlayersOff,
     awaySubstitutes,
     awayArrows,
     awayRectangles,
-    ballPositions,
+
     onBallMove,
     onPlayerMove,
+    onBenchPlayerClick,
     onPlayerClick,
     onPlayerDoubleClick,
-    onBenchPlayerClick,
+
     activeTool,
     onToolChange,
-    onAddArrow,
-    onRemoveArrow,
-    onMoveArrow,
-    onAddRectangle,
-    onRemoveRectangle,
-    onMoveRectangle,
     onOpenColorPicker,
     onOpenAnalysis,
     onOpenEvents,
@@ -117,7 +111,16 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     isSaving,
     hasUnsavedChanges,
     onShare,
-    readOnly = false
+    onHeaderTeamClick,
+
+    onAddArrow,
+    onRemoveArrow,
+    onMoveArrow,
+    onAddRectangle,
+    onRemoveRectangle,
+    onMoveRectangle,
+
+    readOnly = false,
 }) => {
     // State
     const [possession, setPossession] = useState<'home' | 'away'>('home');
@@ -184,7 +187,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         team,
         align,
         coachName,
-        onCoachChange
+        onCoachChange,
+        onTeamClick
     }: {
         name: string,
         players: Player[],
@@ -195,12 +199,20 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         team: 'home' | 'away',
         align?: 'left' | 'right',
         coachName?: string,
-        onCoachChange?: (name: string) => void
+        onCoachChange?: (name: string) => void,
+        onTeamClick?: () => void
     }) => (
         <div className="h-full flex flex-col border-r border-l border-gray-800 bg-nav-dark" style={{ width: '18%' }}>
             {/* Header */}
             <div className="p-4 border-b border-gray-700">
-                <h3 className={`text-white font-bold uppercase text-sm tracking-wider mb-1 px-1 border-l-4 ${align === 'right' ? 'text-right border-l-0 border-r-4' : ''}`} style={{ borderColor: color }}>
+                <h3
+                    className={`text-white font-bold uppercase text-sm tracking-wider mb-1 px-1 border-l-4 ${align === 'right' ? 'text-right border-l-0 border-r-4' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
+                    style={{ borderColor: color }}
+                    onClick={() => {
+
+                        onTeamClick && onTeamClick();
+                    }}
+                >
                     {name}
                 </h3>
                 <div className={`flex items-center mt-2 ${align === 'right' ? 'justify-end' : 'justify-between'}`}>
@@ -258,7 +270,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     team={team}
                     orientation="vertical"
                     align={align || 'left'}
-                    onPromotePlayer={readOnly ? () => { } : onBenchPlayerClick}
+                    onPromotePlayer={readOnly ? () => { } : (p) => onBenchPlayerClick(p, team)}
                     onPlayerDoubleClick={onPlayerDoubleClick}
                 />
             </div>
@@ -297,6 +309,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 team="home"
                 coachName={homeCoachName}
                 onCoachChange={onHomeCoachChange}
+                onTeamClick={() => onHeaderTeamClick && onHeaderTeamClick('home')}
             />
 
             {/* CENTER: FIELD */}
@@ -420,6 +433,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 team="away"
                 coachName={awayCoachName}
                 onCoachChange={onAwayCoachChange}
+                onTeamClick={() => onHeaderTeamClick && onHeaderTeamClick('away')}
             />
 
         </div>

@@ -17,6 +17,7 @@ interface AnalysisLayoutProps {
     matchInfo?: MatchInfo;
     activeTeam?: 'home' | 'away';
     onTeamChange?: (team: 'home' | 'away') => void;
+    onHeaderTeamClick?: (team: 'home' | 'away') => void;
 }
 
 const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
@@ -24,8 +25,10 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     sidebar,
     matchInfo,
     activeTeam,
-    onTeamChange
+    onTeamChange,
+    onHeaderTeamClick
 }) => {
+
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-nav-dark text-gray-100 font-sans">
             {/* Sidebar Area */}
@@ -42,6 +45,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
                     matchInfo={matchInfo}
                     activeTeam={activeTeam}
                     onTeamChange={onTeamChange}
+                    onHeaderTeamClick={onHeaderTeamClick}
                 />
 
                 {/* Page Content */}

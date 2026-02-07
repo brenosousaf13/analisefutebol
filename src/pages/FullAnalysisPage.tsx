@@ -113,6 +113,7 @@ function FullAnalysisPage() {
     const [isEventsExpansionModalOpen, setIsEventsExpansionModalOpen] = useState(false);
     const [eventToEdit, setEventToEdit] = useState<MatchEvent | null>(null);
     const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+    const [analysisSidebarTab, setAnalysisSidebarTab] = useState<'home' | 'away'>('home');
 
     // Player Interaction State
     const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
@@ -190,7 +191,7 @@ function FullAnalysisPage() {
     }, [routeAnalysisId]);
 
     // Handlers
-    const handlePlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+    const handlePlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => {
         const updateFn = team === 'home'
             ? (phase === 'defensive' ? setHomePlayersDef : setHomePlayersOff)
             : (phase === 'defensive' ? setAwayPlayersDef : setAwayPlayersOff);
@@ -199,7 +200,7 @@ function FullAnalysisPage() {
         setHasUnsavedChanges(true);
     };
 
-    const handleBallMove = (pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+    const handleBallMove = (pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => {
         const updateFn = team === 'home'
             ? (phase === 'defensive' ? setHomeBallDef : setHomeBallOff)
             : (phase === 'defensive' ? setAwayBallDef : setAwayBallOff);
@@ -440,11 +441,18 @@ function FullAnalysisPage() {
         setIsAddEventModalOpen(false);
     };
 
+    const handleTeamClick = (team: 'home' | 'away') => {
+        setAnalysisSidebarTab(team);
+        setIsAnalysisSidebarOpen(true);
+        setIsEventsSidebarOpen(false);
+    };
+
 
 
     return (
         <AnalysisLayout
             matchInfo={matchInfo}
+            onHeaderTeamClick={handleTeamClick}
         >
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center bg-gray-900">
@@ -508,6 +516,7 @@ function FullAnalysisPage() {
                     isSaving={saveStatus === 'loading'}
                     hasUnsavedChanges={hasUnsavedChanges}
                     onShare={() => setIsShareModalOpen(true)}
+                    onHeaderTeamClick={handleTeamClick}
                 />
             )}
 
@@ -549,6 +558,8 @@ function FullAnalysisPage() {
                     setTags(newTags);
                     setHasUnsavedChanges(true);
                 }}
+                activeTab={analysisSidebarTab}
+                onTabChange={setAnalysisSidebarTab}
             />
             <EventsSidebar
                 isOpen={isEventsSidebarOpen}

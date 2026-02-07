@@ -28,6 +28,10 @@ interface AnalysisSidebarProps {
     // Tags
     tags: string[];
     onTagsChange: (tags: string[]) => void;
+
+    // Tab Control
+    activeTab?: 'home' | 'away';
+    onTabChange?: (tab: 'home' | 'away') => void;
 }
 
 const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
@@ -52,9 +56,23 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
     readOnly = false,
 
     tags,
-    onTagsChange
+    onTagsChange,
+
+    activeTab: controlledActiveTab,
+    onTabChange
 }: AnalysisSidebarProps) => {
-    const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
+    const [localActiveTab, setLocalActiveTab] = useState<'home' | 'away'>('home');
+
+    // Use controlled state if provided, otherwise local
+    const activeTab = controlledActiveTab || localActiveTab;
+
+    const handleTabChange = (tab: 'home' | 'away') => {
+        if (onTabChange) {
+            onTabChange(tab);
+        } else {
+            setLocalActiveTab(tab);
+        }
+    };
 
     const getStatusText = () => {
         switch (autoSaveStatus) {
@@ -117,7 +135,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                 {/* Team Switcher Tabs */}
                 <div className="px-6 pt-4 pb-0 flex gap-2 border-b border-gray-700">
                     <button
-                        onClick={() => setActiveTab('home')}
+                        onClick={() => handleTabChange('home')}
                         className={`flex-1 py-3 px-6 text-sm font-bold uppercase tracking-wide rounded-t-lg transition-colors border-t border-l border-r ${activeTab === 'home'
                             ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
                             : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'
@@ -127,7 +145,7 @@ const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                         {homeTeamName}
                     </button>
                     <button
-                        onClick={() => setActiveTab('away')}
+                        onClick={() => handleTabChange('away')}
                         className={`flex-1 py-3 px-6 text-sm font-bold uppercase tracking-wide rounded-t-lg transition-colors border-t border-l border-r ${activeTab === 'away'
                             ? 'bg-panel-dark text-white border-gray-700 border-b-panel-dark'
                             : 'bg-transparent text-gray-500 border-transparent hover:text-gray-300'

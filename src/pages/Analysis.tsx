@@ -199,6 +199,7 @@ function Analysis() {
     // Sidebar states (sliding panels from toolbar)
     const [isAnalysisSidebarOpen, setIsAnalysisSidebarOpen] = useState(false);
     const [isEventsSidebarOpen, setIsEventsSidebarOpen] = useState(false);
+    const [analysisSidebarTab, setAnalysisSidebarTab] = useState<'home' | 'away'>('home');
 
     // Phase notes for AnalysisSidebar
     // Phase notes for AnalysisSidebar (Team Specific)
@@ -248,7 +249,12 @@ function Analysis() {
         // Functionality temporarily removed
         toast.error("Funcionalidade indisponível no momento");
     };
+    const handleTeamClick = (team: 'home' | 'away') => {
 
+        setAnalysisSidebarTab(team);
+        setIsAnalysisSidebarOpen(true);
+        setIsEventsSidebarOpen(false);
+    };
 
 
     const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
@@ -463,7 +469,7 @@ function Analysis() {
         setHasUnsavedChanges(true);
     };
 
-    const handleFullBallMove = (pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+    const handleFullBallMove = (pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => {
         const updateFn = team === 'home'
             ? (phase === 'defensive' ? setHomeBallDef : setHomeBallOff)
             : (phase === 'defensive' ? setAwayBallDef : setAwayBallOff);
@@ -471,7 +477,7 @@ function Analysis() {
         setHasUnsavedChanges(true);
     };
 
-    const handleFullPlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: 'defensive' | 'offensive') => {
+    const handleFullPlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => {
         const updateFn = team === 'home'
             ? (phase === 'defensive' ? setFullHomePlayersDef : setFullHomePlayersOff)
             : (phase === 'defensive' ? setFullAwayPlayersDef : setFullAwayPlayersOff);
@@ -993,6 +999,7 @@ function Analysis() {
             }}
             activeTeam={viewTeam}
             onTeamChange={setViewTeam}
+            onHeaderTeamClick={handleTeamClick}
             sidebar={!loading && viewMode !== 'full' ? (
                 <Toolbar
                     activeTool={activeTool}
@@ -1031,6 +1038,10 @@ function Analysis() {
                             awayTeamName={matchInfo.awayTeam}
                             homeTeamColor={homeTeamColor}
                             awayTeamColor={awayTeamColor}
+                            homeCoachName={homeCoach}
+                            awayCoachName={awayCoach}
+                            onHomeCoachChange={(name) => { setHomeCoach(name); setHasUnsavedChanges(true); }}
+                            onAwayCoachChange={(name) => { setAwayCoach(name); setHasUnsavedChanges(true); }}
 
                             // Independent Data
                             ballPositions={{
@@ -1077,6 +1088,7 @@ function Analysis() {
                             isSaving={saveStatus === 'loading'}
                             hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
                             onShare={() => setIsShareModalOpen(true)}
+                            onHeaderTeamClick={handleTeamClick}
 
                             // Drawing Adapters (Handling Team + Phase)
                             onAddArrow={(arrow: Omit<Arrow, 'id'>, team: 'home' | 'away', phase: string) => {
@@ -1351,23 +1363,19 @@ function Analysis() {
                         onClose={() => setIsAnalysisSidebarOpen(false)}
                         homeTeamName={matchInfo.homeTeam}
                         awayTeamName={matchInfo.awayTeam}
-
                         homeDefensiveNotes={homeDefensiveNotes}
                         homeOffensiveNotes={homeOffensiveNotes}
-                        onHomeDefensiveNotesChange={setHomeDefensiveNotes}
-                        onHomeOffensiveNotesChange={setHomeOffensiveNotes}
-
+                        onHomeDefensiveNotesChange={(val) => handleNoteSave('home', val)}
+                        onHomeOffensiveNotesChange={(val) => handleNoteSave('home', val)}
                         awayDefensiveNotes={awayDefensiveNotes}
                         awayOffensiveNotes={awayOffensiveNotes}
-                        onAwayDefensiveNotesChange={(val) => { setAwayDefensiveNotes(val); setHasUnsavedChanges(true); }}
-                        onAwayOffensiveNotesChange={(val) => { setAwayOffensiveNotes(val); setHasUnsavedChanges(true); }}
-                        tags={tags || []} // Ensure tags is never undefined
-                        onTagsChange={(newTags) => {
-                            console.log('Analysis.tsx: onTagsChange triggered', newTags);
-                            setTags(newTags);
-                            setHasUnsavedChanges(true);
-                        }}
-                        autoSaveStatus={saveStatus === 'success' ? 'saved' : saveStatus === 'loading' ? 'saving' : saveStatus === 'idle' ? 'idle' : 'error'}
+                        onAwayDefensiveNotesChange={(val) => handleNoteSave('away', val)}
+                        onAwayOffensiveNotesChange={(val) => handleNoteSave('away', val)}
+                        autoSaveStatus={autoSaveStatus}
+                        tags={tags}
+                        onTagsChange={setTags}
+                        activeTab={analysisSidebarTab}
+                        onTabChange={setAnalysisSidebarTab}
                     />
 
                     {/* Events Sidebar (slides from left) */}
@@ -1415,12 +1423,9 @@ function Analysis() {
                         />
                     )}
 
-
-
                 </>
-            )
-            }
-        </AnalysisLayout >
+            )}
+        </AnalysisLayout>
     );
 };
 
