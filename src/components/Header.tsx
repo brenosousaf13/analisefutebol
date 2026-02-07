@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FolderOpen, LogOut, User, Menu, X, PlusCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -154,18 +155,27 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                 {isAnalysisPage && <ThemeToggle />}
             </div>
 
-            {/* Sidebar Overlay */}
-            {isMenuOpen && (
-                <div className="fixed inset-0 z-[60]">
+            {/* Sidebar Overlay - Rendered outside the header flow conceptually via fixed positioning */}
+            {createPortal(
+                <div className={`fixed inset-0 z-[100] ${isMenuOpen ? 'visible' : 'invisible'}`}>
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className={`
+                        absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out
+                        ${isMenuOpen ? 'opacity-100' : 'opacity-0'}
+                    `}
                         onClick={() => setIsMenuOpen(false)}
                     />
 
                     {/* Sidebar Drawer */}
-                    <div className="absolute top-0 left-0 bottom-0 w-[280px] sm:w-72 bg-nav-dark border-r border-gray-700 shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
-                        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+                    <div className={`
+                    absolute top-0 left-0 bottom-0 w-[280px] sm:w-72 
+                    bg-[#1a1f2e] border-r border-gray-700 shadow-2xl 
+                    flex flex-col 
+                    transform transition-transform duration-300 ease-in-out
+                    ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+                `}>
+                        <div className="p-4 border-b border-gray-700 flex items-center justify-between shrink-0">
                             <h2 className="text-white font-bold text-lg">Menu</h2>
                             <button
                                 onClick={() => setIsMenuOpen(false)}
@@ -175,7 +185,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                             </button>
                         </div>
 
-                        <nav className="flex-1 p-4 flex flex-col gap-2">
+                        <nav className="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
                             {menuItems.map((item) => {
                                 const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
                                 return (
@@ -195,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                             })}
                         </nav>
 
-                        <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+                        <div className="p-4 border-t border-gray-700 bg-gray-800/50 shrink-0">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white border border-gray-600 shrink-0">
@@ -216,7 +226,8 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </header>
     );

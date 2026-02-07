@@ -159,10 +159,19 @@ export default function SharedAnalysis() {
                             awayArrows={{ 'full_away': data.awayArrowsDef || [] }}
                             awayRectangles={{ 'full_away': data.awayRectanglesDef || [] }}
 
-                            homeCoachName={data.homeCoach}
-                            awayCoachName={data.awayCoach}
+                            homeCoachName={data.homeCoach || ''}
+                            awayCoachName={data.awayCoach || ''}
                             onHomeCoachChange={() => { }}
                             onAwayCoachChange={() => { }}
+
+                            ballPositions={{
+                                homeDef: data.homeBallDef || { x: 50, y: 50 },
+                                homeOff: data.homeBallOff || { x: 50, y: 50 },
+                                awayDef: data.awayBallDef || { x: 50, y: 50 },
+                                awayOff: data.awayBallOff || { x: 50, y: 50 }
+                            }}
+                            onBallMove={() => { }}
+                            onShare={() => { }}
 
                             onPlayerMove={() => { }}
                             onPlayerClick={() => { }}

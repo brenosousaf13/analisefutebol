@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
 import AnalysisLayout from '../layouts/AnalysisLayout';
-import { analysisService } from '../services/analysisService';
+import { analysisService, type AnalysisBoard } from '../services/analysisService';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
@@ -22,7 +22,7 @@ import EventsExpansionModal from '../components/EventsExpansionModal';
 import AnalysisSidebar from '../components/AnalysisSidebar';
 import EventsSidebar from '../components/EventsSidebar';
 import ColorPickerModal from '../components/ColorPickerModal';
-// import { CoachNameDisplay } from '../components/CoachNameDisplay';
+import { AnalysisTabs } from '../components/AnalysisTabs';
 
 function FullAnalysisPage() {
     const navigate = useNavigate();
@@ -52,7 +52,11 @@ function FullAnalysisPage() {
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    // Data State (Single Source of Truth for Full Mode)
+    // --- Boards State ---
+    const [boards, setBoards] = useState<AnalysisBoard[]>([]);
+    const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+
+    // Data State (Single Source of Truth for CURRENT Board)
     const [homePlayersDef, setHomePlayersDef] = useState<Player[]>([]);
     const [homePlayersOff, setHomePlayersOff] = useState<Player[]>([]);
     const [awayPlayersDef, setAwayPlayersDef] = useState<Player[]>([]);
@@ -119,6 +123,9 @@ function FullAnalysisPage() {
     const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
+    // Initial Load - Ref to avoid cyclic dependencies in useEffect
+    const boardsRef = useRef<AnalysisBoard[]>([]);
+
     // Initial Load
     useEffect(() => {
         if (routeAnalysisId && routeAnalysisId !== 'new') {
@@ -133,10 +140,12 @@ function FullAnalysisPage() {
                         awayTeam: data.awayTeam,
                         homeTeamLogo: data.homeTeamLogo,
                         awayTeamLogo: data.awayTeamLogo,
+                        competition: data.competition, // Fixed: Added competition from data if available, but getAnalysis might not prevent it. Checking locationState fallback.
                         date: data.matchDate,
                         time: data.matchTime
                     }));
 
+                    // Load Default Board to State
                     setHomePlayersDef(data.homePlayersDef);
                     setHomePlayersOff(data.homePlayersOff);
                     setAwayPlayersDef(data.awayPlayersDef);
@@ -157,10 +166,8 @@ function FullAnalysisPage() {
 
                     setHomeDefensiveNotes(data.homeDefensiveNotes || '');
                     setHomeOffensiveNotes(data.homeOffensiveNotes || '');
-                    // setHomeBenchNotes(data.homeBenchNotes || '');
                     setAwayDefensiveNotes(data.awayDefensiveNotes || '');
                     setAwayOffensiveNotes(data.awayOffensiveNotes || '');
-                    // setAwayBenchNotes(data.awayBenchNotes || '');
 
                     setHomeCoach(data.homeCoach || '');
                     setAwayCoach(data.awayCoach || '');
@@ -182,13 +189,257 @@ function FullAnalysisPage() {
                     setHomeRectangles({ 'full_home': hRectsDef });
                     setAwayRectangles({ 'full_away': aRectsDef });
 
-                    setTags(data.tags || []); // Load tags
+                    setTags(data.tags || []);
+
+                    // Load Boards
+                    if (data.boards) {
+                        setBoards(data.boards);
+                        boardsRef.current = data.boards;
+                    }
 
                     setHasUnsavedChanges(false);
                 }
             }).finally(() => setLoading(false));
         }
     }, [routeAnalysisId]);
+
+    // --- Board Management ---
+
+    // Helper to capture current state into a Board object
+    const captureCurrentStateAsBoard = (id: string, title?: string, order?: number): AnalysisBoard => {
+        // Find existing board to preserve title/order if not provided
+        const existing = boards.find(b => b.id === id);
+
+        return {
+            id,
+            title: title || existing?.title || 'Sem Título',
+            order: order !== undefined ? order : existing?.order || 0,
+            homePlayersDef,
+            homePlayersOff,
+            awayPlayersDef,
+            awayPlayersOff,
+            homeSubstitutes,
+            awaySubstitutes,
+            homeArrowsDef: homeArrows['full_home'] || [], // Simplified: using 'full_home' key
+            homeArrowsOff: [], // TODO: Support arrows per phase fully in UI if not already
+            awayArrowsDef: awayArrows['full_away'] || [],
+            awayArrowsOff: [],
+            homeRectanglesDef: homeRectangles['full_home'] || [],
+            homeRectanglesOff: [],
+            awayRectanglesDef: awayRectangles['full_away'] || [],
+            awayRectanglesOff: [],
+            homeBallDef,
+            homeBallOff,
+            awayBallDef,
+            awayBallOff
+        };
+    };
+
+    const saveCurrentBoardState = () => {
+        if (activeBoardId === null) {
+            // Default board is not stored in 'boards' state, it lives in the component state
+            // and is pushed to 'boards' only when switching AWAY from it? 
+            // NO. The 'boards' array only contains ADDITIONAL boards. 
+            // The default board is the root state.
+            // So we don't need to do anything here for the default board, 
+            // as the component state IS the default board state.
+            return;
+        }
+
+        // If we are on a custom board, update it in the boards array
+        setBoards(prev => prev.map(b =>
+            b.id === activeBoardId ? captureCurrentStateAsBoard(activeBoardId) : b
+        ));
+    };
+
+    const handleSwitchBoard = (newBoardId: string | null) => {
+        if (activeBoardId === newBoardId) return;
+
+        // 1. Save current state
+        if (activeBoardId !== null) {
+            // We are leaving a custom board, save it to the array
+            const currentBoard = boards.find(b => b.id === activeBoardId);
+            if (currentBoard) {
+                const updatedBoard = captureCurrentStateAsBoard(activeBoardId);
+                setBoards(prev => prev.map(b => b.id === activeBoardId ? updatedBoard : b));
+            }
+        } else {
+            // We are leaving the Default board. 
+            // We need to persist the "Root State" somehow?
+            // Actually, the component state variables (homePlayersDef, etc.) *ARE* the visual representation.
+            // When we switch to a board, we overwrite these variables.
+            // So we MUST save the Default Board state if we want to return to it.
+            // BUT: The architecture implies 'boards' are separate entities.
+            // The "Default" board is just a conceptual view of the root items.
+            // To support switching back and forth, I need to store the "Default" board state in a ref or a special board entry?
+            // Or better: The `AnalysisData` defines root items. 
+            // When I switch To a board, I overwrite the UI.
+            // When I switch Back to Null, I need to restore the UI from... where?
+            // I need to store the "Default" board in a Ref or State when I leave it.
+            defaultBoardRef.current = {
+                homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+                homeSubstitutes, awaySubstitutes,
+                homeArrowsDef: homeArrows['full_home'], homeArrowsOff: [],
+                awayArrowsDef: awayArrows['full_away'], awayArrowsOff: [],
+                homeRectanglesDef: homeRectangles['full_home'], homeRectanglesOff: [],
+                awayRectanglesDef: awayRectangles['full_away'], awayRectanglesOff: [],
+                homeBallDef, homeBallOff, awayBallDef, awayBallOff
+            };
+        }
+
+        // 2. Load new state
+        if (newBoardId === null) {
+            // Restore Default Board
+            const def = defaultBoardRef.current;
+            if (def) {
+                setHomePlayersDef(def.homePlayersDef);
+                setHomePlayersOff(def.homePlayersOff);
+                setAwayPlayersDef(def.awayPlayersDef);
+                setAwayPlayersOff(def.awayPlayersOff);
+                setHomeSubstitutes(def.homeSubstitutes);
+                setAwaySubstitutes(def.awaySubstitutes);
+
+                setHomeArrows({ 'full_home': def.homeArrowsDef });
+                setAwayArrows({ 'full_away': def.awayArrowsDef });
+                setHomeRectangles({ 'full_home': def.homeRectanglesDef });
+                setAwayRectangles({ 'full_away': def.awayRectanglesDef });
+
+                setHomeBallDef(def.homeBallDef || { x: 50, y: 50 });
+                setHomeBallOff(def.homeBallOff || { x: 50, y: 50 });
+                setAwayBallDef(def.awayBallDef || { x: 50, y: 50 });
+                setAwayBallOff(def.awayBallOff || { x: 50, y: 50 });
+            }
+        } else {
+            const board = boards.find(b => b.id === newBoardId);
+            if (board) {
+                setHomePlayersDef(board.homePlayersDef);
+                setHomePlayersOff(board.homePlayersOff);
+                setAwayPlayersDef(board.awayPlayersDef);
+                setAwayPlayersOff(board.awayPlayersOff);
+                setHomeSubstitutes(board.homeSubstitutes);
+                setAwaySubstitutes(board.awaySubstitutes);
+
+                setHomeArrows({ 'full_home': board.homeArrowsDef });
+                setAwayArrows({ 'full_away': board.awayArrowsDef });
+                setHomeRectangles({ 'full_home': board.homeRectanglesDef });
+                setAwayRectangles({ 'full_away': board.awayRectanglesDef });
+
+                setHomeBallDef(board.homeBallDef || { x: 50, y: 50 });
+                setHomeBallOff(board.homeBallOff || { x: 50, y: 50 });
+                setAwayBallDef(board.awayBallDef || { x: 50, y: 50 });
+                setAwayBallOff(board.awayBallOff || { x: 50, y: 50 });
+            }
+        }
+
+        setActiveBoardId(newBoardId);
+        setHasUnsavedChanges(true); // Switch implies interaction/view change, usually good to ensure save sync or just manual save. 
+        // Actually, simply switching view shouldn't trigger "Unsaved Changes" flag unless we modified data.
+        // But since we are swapping global state, it's safer to flag it or manage "dirty" states per board.
+        // For now, let's NOT flag it just for reading.
+        // But wait: I just saved the previous board to `boards` state. That IS a change.
+    };
+
+    // Store default board state temporarily when switching tabs
+    const defaultBoardRef = useRef<{
+        homePlayersDef: Player[]; homePlayersOff: Player[];
+        awayPlayersDef: Player[]; awayPlayersOff: Player[];
+        homeSubstitutes: Player[]; awaySubstitutes: Player[];
+        homeArrowsDef: Arrow[]; homeArrowsOff: Arrow[];
+        awayArrowsDef: Arrow[]; awayArrowsOff: Arrow[];
+        homeRectanglesDef: Rectangle[]; homeRectanglesOff: Rectangle[];
+        awayRectanglesDef: Rectangle[]; awayRectanglesOff: Rectangle[];
+        homeBallDef?: { x: number, y: number };
+        homeBallOff?: { x: number, y: number };
+        awayBallDef?: { x: number, y: number };
+        awayBallOff?: { x: number, y: number };
+    } | null>(null);
+
+    // Initialize defaultBoardRef with initial state if needed
+    useEffect(() => {
+        if (!defaultBoardRef.current && homePlayersDef.length > 0) {
+            // Basic init for safety, though handleSwitchBoard logic covers it usually
+            // If we start and immediately switch, this might be needed.
+            // Ideally we capture it on the fly.
+        }
+    }, [homePlayersDef]);
+
+
+    const handleAddBoard = () => {
+        // Save current first
+        saveCurrentBoardState();
+        if (activeBoardId === null) {
+            defaultBoardRef.current = {
+                homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+                homeSubstitutes, awaySubstitutes,
+                homeArrowsDef: homeArrows['full_home'], homeArrowsOff: [],
+                awayArrowsDef: awayArrows['full_away'], awayArrowsOff: [],
+                homeRectanglesDef: homeRectangles['full_home'], homeRectanglesOff: [],
+                awayRectanglesDef: awayRectangles['full_away'], awayRectanglesOff: [],
+                homeBallDef, homeBallOff, awayBallDef, awayBallOff
+            };
+        }
+
+        const newBoard: AnalysisBoard = {
+            id: uuidv4(),
+            title: `Cena ${boards.length + 1}`,
+            order: boards.length + 1,
+            // Initialize with Clean State or Copy? User said "Tabs", like Browser. 
+            // Browser tabs start blank (New Tab) or duplicate.
+            // Let's Clean State but keep players? No, players are part of the scene.
+            // But we need the SQUADS. 
+            // In this app, "players" in state are positioned players.
+            // Let's copy the SQUADS from the default/current board but reset positions?
+            // Or simpler: Deep copy current board as starting point. This is often more useful in analysis.
+            // "Duplicate Tab".
+            // Let's start with a duplicate of the current view for continuity.
+            homePlayersDef: [...homePlayersDef],
+            homePlayersOff: [...homePlayersOff],
+            awayPlayersDef: [...awayPlayersDef],
+            awayPlayersOff: [...awayPlayersOff],
+            homeSubstitutes: [...homeSubstitutes],
+            awaySubstitutes: [...awaySubstitutes],
+            homeArrowsDef: [], // Clear drawings
+            homeArrowsOff: [],
+            awayArrowsDef: [],
+            awayArrowsOff: [],
+            homeRectanglesDef: [],
+            homeRectanglesOff: [],
+            awayRectanglesDef: [],
+            awayRectanglesOff: [],
+            homeBallDef: { ...homeBallDef },
+            homeBallOff: { ...homeBallOff },
+            awayBallDef: { ...awayBallDef },
+            awayBallOff: { ...awayBallOff }
+        };
+
+        setBoards(prev => [...prev, newBoard]);
+
+        // Switch to new board
+        // Logic similar to switch:
+        setActiveBoardId(newBoard.id);
+
+        // Load into UI (It's a copy of current minus drawings, so we just clear drawings)
+        setHomeArrows({ 'full_home': [] });
+        setAwayArrows({ 'full_away': [] });
+        setHomeRectangles({ 'full_home': [] });
+        setAwayRectangles({ 'full_away': [] });
+        setHasUnsavedChanges(true);
+        toast.success('Nova cena criada');
+    };
+
+    const handleUpdateBoardTitle = (id: string, title: string) => {
+        setBoards(prev => prev.map(b => b.id === id ? { ...b, title } : b));
+        setHasUnsavedChanges(true);
+    };
+
+    const handleDeleteBoard = (id: string) => {
+        if (activeBoardId === id) {
+            handleSwitchBoard(null); // Switch to default before deleting
+        }
+        setBoards(prev => prev.filter(b => b.id !== id));
+        setHasUnsavedChanges(true);
+    };
+
 
     // Handlers
     const handlePlayerMove = (id: number, pos: { x: number, y: number }, team: 'home' | 'away', phase: string) => {
@@ -285,6 +536,33 @@ function FullAnalysisPage() {
     const handleSave = async () => {
         setSaveStatus('loading');
         try {
+            // Must capture current board state before saving
+            let finalBoards = [...boards];
+            let finalDefaultBoard = defaultBoardRef.current;
+
+            if (activeBoardId !== null) {
+                // Update active board in list
+                const currentBoard = captureCurrentStateAsBoard(activeBoardId);
+                finalBoards = finalBoards.map(b => b.id === activeBoardId ? currentBoard : b);
+
+                // For Default Board data, we use the ref (if we previously switched away from it)
+                // OR we have to trust that if we never switched away, the state variables ARE the default board.
+                // Wait, if activeBoardId !== null, then the state variables are NOT the default board.
+                // So we use defaultBoardRef.current.
+                if (!finalDefaultBoard) {
+                    // Should not happen if we switched cleanly? 
+                    // Logic gap: If we load directly into a custom board (not implemented yet, defaulting to null),
+                    // defaultBoardRef might be empty. 
+                    // But we init with activeBoardId = null.
+                }
+            } else {
+                // Active Board IS Default. 
+                // So state variables ARE the default board.
+                // WE DO NOT need to look at defaultBoardRef.
+                // We just construct the payload from state.
+            }
+
+            // Construct Payload
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const data: any = {
                 id: currentAnalysisId,
@@ -296,7 +574,7 @@ function FullAnalysisPage() {
                 home_score: homeScore,
                 away_score: awayScore,
 
-                // Detailed Notes (Legacy/Specific)
+                // Detailed Notes
                 notasCasa: notasCasa,
                 notasVisitante,
                 notasVisitanteUpdatedAt,
@@ -316,32 +594,39 @@ function FullAnalysisPage() {
                 awayCoach,
                 tipo: 'analise_completa',
 
-                homePlayersDef,
-                homePlayersOff,
-                awayPlayersDef,
-                awayPlayersOff,
-                homeSubstitutes,
-                awaySubstitutes,
-                homeBallDef,
-                homeBallOff,
-                awayBallDef,
-                awayBallOff,
+                // Default Board Items (Either current state OR from Ref)
+                homePlayersDef: activeBoardId === null ? homePlayersDef : finalDefaultBoard?.homePlayersDef || [],
+                homePlayersOff: activeBoardId === null ? homePlayersOff : finalDefaultBoard?.homePlayersOff || [],
+                awayPlayersDef: activeBoardId === null ? awayPlayersDef : finalDefaultBoard?.awayPlayersDef || [],
+                awayPlayersOff: activeBoardId === null ? awayPlayersOff : finalDefaultBoard?.awayPlayersOff || [],
+                homeSubstitutes: activeBoardId === null ? homeSubstitutes : finalDefaultBoard?.homeSubstitutes || [],
+                awaySubstitutes: activeBoardId === null ? awaySubstitutes : finalDefaultBoard?.awaySubstitutes || [],
 
-                homeArrowsDef: homeArrows['full_home'],
+                homeBallDef: activeBoardId === null ? homeBallDef : finalDefaultBoard?.homeBallDef,
+                homeBallOff: activeBoardId === null ? homeBallOff : finalDefaultBoard?.homeBallOff,
+                awayBallDef: activeBoardId === null ? awayBallDef : finalDefaultBoard?.awayBallDef,
+                awayBallOff: activeBoardId === null ? awayBallOff : finalDefaultBoard?.awayBallOff,
+
+                homeArrowsDef: activeBoardId === null ? homeArrows['full_home'] : finalDefaultBoard?.homeArrowsDef || [],
                 homeArrowsOff: [],
-                awayArrowsDef: awayArrows['full_away'],
+                awayArrowsDef: activeBoardId === null ? awayArrows['full_away'] : finalDefaultBoard?.awayArrowsDef || [],
                 awayArrowsOff: [],
 
-                homeRectanglesDef: homeRectangles['full_home'],
+                homeRectanglesDef: activeBoardId === null ? homeRectangles['full_home'] : finalDefaultBoard?.homeRectanglesDef || [],
                 homeRectanglesOff: [],
-                awayRectanglesDef: awayRectangles['full_away'],
+                awayRectanglesDef: activeBoardId === null ? awayRectangles['full_away'] : finalDefaultBoard?.awayRectanglesDef || [],
                 awayRectanglesOff: [],
+
                 events,
-                tags: tags || [] // Include tags
+                tags: tags || [],
+
+                // NEW: Boards
+                boards: finalBoards
             };
 
             const savedId = await analysisService.saveAnalysis(data);
             setCurrentAnalysisId(savedId);
+            setBoards(finalBoards); // Update state with synchronized boards
             setSaveStatus('success');
             setHasUnsavedChanges(false);
 
@@ -454,6 +739,17 @@ function FullAnalysisPage() {
             matchInfo={matchInfo}
             onHeaderTeamClick={handleTeamClick}
         >
+            <div className="z-20 bg-gray-900 border-b border-gray-800">
+                <AnalysisTabs
+                    boards={boards}
+                    activeBoardId={activeBoardId}
+                    onSwitchBoard={handleSwitchBoard}
+                    onAddBoard={handleAddBoard}
+                    onUpdateBoardTitle={handleUpdateBoardTitle}
+                    onDeleteBoard={handleDeleteBoard}
+                />
+            </div>
+
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center bg-gray-900">
                     <Loader2 className="w-12 h-12 text-green-500 animate-spin mb-4" />

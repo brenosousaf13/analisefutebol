@@ -296,7 +296,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const playerNotes = playersToRender.reduce((acc, p) => (p as any).note ? ({ ...acc, [p.id]: (p as any).note }) : acc, {} as Record<number, string>);
 
     return (
-        <div className="flex flex-1 h-full overflow-hidden relative bg-panel-dark" style={{ height: 'calc(100vh - 64px)' }}>
+        <div className="flex flex-1 h-full overflow-hidden relative bg-panel-dark">
 
             {/* LEFT COLUMN: HOME */}
             <TeamColumn
