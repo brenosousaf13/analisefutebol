@@ -871,79 +871,111 @@ export const analysisService = {
 
         if (error || !analysis) return null;
 
-        // Fetch related data (public policies allow this if token matches)
         const id = analysis.id;
+
+        // Fetch Boards
+        const { data: boardsData } = await supabase
+            .from('analysis_boards')
+            .select('*')
+            .eq('analysis_id', id)
+            .order('order', { ascending: true });
+
+        // Fetch all items
         const { data: players } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
         const { data: arrows } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
         const { data: rectangles } = await supabase.from('analysis_rectangles').select('*').eq('analysis_id', id);
 
-        // Same mapping logic as getAnalysis...
-        // Reuse mapping logic by extracting a private helper function? 
-        // For now, I'll duplicate the mapping to avoid refactoring risk, 
-        // or I can call a shared mapper if I create one.
-        // Let's duplicate carefully to ensure safety.
+        // Helper to process items for a specific board (or null for default)
+        const processItems = (boardId: string | null) => {
+            const homePlayersDef: Player[] = [];
+            const homePlayersOff: Player[] = [];
+            const awayPlayersDef: Player[] = [];
+            const awayPlayersOff: Player[] = [];
+            const homeSubstitutes: Player[] = [];
+            const awaySubstitutes: Player[] = [];
 
-        const homePlayersDef: Player[] = [];
-        const homePlayersOff: Player[] = [];
-        const awayPlayersDef: Player[] = [];
-        const awayPlayersOff: Player[] = [];
-        const homeSubstitutes: Player[] = [];
-        const awaySubstitutes: Player[] = [];
+            players?.filter(p => p.board_id === boardId).forEach(p => {
+                const playerObj: Player = {
+                    id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note,
+                    color: p.color // Ensure color is passed if saved
+                };
+                const variant = p.variant || 'defensive';
+                if (p.team === 'home') {
+                    if (p.type === 'field') {
+                        if (variant === 'defensive') homePlayersDef.push(playerObj);
+                        else homePlayersOff.push(playerObj);
+                    } else homeSubstitutes.push(playerObj);
+                } else {
+                    if (p.type === 'field') {
+                        if (variant === 'defensive') awayPlayersDef.push(playerObj);
+                        else awayPlayersOff.push(playerObj);
+                    } else awaySubstitutes.push(playerObj);
+                }
+            });
 
-        players?.forEach(p => {
-            const playerObj: Player = {
-                id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note
+            const homeArrowsDef: Arrow[] = [];
+            const homeArrowsOff: Arrow[] = [];
+            const awayArrowsDef: Arrow[] = [];
+            const awayArrowsOff: Arrow[] = [];
+
+            arrows?.filter(a => a.board_id === boardId).forEach(a => {
+                const arrowObj: Arrow = {
+                    id: a.id, startX: a.start_x, startY: a.start_y, endX: a.end_x, endY: a.end_y, color: a.color
+                };
+                const variant = a.variant || 'defensive';
+                if (a.team === 'home') {
+                    if (variant === 'defensive') homeArrowsDef.push(arrowObj);
+                    else homeArrowsOff.push(arrowObj);
+                } else {
+                    if (variant === 'defensive') awayArrowsDef.push(arrowObj);
+                    else awayArrowsOff.push(arrowObj);
+                }
+            });
+
+            const homeRectanglesDef: Rectangle[] = [];
+            const homeRectanglesOff: Rectangle[] = [];
+            const awayRectanglesDef: Rectangle[] = [];
+            const awayRectanglesOff: Rectangle[] = [];
+
+            rectangles?.filter(r => r.board_id === boardId).forEach(r => {
+                const rectObj: Rectangle = {
+                    id: r.id, startX: r.start_x, startY: r.start_y, endX: r.end_x, endY: r.end_y, color: r.color, opacity: r.opacity
+                };
+                const variant = r.variant || 'defensive';
+                if (r.team === 'home') {
+                    if (variant === 'defensive') homeRectanglesDef.push(rectObj);
+                    else homeRectanglesOff.push(rectObj);
+                } else {
+                    if (variant === 'defensive') awayRectanglesDef.push(rectObj);
+                    else awayRectanglesOff.push(rectObj);
+                }
+            });
+
+            return {
+                homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+                homeSubstitutes, awaySubstitutes,
+                homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
+                homeRectanglesDef, homeRectanglesOff, awayRectanglesDef, awayRectanglesOff
             };
-            const variant = p.variant || 'defensive';
-            if (p.team === 'home') {
-                if (p.type === 'field') {
-                    if (variant === 'defensive') homePlayersDef.push(playerObj);
-                    else homePlayersOff.push(playerObj);
-                } else homeSubstitutes.push(playerObj);
-            } else {
-                if (p.type === 'field') {
-                    if (variant === 'defensive') awayPlayersDef.push(playerObj);
-                    else awayPlayersOff.push(playerObj);
-                } else awaySubstitutes.push(playerObj);
-            }
-        });
+        };
 
-        const homeArrowsDef: Arrow[] = [];
-        const homeArrowsOff: Arrow[] = [];
-        const awayArrowsDef: Arrow[] = [];
-        const awayArrowsOff: Arrow[] = [];
+        // Process Default Board (Legacy/Root items)
+        const defaultBoardItems = processItems(null);
 
-        arrows?.forEach(a => {
-            const arrowObj: Arrow = {
-                id: a.id, startX: a.start_x, startY: a.start_y, endX: a.end_x, endY: a.end_y, color: a.color
+        // Process Additional Boards
+        const boards: AnalysisBoard[] = (boardsData || []).map(b => {
+            const items = processItems(b.id);
+            return {
+                id: b.id,
+                title: b.title,
+                order: b.order,
+                ...items,
+                // Ball positions defaulting to root if not saved per board (future improvement: save per board)
+                homeBallDef: analysis.home_ball_def,
+                homeBallOff: analysis.home_ball_off,
+                awayBallDef: analysis.away_ball_def,
+                awayBallOff: analysis.away_ball_off
             };
-            const variant = a.variant || 'defensive';
-            if (a.team === 'home') {
-                if (variant === 'defensive') homeArrowsDef.push(arrowObj);
-                else homeArrowsOff.push(arrowObj);
-            } else {
-                if (variant === 'defensive') awayArrowsDef.push(arrowObj);
-                else awayArrowsOff.push(arrowObj);
-            }
-        });
-
-        const homeRectanglesDef: Rectangle[] = [];
-        const homeRectanglesOff: Rectangle[] = [];
-        const awayRectanglesDef: Rectangle[] = [];
-        const awayRectanglesOff: Rectangle[] = [];
-
-        rectangles?.forEach(r => {
-            const rectObj: Rectangle = {
-                id: r.id, startX: r.start_x, startY: r.start_y, endX: r.end_x, endY: r.end_y, color: r.color, opacity: r.opacity
-            };
-            const variant = r.variant || 'defensive';
-            if (r.team === 'home') {
-                if (variant === 'defensive') homeRectanglesDef.push(rectObj);
-                else homeRectanglesOff.push(rectObj);
-            } else {
-                if (variant === 'defensive') awayRectanglesDef.push(rectObj);
-                else awayRectanglesOff.push(rectObj);
-            }
         });
 
         return {
@@ -980,10 +1012,12 @@ export const analysisService = {
             homeTeamColor: analysis.home_team_color || '#EF4444',
             awayTeamColor: analysis.away_team_color || '#3B82F6',
 
-            homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-            homeSubstitutes, awaySubstitutes,
-            homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
-            homeRectanglesDef, homeRectanglesOff, awayRectanglesDef, awayRectanglesOff,
+            // Spread default board items to root
+            ...defaultBoardItems,
+
+            // Include boards array
+            boards,
+
             events: analysis.events || [],
             homeCoach: analysis.home_coach,
             awayCoach: analysis.away_coach,

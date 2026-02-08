@@ -9,6 +9,7 @@ interface AnalysisTabsProps {
     onAddBoard: () => void;
     onUpdateBoardTitle: (boardId: string, newTitle: string) => void;
     onDeleteBoard: (boardId: string) => void;
+    readOnly?: boolean;
 }
 
 export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
@@ -17,7 +18,8 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
     onSwitchBoard,
     onAddBoard,
     onUpdateBoardTitle,
-    onDeleteBoard
+    onDeleteBoard,
+    readOnly = false
 }) => {
     const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
@@ -65,6 +67,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                     key={board.id}
                     onClick={() => onSwitchBoard(board.id)}
                     onDoubleClick={(e) => {
+                        if (readOnly) return;
                         e.stopPropagation();
                         startEditing(board);
                     }}
@@ -93,41 +96,45 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                     ) : (
                         <>
                             <span className="truncate max-w-[150px]">{board.title}</span>
-                            <div className={`flex items-center gap-1 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        startEditing(board);
-                                    }}
-                                    className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
-                                    title="Renomear"
-                                >
-                                    <Edit2 size={12} />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm('Tem certeza que deseja excluir esta aba?')) onDeleteBoard(board.id);
-                                    }}
-                                    className="p-1 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400"
-                                    title="Excluir"
-                                >
-                                    <X size={12} />
-                                </button>
-                            </div>
+                            {!readOnly && (
+                                <div className={`flex items-center gap-1 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            startEditing(board);
+                                        }}
+                                        className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                                        title="Renomear"
+                                    >
+                                        <Edit2 size={12} />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('Tem certeza que deseja excluir esta aba?')) onDeleteBoard(board.id);
+                                        }}
+                                        className="p-1 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400"
+                                        title="Excluir"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
             ))}
 
             {/* Add Tab Button */}
-            <button
-                onClick={onAddBoard}
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-700 text-gray-400 hover:text-green-400 transition-colors ml-1"
-                title="Nova Aba"
-            >
-                <Plus size={18} />
-            </button>
+            {!readOnly && (
+                <button
+                    onClick={onAddBoard}
+                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-700 text-gray-400 hover:text-green-400 transition-colors ml-1"
+                    title="Nova Aba"
+                >
+                    <Plus size={18} />
+                </button>
+            )}
         </div>
     );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Loader2, X, StickyNote } from 'lucide-react';
 import TacticalField from '../components/TacticalField';
@@ -8,6 +8,7 @@ import MatchTimeline from '../components/MatchTimeline';
 import { FullAnalysisMode } from '../components/FullAnalysisMode';
 import AnalysisSidebar from '../components/AnalysisSidebar';
 import EventsSidebar from '../components/EventsSidebar';
+import { AnalysisTabs } from '../components/AnalysisTabs';
 
 export default function SharedAnalysis() {
     const { token } = useParams<{ token: string }>();
@@ -19,6 +20,7 @@ export default function SharedAnalysis() {
     const [isAnalysisSidebarOpen, setIsAnalysisSidebarOpen] = useState(false);
     const [isEventsSidebarOpen, setIsEventsSidebarOpen] = useState(false);
     const [viewingPlayerNote, setViewingPlayerNote] = useState<{ name: string; note: string } | null>(null);
+    const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
 
     const handlePlayerDoubleClick = (player: any) => {
         if (player && player.note) {
@@ -45,6 +47,64 @@ export default function SharedAnalysis() {
             .finally(() => setLoading(false));
     }, [token]);
 
+    // Current Board Logic
+    const currentBoard = useMemo(() => {
+        if (!data) return null;
+        if (activeBoardId && data.boards) {
+            return data.boards.find(b => b.id === activeBoardId) || null;
+        }
+        return null; // Default board (root items)
+    }, [data, activeBoardId]);
+
+    const activeData = useMemo(() => {
+        if (!data) return null;
+        if (currentBoard) {
+            return {
+                homePlayersDef: currentBoard.homePlayersDef,
+                homePlayersOff: currentBoard.homePlayersOff,
+                awayPlayersDef: currentBoard.awayPlayersDef,
+                awayPlayersOff: currentBoard.awayPlayersOff,
+                homeSubstitutes: currentBoard.homeSubstitutes,
+                awaySubstitutes: currentBoard.awaySubstitutes,
+                homeArrowsDef: currentBoard.homeArrowsDef,
+                homeArrowsOff: currentBoard.homeArrowsOff,
+                awayArrowsDef: currentBoard.awayArrowsDef,
+                awayArrowsOff: currentBoard.awayArrowsOff,
+                homeRectanglesDef: currentBoard.homeRectanglesDef,
+                homeRectanglesOff: currentBoard.homeRectanglesOff,
+                awayRectanglesDef: currentBoard.awayRectanglesDef,
+                awayRectanglesOff: currentBoard.awayRectanglesOff,
+                // Ball positions (fallback to root if not in board)
+                homeBallDef: currentBoard.homeBallDef || data.homeBallDef,
+                homeBallOff: currentBoard.homeBallOff || data.homeBallOff,
+                awayBallDef: currentBoard.awayBallDef || data.awayBallDef,
+                awayBallOff: currentBoard.awayBallOff || data.awayBallOff
+            };
+        }
+        // Default (Root) Data
+        return {
+            homePlayersDef: data.homePlayersDef,
+            homePlayersOff: data.homePlayersOff,
+            awayPlayersDef: data.awayPlayersDef,
+            awayPlayersOff: data.awayPlayersOff,
+            homeSubstitutes: data.homeSubstitutes,
+            awaySubstitutes: data.awaySubstitutes,
+            homeArrowsDef: data.homeArrowsDef,
+            homeArrowsOff: data.homeArrowsOff,
+            awayArrowsDef: data.awayArrowsDef,
+            awayArrowsOff: data.awayArrowsOff,
+            homeRectanglesDef: data.homeRectanglesDef,
+            homeRectanglesOff: data.homeRectanglesOff,
+            awayRectanglesDef: data.awayRectanglesDef,
+            awayRectanglesOff: data.awayRectanglesOff,
+            homeBallDef: data.homeBallDef,
+            homeBallOff: data.homeBallOff,
+            awayBallDef: data.awayBallDef,
+            awayBallOff: data.awayBallOff
+        };
+    }, [data, currentBoard]);
+
+
     if (loading) {
         return (
             <div className="min-h-screen bg-panel-dark flex items-center justify-center">
@@ -53,7 +113,7 @@ export default function SharedAnalysis() {
         );
     }
 
-    if (error || !data) {
+    if (error || !data || !activeData) {
         return (
             <div className="min-h-screen bg-panel-dark flex items-center justify-center p-4">
                 <div className="text-center max-w-md">
@@ -72,17 +132,17 @@ export default function SharedAnalysis() {
 
     // Simple Mode Data Prep
     const currentTeamPlayers = viewTeam === 'home'
-        ? (activePhase === 'defensive' ? data.homePlayersDef : data.homePlayersOff)
-        : (activePhase === 'defensive' ? data.awayPlayersDef : data.awayPlayersOff);
+        ? (activePhase === 'defensive' ? activeData.homePlayersDef : activeData.homePlayersOff)
+        : (activePhase === 'defensive' ? activeData.awayPlayersDef : activeData.awayPlayersOff);
 
     // Fix: Ensure we correctly map simple mode arrows/rects
     const currentArrows = viewTeam === 'home'
-        ? (activePhase === 'defensive' ? data.homeArrowsDef : data.homeArrowsOff)
-        : (activePhase === 'defensive' ? data.awayArrowsDef : data.awayArrowsOff);
+        ? (activePhase === 'defensive' ? activeData.homeArrowsDef : activeData.homeArrowsOff)
+        : (activePhase === 'defensive' ? activeData.awayArrowsDef : activeData.awayArrowsOff);
 
     const currentRectangles = viewTeam === 'home'
-        ? (activePhase === 'defensive' ? data.homeRectanglesDef : data.homeRectanglesOff) // Assume simple mode stores flat arrays or mapped properly
-        : (activePhase === 'defensive' ? data.awayRectanglesDef : data.awayRectanglesOff);
+        ? (activePhase === 'defensive' ? activeData.homeRectanglesDef : activeData.homeRectanglesOff) // Assume simple mode stores flat arrays or mapped properly
+        : (activePhase === 'defensive' ? activeData.awayRectanglesDef : activeData.awayRectanglesOff);
 
     // Notes for Simple Mode
     const teamColor = viewTeam === 'home' ? data.homeTeamColor : data.awayTeamColor;
@@ -93,7 +153,7 @@ export default function SharedAnalysis() {
     return (
         <div className="min-h-screen bg-panel-dark text-white flex flex-col">
             {/* Header */}
-            <header className="bg-nav-dark border-b border-gray-800 p-4 shrink-0">
+            <header className="bg-nav-dark border-b border-gray-800 p-4 shrink-0 z-40 relative">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div>
@@ -137,6 +197,21 @@ export default function SharedAnalysis() {
                 </div>
             </header>
 
+            {/* Analysis Tabs (if multiple) */}
+            {isFullMode && (data.boards?.length || 0) > 0 && (
+                <div className="border-b border-gray-700 bg-gray-900 px-4 pt-2 shrink-0">
+                    <AnalysisTabs
+                        boards={data.boards || []}
+                        activeBoardId={activeBoardId}
+                        onSwitchBoard={setActiveBoardId}
+                        onAddBoard={() => { }} // Read only
+                        onUpdateBoardTitle={() => { }} // Read only
+                        onDeleteBoard={() => { }} // Read only
+                        readOnly={true}
+                    />
+                </div>
+            )}
+
             {/* Main Content */}
             <main className={`flex-1 overflow-y-auto ${isFullMode ? 'flex flex-col' : 'p-4 lg:p-6'}`}>
                 {isFullMode ? (
@@ -147,17 +222,17 @@ export default function SharedAnalysis() {
                             homeTeamColor={data.homeTeamColor || '#EF4444'}
                             awayTeamColor={data.awayTeamColor || '#3B82F6'}
 
-                            homePlayersDef={data.homePlayersDef}
-                            homePlayersOff={data.homePlayersOff}
-                            homeSubstitutes={data.homeSubstitutes || []}
-                            homeArrows={{ 'full_home': data.homeArrowsDef || [] }}
-                            homeRectangles={{ 'full_home': data.homeRectanglesDef || [] }}
+                            homePlayersDef={activeData.homePlayersDef}
+                            homePlayersOff={activeData.homePlayersOff}
+                            homeSubstitutes={activeData.homeSubstitutes || []}
+                            homeArrows={{ 'full_home': activeData.homeArrowsDef || [] }}
+                            homeRectangles={{ 'full_home': activeData.homeRectanglesDef || [] }}
 
-                            awayPlayersDef={data.awayPlayersDef}
-                            awayPlayersOff={data.awayPlayersOff}
-                            awaySubstitutes={data.awaySubstitutes || []}
-                            awayArrows={{ 'full_away': data.awayArrowsDef || [] }}
-                            awayRectangles={{ 'full_away': data.awayRectanglesDef || [] }}
+                            awayPlayersDef={activeData.awayPlayersDef}
+                            awayPlayersOff={activeData.awayPlayersOff}
+                            awaySubstitutes={activeData.awaySubstitutes || []}
+                            awayArrows={{ 'full_away': activeData.awayArrowsDef || [] }}
+                            awayRectangles={{ 'full_away': activeData.awayRectanglesDef || [] }}
 
                             homeCoachName={data.homeCoach || ''}
                             awayCoachName={data.awayCoach || ''}
@@ -165,10 +240,10 @@ export default function SharedAnalysis() {
                             onAwayCoachChange={() => { }}
 
                             ballPositions={{
-                                homeDef: data.homeBallDef || { x: 50, y: 50 },
-                                homeOff: data.homeBallOff || { x: 50, y: 50 },
-                                awayDef: data.awayBallDef || { x: 50, y: 50 },
-                                awayOff: data.awayBallOff || { x: 50, y: 50 }
+                                homeDef: activeData.homeBallDef || { x: 50, y: 50 },
+                                homeOff: activeData.homeBallOff || { x: 50, y: 50 },
+                                awayDef: activeData.awayBallDef || { x: 50, y: 50 },
+                                awayOff: activeData.awayBallOff || { x: 50, y: 50 }
                             }}
                             onBallMove={() => { }}
                             onShare={() => { }}
