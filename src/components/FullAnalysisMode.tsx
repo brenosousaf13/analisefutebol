@@ -202,7 +202,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         onCoachChange?: (name: string) => void,
         onTeamClick?: () => void
     }) => (
-        <div className="h-full flex flex-col border-r border-l border-gray-800 bg-nav-dark" style={{ width: '18%' }}>
+        <div className="flex flex-col border-r border-l border-gray-800 bg-nav-dark w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden" >
             {/* Header */}
             <div className="p-4 border-b border-gray-700">
                 <h3
@@ -296,7 +296,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const playerNotes = playersToRender.reduce((acc, p) => (p as any).note ? ({ ...acc, [p.id]: (p as any).note }) : acc, {} as Record<number, string>);
 
     return (
-        <div className="flex flex-1 h-full overflow-hidden relative bg-panel-dark">
+        <div className="flex flex-col lg:flex-row flex-1 h-full overflow-y-auto lg:overflow-hidden relative bg-panel-dark">
 
             {/* LEFT COLUMN: HOME */}
             <TeamColumn
@@ -313,7 +313,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             />
 
             {/* CENTER: FIELD */}
-            <div className="flex flex-col flex-1 h-full relative" style={{ width: '64%' }}>
+            <div className="flex flex-col w-full lg:w-[64%] h-auto lg:h-full relative shrink-0 order-1 lg:order-none">
 
                 {/* Switcher & Header & Toolbar Trigger */}
                 <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-30 shrink-0 relative">
