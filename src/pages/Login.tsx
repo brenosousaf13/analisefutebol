@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Check, Shield, User, Calendar, FileText, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { validateCPF } from '../utils/cpfValidation';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -119,12 +120,21 @@ const Login: React.FC = () => {
         setAuthError(null);
     };
 
+
+
     const validateStep1 = () => {
         const newErrors: Record<string, string> = {};
         if (!formData.firstName) newErrors.firstName = 'Nome é obrigatório';
         if (!formData.lastName) newErrors.lastName = 'Sobrenome é obrigatório';
         if (!formData.birthDate || formData.birthDate.length < 10) newErrors.birthDate = 'Data inválida';
-        if (!formData.cpf || formData.cpf.length < 14) newErrors.cpf = 'CPF inválido';
+
+        // CPF Validation
+        if (!formData.cpf) {
+            newErrors.cpf = 'CPF é obrigatório';
+        } else if (!validateCPF(formData.cpf)) {
+            newErrors.cpf = 'CPF inválido';
+        }
+
         if (!formData.phone || formData.phone.length < 15) newErrors.phone = 'Celular inválido';
 
         setErrors(newErrors);
