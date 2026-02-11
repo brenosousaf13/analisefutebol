@@ -6,7 +6,7 @@ import BenchArea from './BenchArea';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
-import { Eye, EyeOff, Menu, X } from 'lucide-react';
+import { Eye, EyeOff, Menu, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
 
 interface FullAnalysisModeProps {
@@ -130,6 +130,13 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const [showHomePlayers, setShowHomePlayers] = useState(true);
     const [showAwayPlayers, setShowAwayPlayers] = useState(true);
 
+    // Mobile specific: Expansion state
+    const [mobileExpandedTeam, setMobileExpandedTeam] = useState<'home' | 'away' | null>(null);
+
+    const toggleMobileExpansion = (team: 'home' | 'away') => {
+        setMobileExpandedTeam(prev => prev === team ? null : team);
+    };
+
     // Derived Data
     const playersToRender = useMemo(() => {
         const list: Player[] = [];
@@ -188,7 +195,9 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         align,
         coachName,
         onCoachChange,
-        onTeamClick
+        onTeamClick,
+        isExpandedOnMobile,
+        onToggleMobileExpansion
     }: {
         name: string,
         players: Player[],
@@ -200,21 +209,43 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         align?: 'left' | 'right',
         coachName?: string,
         onCoachChange?: (name: string) => void,
-        onTeamClick?: () => void
+        onTeamClick?: () => void,
+        isExpandedOnMobile?: boolean,
+        onToggleMobileExpansion?: () => void
     }) => (
         <div className="flex flex-col border-r border-l border-gray-800 bg-nav-dark w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden" >
             {/* Header */}
-            <div className="p-4 border-b border-gray-700">
-                <h3
-                    className={`text-white font-bold uppercase text-sm tracking-wider mb-1 px-1 border-l-4 ${align === 'right' ? 'text-right border-l-0 border-r-4' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
-                    style={{ borderColor: color }}
-                    onClick={() => {
+            <div
+                className="p-4 border-b border-gray-700 bg-nav-dark cursor-pointer lg:cursor-default"
+                onClick={() => {
+                    // Only toggle on mobile if prop provided
+                    if (onToggleMobileExpansion && window.innerWidth < 1024) {
+                        onToggleMobileExpansion();
+                    }
+                }}
+            >
+                <div className="flex justify-between items-center">
+                    <h3
+                        className={`text-white font-bold uppercase text-sm tracking-wider mb-1 px-1 border-l-4 ${align === 'right' ? 'text-right border-l-0 border-r-4' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
+                        style={{ borderColor: color }}
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent double toggle if header clicked? Actually we want header to toggle.
+                            // But keeping existing onTeamClick logic for desktop/general
+                            onTeamClick && onTeamClick();
+                            // Also toggle mobile
+                            if (onToggleMobileExpansion && window.innerWidth < 1024) {
+                                onToggleMobileExpansion();
+                            }
+                        }}
+                    >
+                        {name}
+                    </h3>
+                    {/* Mobile Chevron */}
+                    <div className="lg:hidden text-gray-400">
+                        {isExpandedOnMobile ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
+                </div>
 
-                        onTeamClick && onTeamClick();
-                    }}
-                >
-                    {name}
-                </h3>
                 <div className={`flex items-center mt-2 ${align === 'right' ? 'justify-end' : 'justify-between'}`}>
                     {align !== 'right' && (
                         <>
@@ -223,7 +254,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                             </span>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={onToggleVisibility}
+                                    onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
                                     className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
                                     title={isVisible ? "Ocultar jogadores" : "Mostrar jogadores"}
                                 >
@@ -237,7 +268,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         <>
                             <div className="flex gap-2 mr-auto">
                                 <button
-                                    onClick={onToggleVisibility}
+                                    onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
                                     className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
                                     title={isVisible ? "Ocultar jogadores" : "Mostrar jogadores"}
                                 >
@@ -250,9 +281,13 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         </>
                     )}
                 </div>
+            </div>
+
+            {/* Collapsible Content Wrapper (Mobile) */}
+            <div className={`${isExpandedOnMobile ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-h-0 overflow-hidden`}>
 
                 {/* Coach Name directly under Header */}
-                <div className="mt-2 pt-2 border-t border-gray-700/50">
+                <div className="px-4 py-2 border-b border-gray-700/50 bg-nav-dark">
                     <CoachNameDisplay
                         coachName={coachName || ''}
                         onSave={onCoachChange || (() => { })}
@@ -261,18 +296,18 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         readOnly={readOnly}
                     />
                 </div>
-            </div>
 
-            {/* Substitutes / Bench - Taking full height now */}
-            <div className="flex flex-col p-2 flex-1 min-h-0 overflow-hidden">
-                <BenchArea
-                    players={substitutes}
-                    team={team}
-                    orientation="vertical"
-                    align={align || 'left'}
-                    onPromotePlayer={readOnly ? () => { } : (p) => onBenchPlayerClick(p, team)}
-                    onPlayerDoubleClick={onPlayerDoubleClick}
-                />
+                {/* Substitutes / Bench - Taking full height now */}
+                <div className="flex flex-col p-2 flex-1 min-h-0 overflow-hidden">
+                    <BenchArea
+                        players={substitutes}
+                        team={team}
+                        orientation="vertical"
+                        align={align || 'left'}
+                        onPromotePlayer={readOnly ? () => { } : (p) => onBenchPlayerClick(p, team)}
+                        onPlayerDoubleClick={onPlayerDoubleClick}
+                    />
+                </div>
             </div>
         </div>
     );
@@ -310,6 +345,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 coachName={homeCoachName}
                 onCoachChange={onHomeCoachChange}
                 onTeamClick={() => onHeaderTeamClick && onHeaderTeamClick('home')}
+                isExpandedOnMobile={mobileExpandedTeam === 'home'}
+                onToggleMobileExpansion={() => toggleMobileExpansion('home')}
             />
 
             {/* CENTER: FIELD */}
@@ -434,6 +471,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 coachName={awayCoachName}
                 onCoachChange={onAwayCoachChange}
                 onTeamClick={() => onHeaderTeamClick && onHeaderTeamClick('away')}
+                isExpandedOnMobile={mobileExpandedTeam === 'away'}
+                onToggleMobileExpansion={() => toggleMobileExpansion('away')}
             />
 
         </div>
