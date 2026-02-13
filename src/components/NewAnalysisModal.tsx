@@ -212,7 +212,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-[#1a1f2e] rounded-xl w-full max-w-5xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] min-h-[600px]">
+            <div className="bg-card-bg rounded-xl w-full max-w-5xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] min-h-[600px]">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-700 shrink-0">
                     <div className="flex items-center gap-3">

@@ -234,7 +234,7 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row h-screen w-full bg-[#fafafa] dark:bg-[#1a1a1a] font-sans selection:bg-emerald-500 selected:text-white overflow-hidden">
+        <div className="flex flex-col lg:flex-row h-screen w-full bg-app-bg font-sans selection:bg-emerald-500 selected:text-white overflow-hidden">
             {/* Left Panel: Immersive Visual */}
             <div className="relative hidden lg:flex w-5/12 flex-col justify-end overflow-hidden bg-[#1a1a1a] group">
                 {/* Background Image */}
@@ -268,14 +268,14 @@ const Login: React.FC = () => {
             </div>
 
             {/* Right Panel: Login Form */}
-            <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 bg-[#fafafa] relative overflow-y-auto overflow-x-hidden">
+            <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 bg-app-bg relative overflow-y-auto overflow-x-hidden">
                 {/* Mobile decorative background logic */}
-                <div className="absolute inset-0 bg-white lg:bg-[#f4f7f7] -z-10"></div>
+                <div className="absolute inset-0 bg-app-bg -z-10"></div>
 
                 {/* Abstract decorative elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
-                <div className="w-full max-w-[440px] flex flex-col gap-8 bg-white lg:p-10 lg:rounded-2xl lg:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] border border-transparent lg:border-slate-100 my-auto animate-in fade-in zoom-in-95 duration-500">
+                <div className="w-full max-w-[440px] flex flex-col gap-8 bg-card-gradient lg:p-10 lg:rounded-2xl lg:shadow-2xl border border-white/5 my-auto animate-in fade-in zoom-in-95 duration-500">
                     {/* Header */}
                     <div className="flex flex-col gap-2">
                         <div className="flex justify-center mb-6">
@@ -290,12 +290,12 @@ const Login: React.FC = () => {
                                 <Mail className="w-10 h-10 text-emerald-600" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifique seu E-mail</h2>
-                                <p className="text-gray-600 leading-relaxed">
+                                <h2 className="text-2xl font-bold text-white mb-2">Verifique seu E-mail</h2>
+                                <p className="text-gray-400 leading-relaxed">
                                     Enviamos um link de confirmação para <br />
-                                    <span className="font-semibold text-gray-900">{formData.email}</span>.
+                                    <span className="font-semibold text-white">{formData.email}</span>.
                                 </p>
-                                <p className="text-sm text-gray-500 mt-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                                <p className="text-sm text-yellow-500 mt-4 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
                                     Por favor, confirme seu cadastro clicando no link enviado antes de fazer login.
                                 </p>
                             </div>
@@ -314,7 +314,7 @@ const Login: React.FC = () => {
                         // LOGIN / REGISTER FORM
                         <>
                             <div className="text-center">
-                                <p className="text-slate-500 text-sm">
+                                <p className="text-gray-400 text-sm">
                                     {isRegistering
                                         ? (step === 1 ? "Etapa 1: Dados Pessoais" : "Etapa 2: Credenciais de Acesso")
                                         : "Entre com suas credenciais para acessar o painel."}
@@ -323,7 +323,7 @@ const Login: React.FC = () => {
 
                             {/* Auth Error Alert */}
                             {authError && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm animate-in fade-in slide-in-from-top-2">
+                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-sm animate-in fade-in slide-in-from-top-2">
                                     <AlertCircle size={16} />
                                     <span>{authError}</span>
                                 </div>
@@ -337,17 +337,17 @@ const Login: React.FC = () => {
                                         {/* Name */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nome</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Nome</span>
                                             </div>
                                             <div className="relative flex items-center">
-                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                     <User size={20} />
                                                 </div>
                                                 <input
                                                     name="firstName"
                                                     value={formData.firstName}
                                                     onChange={handleChange}
-                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.firstName ? 'border-red-500' : 'border-slate-200'}`}
+                                                    className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.firstName ? 'border-red-500' : 'border-white/5'}`}
                                                     placeholder="João"
                                                     type="text"
                                                 />
@@ -358,13 +358,13 @@ const Login: React.FC = () => {
                                         {/* Surname */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Sobrenome</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Sobrenome</span>
                                             </div>
                                             <input
                                                 name="lastName"
                                                 value={formData.lastName}
                                                 onChange={handleChange}
-                                                className={`w-full bg-slate-50 border rounded-lg py-3.5 px-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.lastName ? 'border-red-500' : 'border-slate-200'}`}
+                                                className={`w-full bg-app-bg border rounded-lg py-3.5 px-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.lastName ? 'border-red-500' : 'border-white/5'}`}
                                                 placeholder="Silva"
                                                 type="text"
                                             />
@@ -374,10 +374,10 @@ const Login: React.FC = () => {
                                         {/* Birth Date */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Nascimento</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Nascimento</span>
                                             </div>
                                             <div className="relative flex items-center">
-                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                     <Calendar size={20} />
                                                 </div>
                                                 <input
@@ -385,7 +385,7 @@ const Login: React.FC = () => {
                                                     value={formData.birthDate}
                                                     onChange={handleChange}
                                                     maxLength={10}
-                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.birthDate ? 'border-red-500' : 'border-slate-200'}`}
+                                                    className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.birthDate ? 'border-red-500' : 'border-white/5'}`}
                                                     placeholder="DD/MM/AAAA"
                                                     type="text"
                                                 />
@@ -396,10 +396,10 @@ const Login: React.FC = () => {
                                         {/* CPF */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">CPF</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">CPF</span>
                                             </div>
                                             <div className="relative flex items-center">
-                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                     <FileText size={20} />
                                                 </div>
                                                 <input
@@ -407,7 +407,7 @@ const Login: React.FC = () => {
                                                     value={formData.cpf}
                                                     onChange={handleChange}
                                                     maxLength={14}
-                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.cpf ? 'border-red-500' : 'border-slate-200'}`}
+                                                    className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.cpf ? 'border-red-500' : 'border-white/5'}`}
                                                     placeholder="000.000.000-00"
                                                     type="text"
                                                 />
@@ -418,10 +418,10 @@ const Login: React.FC = () => {
                                         {/* Phone */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Celular</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Celular</span>
                                             </div>
                                             <div className="relative flex items-center">
-                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                                                 </div>
                                                 <input
@@ -429,7 +429,7 @@ const Login: React.FC = () => {
                                                     value={formData.phone}
                                                     onChange={handleChange}
                                                     maxLength={15}
-                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-slate-200'}`}
+                                                    className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.phone ? 'border-red-500' : 'border-white/5'}`}
                                                     placeholder="(11) 99999-9999"
                                                     type="text"
                                                 />
@@ -445,17 +445,17 @@ const Login: React.FC = () => {
                                         {/* Credential ID / Email */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">E-mail</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">E-mail</span>
                                             </div>
                                             <div className="relative flex items-center">
-                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                     <Mail size={20} />
                                                 </div>
                                                 <input
                                                     name="email"
                                                     value={formData.email}
                                                     onChange={handleChange}
-                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
+                                                    className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.email ? 'border-red-500' : 'border-white/5'}`}
                                                     placeholder="analista@clube.com"
                                                     type="email"
                                                 />
@@ -467,10 +467,10 @@ const Login: React.FC = () => {
                                         {isRegistering && step === 2 && (
                                             <label className="flex flex-col gap-1.5 group">
                                                 <div className="flex justify-between">
-                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar E-mail</span>
+                                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Confirmar E-mail</span>
                                                 </div>
                                                 <div className="relative flex items-center">
-                                                    <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                         <Check size={20} />
                                                     </div>
                                                     <input
@@ -478,7 +478,7 @@ const Login: React.FC = () => {
                                                         value={formData.confirmEmail}
                                                         onChange={handleChange}
                                                         onBlur={handleBlur}
-                                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.confirmEmail ? 'border-red-500' : 'border-slate-200'}`}
+                                                        className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm ${errors.confirmEmail ? 'border-red-500' : 'border-white/5'}`}
                                                         placeholder="Confirme seu e-mail"
                                                         type="email"
                                                     />
@@ -490,27 +490,27 @@ const Login: React.FC = () => {
                                         {/* Secure Key / Password */}
                                         <label className="flex flex-col gap-1.5 group">
                                             <div className="flex justify-between">
-                                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Senha</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Senha</span>
                                                 {!isRegistering && (
-                                                    <a href="#" className="text-[11px] font-bold text-slate-400 hover:text-[#0f2124] transition-colors">ESQUECEU A SENHA?</a>
+                                                    <a href="#" className="text-[11px] font-bold text-gray-400 hover:text-white transition-colors">ESQUECEU A SENHA?</a>
                                                 )}
                                             </div>
                                             <div className="relative flex items-center">
-                                                <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                     <Lock size={20} />
                                                 </div>
                                                 <input
                                                     name="password"
                                                     value={formData.password}
                                                     onChange={handleChange}
-                                                    className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.password ? 'border-red-500' : 'border-slate-200'}`}
+                                                    className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.password ? 'border-red-500' : 'border-white/5'}`}
                                                     placeholder="••••••••"
                                                     type={showPassword ? "text" : "password"}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
+                                                    className="absolute right-3.5 text-gray-500 hover:text-emerald-500 transition-colors flex items-center cursor-pointer"
                                                 >
                                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                                 </button>
@@ -522,10 +522,10 @@ const Login: React.FC = () => {
                                         {isRegistering && step === 2 && (
                                             <label className="flex flex-col gap-1.5 group">
                                                 <div className="flex justify-between">
-                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-emerald-600 transition-colors">Confirmar Senha</span>
+                                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-focus-within:text-emerald-500 transition-colors">Confirmar Senha</span>
                                                 </div>
                                                 <div className="relative flex items-center">
-                                                    <div className="absolute left-3.5 text-slate-400 flex items-center pointer-events-none group-focus-within:text-[#0f2124] transition-colors">
+                                                    <div className="absolute left-3.5 text-gray-500 flex items-center pointer-events-none group-focus-within:text-white transition-colors">
                                                         <Check size={20} />
                                                     </div>
                                                     <input
@@ -533,14 +533,14 @@ const Login: React.FC = () => {
                                                         value={formData.confirmPassword}
                                                         onChange={handleChange}
                                                         onBlur={handleBlur}
-                                                        className={`w-full bg-slate-50 border rounded-lg py-3.5 pl-11 pr-4 text-[#0f2124] placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.confirmPassword ? 'border-red-500' : 'border-slate-200'}`}
+                                                        className={`w-full bg-app-bg border rounded-lg py-3.5 pl-11 pr-4 text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all shadow-sm tracking-widest ${errors.confirmPassword ? 'border-red-500' : 'border-white/5'}`}
                                                         placeholder="••••••••"
                                                         type={showConfirmPassword ? "text" : "password"}
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                        className="absolute right-3.5 text-slate-400 hover:text-emerald-600 transition-colors flex items-center cursor-pointer"
+                                                        className="absolute right-3.5 text-gray-500 hover:text-emerald-500 transition-colors flex items-center cursor-pointer"
                                                     >
                                                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                                     </button>
@@ -604,11 +604,11 @@ const Login: React.FC = () => {
                                                 <input
                                                     id="remember"
                                                     type="checkbox"
-                                                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-emerald-600 checked:bg-emerald-600 transition-all hover:border-emerald-600/50 focus:ring-2 focus:ring-emerald-600/20 focus:ring-offset-1"
+                                                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-600 bg-app-bg checked:border-emerald-600 checked:bg-emerald-600 transition-all hover:border-emerald-600/50 focus:ring-2 focus:ring-emerald-600/20 focus:ring-offset-1"
                                                 />
                                                 <Check className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" size={14} strokeWidth={4} />
                                             </div>
-                                            <label htmlFor="remember" className="text-sm font-medium text-slate-600 cursor-pointer select-none">
+                                            <label htmlFor="remember" className="text-sm font-medium text-gray-400 cursor-pointer select-none">
                                                 Mantenha-me conectado
                                             </label>
                                         </div>
@@ -639,7 +639,7 @@ const Login: React.FC = () => {
                                     {isRegistering ? "Já tem uma conta de analista? " : "Não tem uma conta de analista? "}
                                     <button
                                         onClick={toggleMode}
-                                        className="text-[#0f2124] font-bold hover:text-emerald-600 transition-colors underline decoration-2 decoration-transparent hover:decoration-[#00e1ff] underline-offset-4"
+                                        className="text-white font-bold hover:text-emerald-500 transition-colors underline decoration-2 decoration-transparent hover:decoration-emerald-500 underline-offset-4"
                                     >
                                         {isRegistering ? "Iniciar Sessão" : "Criar Conta"}
                                     </button>

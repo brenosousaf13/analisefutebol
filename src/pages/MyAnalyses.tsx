@@ -159,7 +159,7 @@ const MyAnalyses = () => {
             className="group bg-dashboard-card rounded-2xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl hover:shadow-black/50 border border-transparent hover:border-gray-700/50 flex flex-col"
         >
             {/* Top Section: Gradient & Logos */}
-            <div className={`relative h-40 w-full overflow-hidden ${analysis.thumbnail_url ? '' : 'bg-gradient-to-br from-[#1e293b] to-[#0f172a]'}`}>
+            <div className={`relative h-40 w-full overflow-hidden ${analysis.thumbnail_url ? '' : 'bg-card-gradient'}`}>
                 {analysis.thumbnail_url ? (
                     <div className="absolute inset-0">
                         <img

@@ -7,18 +7,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        'nav-dark': '#1a1f2e',
-        'panel-dark': '#242938',
+        'nav-dark': '#030909', // Header
+        'panel-dark': '#141A1A', // Cards/Panels
         'field-green': '#2d5a3d',
         'accent-green': '#22c55e',
         'accent-yellow': '#eab308',
         // New Design System
-        'app-bg': '#0D0D0D',
-        'card-bg': '#161618',
+        'app-bg': '#0B1111', // Main Background
+        'card-bg': '#141A1A', // Cards
         'brand-primary': '#27D888',
         'brand-secondary': '#ACFA70',
-        'dashboard-page': '#1a1f2e',
-        'dashboard-card': '#242938',
+        'dashboard-page': '#0B1111',
+        'dashboard-card': '#141A1A',
+        // Overrides
+        gray: {
+          900: '#0B1111', // Main BG usually
+          800: '#141A1A', // Card BG usually
+        },
+        slate: {
+          900: '#0B1111',
+          800: '#141A1A',
+        },
+      },
+      backgroundImage: {
+        'card-gradient': 'linear-gradient(to bottom right, #030909, #141A1A)',
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'sans-serif'],

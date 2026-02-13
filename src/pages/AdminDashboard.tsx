@@ -61,7 +61,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 p-6 md:p-10">
+        <div className="min-h-screen bg-app-bg text-slate-900 dark:text-slate-100 p-6 md:p-10">
             <div className="max-w-7xl mx-auto space-y-8">
 
                 {/* Header */}
@@ -88,7 +88,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Filters & Actions */}
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="bg-card-bg p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row gap-4 justify-between items-center">
                     <div className="relative w-full md:max-w-md">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                             <Search size={18} />
@@ -123,7 +123,7 @@ const AdminDashboard: React.FC = () => {
                         </button>
                     </div>
                 ) : (
-                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div className="bg-card-bg rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">

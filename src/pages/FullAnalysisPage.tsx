@@ -739,7 +739,7 @@ function FullAnalysisPage() {
             matchInfo={matchInfo}
             onHeaderTeamClick={handleTeamClick}
         >
-            <div className="z-20 bg-gray-900 border-b border-gray-800">
+            <div className="z-20 bg-black">
                 <AnalysisTabs
                     boards={boards}
                     activeBoardId={activeBoardId}

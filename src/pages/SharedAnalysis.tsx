@@ -319,7 +319,7 @@ export default function SharedAnalysis() {
                         {/* Left Panel: Field */}
                         <div className="lg:col-span-2 flex flex-col gap-4 h-full">
                             {/* Controls */}
-                            <div className="flex items-center justify-between bg-card-dark p-2 rounded-lg border border-gray-700">
+                            <div className="flex items-center justify-between bg-card-bg p-2 rounded-lg border border-gray-700">
                                 {/* Team Toggle */}
                                 <div className="flex rounded-md bg-gray-800 p-1">
                                     <button
@@ -358,7 +358,7 @@ export default function SharedAnalysis() {
                             </div>
 
                             {/* Field Wrapper */}
-                            <div className="flex-1 bg-card-dark rounded-xl border border-gray-700 shadow-xl p-4 flex items-center justify-center overflow-hidden relative">
+                            <div className="flex-1 bg-card-bg rounded-xl border border-gray-700 shadow-xl p-4 flex items-center justify-center overflow-hidden relative">
                                 <div className="w-full max-w-[600px] aspect-[68/105]">
                                     <TacticalField
                                         players={currentTeamPlayers}
@@ -393,7 +393,7 @@ export default function SharedAnalysis() {
 
                             {/* Notes Section - scrollable */}
                             <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                                <div className="bg-card-dark rounded-xl border border-gray-700 p-5 shadow-lg">
+                                <div className="bg-card-bg rounded-xl border border-gray-700 p-5 shadow-lg">
                                     <h3 className="text-white text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: teamColor }} />
                                         Organização - {activePhase === 'defensive' ? 'Sem Posse' : 'Com Posse'}
@@ -407,7 +407,7 @@ export default function SharedAnalysis() {
 
                                 {/* Timeline Section */}
                                 {data.events && data.events.length > 0 && (
-                                    <div className="bg-card-dark rounded-xl border border-gray-700 shadow-lg flex flex-col max-h-[400px]">
+                                    <div className="bg-card-bg rounded-xl border border-gray-700 shadow-lg flex flex-col max-h-[400px]">
                                         <div className="p-4 border-b border-gray-700 bg-gray-800/50 rounded-t-xl">
                                             <h3 className="text-white font-bold text-sm uppercase tracking-wide">Linha do Tempo</h3>
                                         </div>
@@ -440,7 +440,7 @@ export default function SharedAnalysis() {
             {viewingPlayerNote && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={() => setViewingPlayerNote(null)}>
                     <div
-                        className="bg-[#1a1f2e] rounded-xl border border-gray-700 shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100"
+                        className="bg-card-bg rounded-xl border border-gray-700 shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}

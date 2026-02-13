@@ -170,7 +170,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                     {/* Sidebar Drawer */}
                     <div className={`
                     absolute top-0 left-0 bottom-0 w-[280px] sm:w-72 
-                    bg-[#1a1f2e] border-r border-gray-700 shadow-2xl 
+                    bg-nav-dark border-r border-gray-700 shadow-2xl 
                     flex flex-col 
                     transform transition-transform duration-300 ease-in-out
                     ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}

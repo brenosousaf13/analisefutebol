@@ -47,18 +47,26 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
     };
 
     return (
-        <div className="flex items-center gap-1 overflow-x-auto bg-gray-900 p-1 rounded-t-lg border-b border-gray-700 select-none">
+        <div className="flex items-end gap-0 overflow-x-auto bg-black pt-2 px-2 select-none">
             {/* Default Tab (Legacy/Root) */}
             <div
                 onClick={() => onSwitchBoard(null)}
                 className={`
-                    group relative flex items-center gap-2 px-4 py-2 rounded-t-md text-sm font-medium transition-colors cursor-pointer border-t-2
+                    group relative flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-all cursor-pointer min-w-[120px] justify-center
                     ${activeBoardId === null
-                        ? 'bg-gray-800 text-white border-green-500'
-                        : 'bg-gray-800/50 text-gray-400 border-transparent hover:bg-gray-800 hover:text-gray-200'}
+                        ? 'bg-[#141A1A] text-white z-10'
+                        : 'bg-[#0B1111] text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
                 `}
+                style={{
+                    boxShadow: activeBoardId === null ? '0 -4px 12px rgba(0,0,0,0.5)' : 'none',
+                    marginBottom: activeBoardId === null ? '-1px' : '0'
+                }}
             >
                 <span>Principal</span>
+                {/* Active Indicator Line on Top (Optional, Chrome doesn't have it but it looks nice) */}
+                {activeBoardId === null && (
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-primary rounded-t-xl" />
+                )}
             </div>
 
             {/* Dynamic Boards */}
@@ -72,11 +80,16 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                         startEditing(board);
                     }}
                     className={`
-                        group relative flex items-center gap-2 px-4 py-2 rounded-t-md text-sm font-medium transition-colors cursor-pointer border-t-2 min-w-[120px] justify-between
+                        group relative flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-all cursor-pointer min-w-[120px] justify-between
                         ${activeBoardId === board.id
-                            ? 'bg-gray-800 text-white border-green-500 z-10'
-                            : 'bg-gray-800/50 text-gray-400 border-transparent hover:bg-gray-800 hover:text-gray-200'}
+                            ? 'bg-[#141A1A] text-white z-10'
+                            : 'bg-[#0B1111] text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
                     `}
+                    style={{
+                        boxShadow: activeBoardId === board.id ? '0 -4px 12px rgba(0,0,0,0.5)' : 'none',
+                        marginBottom: activeBoardId === board.id ? '-1px' : '0',
+                        marginLeft: '-8px' // Overlap effect like Chrome
+                    }}
                 >
                     {editingBoardId === board.id ? (
                         <div className="flex items-center gap-1 w-full" onClick={e => e.stopPropagation()}>
@@ -95,32 +108,36 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                         </div>
                     ) : (
                         <>
-                            <span className="truncate max-w-[150px]">{board.title}</span>
+                            <span className="truncate max-w-[120px]">{board.title}</span>
                             {!readOnly && (
-                                <div className={`flex items-center gap-1 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                                <div className={`flex items-center gap-1 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity ml-2`}>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             startEditing(board);
                                         }}
-                                        className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                                        className="p-0.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
                                         title="Renomear"
                                     >
-                                        <Edit2 size={12} />
+                                        <Edit2 size={10} />
                                     </button>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (confirm('Tem certeza que deseja excluir esta aba?')) onDeleteBoard(board.id);
                                         }}
-                                        className="p-1 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400"
+                                        className="p-0.5 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400"
                                         title="Excluir"
                                     >
-                                        <X size={12} />
+                                        <X size={10} />
                                     </button>
                                 </div>
                             )}
                         </>
+                    )}
+                    {/* Active Indicator Line */}
+                    {activeBoardId === board.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-primary rounded-t-xl" />
                     )}
                 </div>
             ))}
@@ -129,7 +146,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
             {!readOnly && (
                 <button
                     onClick={onAddBoard}
-                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-700 text-gray-400 hover:text-green-400 transition-colors ml-1"
+                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-800 text-gray-500 hover:text-white transition-colors ml-2"
                     title="Nova Aba"
                 >
                     <Plus size={18} />
