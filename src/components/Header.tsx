@@ -121,8 +121,8 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                     )}
                 </div>
             ) : (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50">
-                    <img src="/ZonaLogoOficial.png" alt="Zona 14" className="h-10 w-auto object-contain" />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <img src="/zona14-logo-branco.svg" alt="Zona 14" className="h-8 w-auto object-contain" />
                 </div>
             )}
 
