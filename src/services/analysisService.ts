@@ -168,6 +168,8 @@ export const analysisService = {
                 away_team_logo: data.awayTeamLogo,
                 home_score: data.homeScore,
                 away_score: data.awayScore,
+                home_team_color: data.homeTeamColor, // Added missing field
+                away_team_color: data.awayTeamColor, // Added missing field
 
                 // Old notes
                 notas_casa: data.notasCasa,

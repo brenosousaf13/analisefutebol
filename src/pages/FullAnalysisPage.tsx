@@ -119,6 +119,9 @@ function FullAnalysisPage() {
     const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
     const [analysisSidebarTab, setAnalysisSidebarTab] = useState<'home' | 'away'>('home');
 
+    // Global Player Notes State (Synced across all boards)
+    const [allPlayerNotes, setAllPlayerNotes] = useState<Record<number, string>>({});
+
     // Player Interaction State
     const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -140,18 +143,54 @@ function FullAnalysisPage() {
                         awayTeam: data.awayTeam,
                         homeTeamLogo: data.homeTeamLogo,
                         awayTeamLogo: data.awayTeamLogo,
-                        competition: data.competition, // Fixed: Added competition from data if available, but getAnalysis might not prevent it. Checking locationState fallback.
+                        competition: data.competition,
                         date: data.matchDate,
                         time: data.matchTime
                     }));
 
-                    // Load Default Board to State
-                    setHomePlayersDef(data.homePlayersDef);
-                    setHomePlayersOff(data.homePlayersOff);
-                    setAwayPlayersDef(data.awayPlayersDef);
-                    setAwayPlayersOff(data.awayPlayersOff);
-                    setHomeSubstitutes(data.homeSubstitutes || []);
-                    setAwaySubstitutes(data.awaySubstitutes || []);
+                    // Load Boards first to aggregate notes
+                    const loadedBoards = data.boards || [];
+
+                    // Aggregate notes from all boards and default board
+                    const notesMap: Record<number, string> = {};
+
+                    // Helper to collect notes
+                    const collectNotes = (players: Player[]) => {
+                        players.forEach(p => {
+                            if (p.note) notesMap[p.id] = p.note;
+                        });
+                    };
+
+                    // Collect from Default Board
+                    collectNotes(data.homePlayersDef);
+                    collectNotes(data.homePlayersOff);
+                    collectNotes(data.awayPlayersDef);
+                    collectNotes(data.awayPlayersOff);
+                    if (data.homeSubstitutes) collectNotes(data.homeSubstitutes);
+                    if (data.awaySubstitutes) collectNotes(data.awaySubstitutes);
+
+                    // Collect from Additional Boards
+                    loadedBoards.forEach(b => {
+                        collectNotes(b.homePlayersDef);
+                        collectNotes(b.homePlayersOff);
+                        collectNotes(b.awayPlayersDef);
+                        collectNotes(b.awayPlayersOff);
+                        collectNotes(b.homeSubstitutes);
+                        collectNotes(b.awaySubstitutes);
+                    });
+
+                    setAllPlayerNotes(notesMap);
+
+                    // Hydrate players with global notes (ensure consistency on load)
+                    const hydrate = (list: Player[]) => list.map(p => ({ ...p, note: notesMap[p.id] !== undefined ? notesMap[p.id] : p.note }));
+
+                    setHomePlayersDef(hydrate(data.homePlayersDef));
+                    setHomePlayersOff(hydrate(data.homePlayersOff));
+                    setAwayPlayersDef(hydrate(data.awayPlayersDef));
+                    setAwayPlayersOff(hydrate(data.awayPlayersOff));
+                    setHomeSubstitutes(hydrate(data.homeSubstitutes || []));
+                    setAwaySubstitutes(hydrate(data.awaySubstitutes || []));
+
                     setHomeBallDef(data.homeBallDef || { x: 50, y: 50 });
                     setHomeBallOff(data.homeBallOff || { x: 50, y: 50 });
                     setAwayBallDef(data.awayBallDef || { x: 50, y: 50 });
@@ -292,12 +331,18 @@ function FullAnalysisPage() {
             // Restore Default Board
             const def = defaultBoardRef.current;
             if (def) {
-                setHomePlayersDef(def.homePlayersDef);
-                setHomePlayersOff(def.homePlayersOff);
-                setAwayPlayersDef(def.awayPlayersDef);
-                setAwayPlayersOff(def.awayPlayersOff);
-                setHomeSubstitutes(def.homeSubstitutes);
-                setAwaySubstitutes(def.awaySubstitutes);
+                // Determine source for hydration: defaultBoardRef has the structure but maybe old notes?
+                // Actually, if we just came from another board, defaultBoardRef is stale regarding GLOBAL notes if we adjusted them elsewhere.
+                // We must hydrate ONLY the 'note' field from allPlayerNotes.
+
+                const hydrate = (list: Player[]) => list.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note }));
+
+                setHomePlayersDef(hydrate(def.homePlayersDef));
+                setHomePlayersOff(hydrate(def.homePlayersOff));
+                setAwayPlayersDef(hydrate(def.awayPlayersDef));
+                setAwayPlayersOff(hydrate(def.awayPlayersOff));
+                setHomeSubstitutes(hydrate(def.homeSubstitutes));
+                setAwaySubstitutes(hydrate(def.awaySubstitutes));
 
                 setHomeArrows({ 'full_home': def.homeArrowsDef });
                 setAwayArrows({ 'full_away': def.awayArrowsDef });
@@ -312,12 +357,14 @@ function FullAnalysisPage() {
         } else {
             const board = boards.find(b => b.id === newBoardId);
             if (board) {
-                setHomePlayersDef(board.homePlayersDef);
-                setHomePlayersOff(board.homePlayersOff);
-                setAwayPlayersDef(board.awayPlayersDef);
-                setAwayPlayersOff(board.awayPlayersOff);
-                setHomeSubstitutes(board.homeSubstitutes);
-                setAwaySubstitutes(board.awaySubstitutes);
+                const hydrate = (list: Player[]) => list.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note }));
+
+                setHomePlayersDef(hydrate(board.homePlayersDef));
+                setHomePlayersOff(hydrate(board.homePlayersOff));
+                setAwayPlayersDef(hydrate(board.awayPlayersDef));
+                setAwayPlayersOff(hydrate(board.awayPlayersOff));
+                setHomeSubstitutes(hydrate(board.homeSubstitutes));
+                setAwaySubstitutes(hydrate(board.awaySubstitutes));
 
                 setHomeArrows({ 'full_home': board.homeArrowsDef });
                 setAwayArrows({ 'full_away': board.awayArrowsDef });
@@ -621,8 +668,26 @@ function FullAnalysisPage() {
                 tags: tags || [],
 
                 // NEW: Boards
-                boards: finalBoards
+                // Inject Global Notes into ALL boards states and Default Board state before saving
+                boards: finalBoards.map(b => ({
+                    ...b,
+                    homePlayersDef: b.homePlayersDef.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note })),
+                    homePlayersOff: b.homePlayersOff.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note })),
+                    awayPlayersDef: b.awayPlayersDef.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note })),
+                    awayPlayersOff: b.awayPlayersOff.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note })),
+                    homeSubstitutes: b.homeSubstitutes.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note })),
+                    awaySubstitutes: b.awaySubstitutes.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note })),
+                }))
             };
+
+            // Inject Global Notes into Default Board items (which are top level params)
+            const hydrate = (list: Player[]) => list.map(p => ({ ...p, note: allPlayerNotes[p.id] !== undefined ? allPlayerNotes[p.id] : p.note }));
+            data.homePlayersDef = hydrate(data.homePlayersDef);
+            data.homePlayersOff = hydrate(data.homePlayersOff);
+            data.awayPlayersDef = hydrate(data.awayPlayersDef);
+            data.awayPlayersOff = hydrate(data.awayPlayersOff);
+            data.homeSubstitutes = hydrate(data.homeSubstitutes);
+            data.awaySubstitutes = hydrate(data.awaySubstitutes);
 
             const savedId = await analysisService.saveAnalysis(data);
             setCurrentAnalysisId(savedId);
@@ -901,7 +966,11 @@ function FullAnalysisPage() {
                 isOpen={!!editingPlayer}
                 onClose={() => setEditingPlayer(null)}
                 onSave={(p) => {
-                    // Quick update - Preserve position of the target list, only update metadata
+                    // 1. Update Global Notes State
+                    // Always set the note value, even if empty string, to ensure deletion propagates
+                    setAllPlayerNotes(prev => ({ ...prev, [p.id]: p.note || '' }));
+
+                    // 2. Quick update - Preserve position of the target list, only update metadata
                     const update = (list: Player[]) => list.map(orig =>
                         orig.id === p.id
                             ? { ...orig, name: p.name, number: p.number, note: p.note }
