@@ -551,7 +551,18 @@ function FullAnalysisPage() {
                 }
             }
         } else {
-
+            if (isHomeBench) {
+                setHomeSubstitutes(prev => prev.filter(p => p.id !== benchPlayer.id));
+                setHomePlayersDef(prev => [...prev, { ...benchPlayer, isStarter: true, position: { x: 50, y: 50 } }]);
+                setHomePlayersOff(prev => [...prev, { ...benchPlayer, isStarter: true, position: { x: 50, y: 50 } }]);
+                toast.success('Adicionado ao campo');
+            } else if (isAwayBench) {
+                setAwaySubstitutes(prev => prev.filter(p => p.id !== benchPlayer.id));
+                setAwayPlayersDef(prev => [...prev, { ...benchPlayer, isStarter: true, position: { x: 50, y: 50 } }]);
+                setAwayPlayersOff(prev => [...prev, { ...benchPlayer, isStarter: true, position: { x: 50, y: 50 } }]);
+                toast.success('Adicionado ao campo');
+            }
+            setHasUnsavedChanges(true);
         }
     };
 

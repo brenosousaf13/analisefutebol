@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChevronRight, ChevronLeft, ChevronUp } from 'lucide-react';
 import type { Player } from '../types/Player';
 
 interface BenchAreaProps {
@@ -13,7 +13,7 @@ interface BenchAreaProps {
 
 const BenchArea: React.FC<BenchAreaProps> = ({
     players,
-    team: _team,
+    team,
     onPromotePlayer,
     onPlayerDoubleClick,
     orientation = 'horizontal',
@@ -56,29 +56,51 @@ const BenchArea: React.FC<BenchAreaProps> = ({
                     filteredPlayers.map(player => (
                         <div
                             key={player.id}
-                            onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                onPlayerDoubleClick(player);
-                            }}
-                            onClick={() => onPromotePlayer(player)}
-                            title={`${player.name} - Clique para promover, duplo clique para editar`}
                             className={`
-                                flex items-center cursor-pointer group shrink-0 hover:bg-white/5 rounded px-2 py-1 transition-colors
+                                flex items-center justify-between group rounded transition-colors pr-1
                                 ${orientation === 'vertical'
-                                    ? `w-full gap-3 ${align === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'}`
-                                    : 'flex-col items-center'
+                                    ? `w-full gap-2 ${align === 'right' ? 'flex-row-reverse pl-1 pr-0' : ''}`
+                                    : 'flex-col items-center gap-1'
                                 }
                             `}
                         >
-                            {/* Player circle - Responsive size */}
-                            <div className="w-[27px] h-[27px] rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-300 font-bold text-[10px] group-hover:border-white group-hover:text-white transition-all">
-                                {player.number}
+                            {/* Player Info (Name/Number) */}
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPlayerDoubleClick(player);
+                                }}
+                                className={`flex items-center cursor-pointer hover:bg-white/5 rounded px-2 py-1 flex-1 gap-3 ${orientation === 'vertical' && align === 'right' ? 'flex-row-reverse' : ''}`}
+                                title={`${player.name} - Clique para editar`}
+                            >
+                                {/* Player circle - Responsive size */}
+                                <div className="w-[27px] h-[27px] rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-300 font-bold text-[10px] group-hover:border-white group-hover:text-white transition-all shrink-0">
+                                    {player.number}
+                                </div>
+
+                                {/* Player name */}
+                                <span className={`text-xs text-gray-400 group-hover:text-white font-medium truncate ${orientation === 'horizontal' ? 'max-w-[50px] text-[9px]' : 'flex-1'} ${orientation === 'vertical' && align === 'right' ? 'text-right' : 'text-left'}`}>
+                                    {orientation === 'horizontal' ? player.name.split(' ').pop() : player.name}
+                                </span>
                             </div>
 
-                            {/* Player name */}
-                            <span className={`text-xs text-gray-400 group-hover:text-white font-medium truncate ${orientation === 'horizontal' ? 'max-w-[50px] text-[9px]' : 'flex-1'}`}>
-                                {orientation === 'horizontal' ? player.name.split(' ').pop() : player.name}
-                            </span>
+                            {/* Promote Button (Arrow) */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPromotePlayer(player);
+                                }}
+                                title="Mover para o campo"
+                                className="p-1.5 text-gray-500 hover:text-accent-green hover:bg-white/10 rounded-full transition-colors cursor-pointer shrink-0"
+                            >
+                                {orientation === 'horizontal' ? (
+                                    <ChevronUp className="w-4 h-4" />
+                                ) : team === 'away' || align === 'right' ? (
+                                    <ChevronLeft className="w-4 h-4" />
+                                ) : (
+                                    <ChevronRight className="w-4 h-4" />
+                                )}
+                            </button>
                         </div>
                     ))
                 ) : (
