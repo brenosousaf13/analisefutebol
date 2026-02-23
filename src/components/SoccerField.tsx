@@ -263,6 +263,15 @@ const SoccerField: React.FC<SoccerFieldProps> = ({
                     <path d="M 2 105 A 2 2 0 0 0 0 103" fill="none" stroke="white" strokeWidth="0.5" strokeOpacity="0.8" />
                 </svg>
 
+                {/* Center Logo */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <img
+                        src="/zona14-logo-branco.svg"
+                        alt="Zona 14 Logo"
+                        className="w-1/3 opacity-15"
+                    />
+                </div>
+
                 {/* Arrows Layer */}
                 <svg className="absolute inset-0 w-full h-full z-20 pointer-events-none">
                     <defs>

@@ -669,6 +669,15 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 {/* Field Lines */}
                 <FieldLines orientation={orientation} />
 
+                {/* Center Logo */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <img
+                        src="/zona14-logo-branco.svg"
+                        alt="Zona 14 Logo"
+                        className="w-1/3 opacity-15"
+                    />
+                </div>
+
                 {/* BALL */}
                 {(ballPosition || tempBallPosition) && (
                     <div
