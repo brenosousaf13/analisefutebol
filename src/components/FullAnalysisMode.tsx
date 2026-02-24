@@ -304,6 +304,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     <BenchArea
                         players={substitutes}
                         team={team}
+                        teamColor={color}
                         orientation="vertical"
                         align={align || 'left'}
                         onPromotePlayer={readOnly ? () => { } : (p) => onBenchPlayerClick(p, team)}

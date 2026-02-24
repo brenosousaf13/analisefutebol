@@ -9,6 +9,7 @@ interface BenchAreaProps {
     onPlayerDoubleClick: (player: Player) => void;
     orientation?: 'horizontal' | 'vertical';
     align?: 'left' | 'center' | 'right';
+    teamColor?: string;
 }
 
 const BenchArea: React.FC<BenchAreaProps> = ({
@@ -17,7 +18,8 @@ const BenchArea: React.FC<BenchAreaProps> = ({
     onPromotePlayer,
     onPlayerDoubleClick,
     orientation = 'horizontal',
-    align = 'center'
+    align = 'center',
+    teamColor
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -74,7 +76,13 @@ const BenchArea: React.FC<BenchAreaProps> = ({
                                 title={`${player.name} - Clique para editar`}
                             >
                                 {/* Player circle - Responsive size */}
-                                <div className="w-[27px] h-[27px] rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-300 font-bold text-[10px] group-hover:border-white group-hover:text-white transition-all shrink-0">
+                                <div
+                                    className="w-[27px] h-[27px] rounded-full flex items-center justify-center font-bold text-[10px] group-hover:scale-110 transition-transform shrink-0 drop-shadow-md bg-[#090909]"
+                                    style={{
+                                        color: player.color || teamColor || '#9CA3AF',
+                                        border: `2px solid ${player.color || teamColor || '#4B5563'}`
+                                    }}
+                                >
                                     {player.number}
                                 </div>
 

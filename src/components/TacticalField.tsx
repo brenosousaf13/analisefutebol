@@ -863,7 +863,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         <div
                                             className={`
                                             rounded-full 
-                                            flex items-center justify-center text-gray-900 font-bold
+                                            flex items-center justify-center font-bold
                                             shadow-lg transition-transform duration-75
                                             ${isDragging ? 'scale-110 ring-2 ring-white' : (readOnly ? '' : 'hover:scale-105')}
                                             ${selectedPlayerId === player.id ? 'ring-2 ring-green-400' : ''}
@@ -872,7 +872,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                                 width: compact ? 24 : playerSize,
                                                 height: compact ? 24 : playerSize,
                                                 fontSize: compact ? 10 : fontSizes.number,
-                                                backgroundColor: player.color || playerColor
+                                                backgroundColor: '#090909',
+                                                color: player.color || playerColor,
+                                                border: `2px solid ${player.color || playerColor}`
                                             }}
                                         >
                                             {player.number}

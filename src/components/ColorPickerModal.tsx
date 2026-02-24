@@ -12,6 +12,16 @@ const PRESET_COLORS = [
     '#EC4899', // Pink
     '#FFFFFF', // White
     '#374151', // Gray
+    // Add specifically requested colors
+    '#FDB913',
+    '#005E36',
+    '#ED7203',
+    '#6CABDD',
+    '#034694',
+    '#00C35B',
+    '#DA291C',
+    '#862633',
+    '#090909',
 ];
 
 interface ColorPickerModalProps {
