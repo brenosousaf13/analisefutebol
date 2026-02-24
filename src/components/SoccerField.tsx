@@ -264,8 +264,13 @@ const SoccerField: React.FC<SoccerFieldProps> = ({
                 </svg>
 
                 {/* Website Branding */}
-                <div className="absolute bottom-0 left-1 pointer-events-none z-0 opacity-30">
-                    <span className="text-white text-[8px] sm:text-[10px] font-bold tracking-widest uppercase">zona14.app.br</span>
+                <div className="absolute bottom-0 left-0 pointer-events-none z-0 opacity-30">
+                    <img
+                        src="/url-branco.svg"
+                        alt="zona14.app.br"
+                        className="h-[6px] sm:h-[8px] w-auto"
+                        style={{ display: 'block' }}
+                    />
                 </div>
 
                 {/* Arrows Layer */}

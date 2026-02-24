@@ -670,8 +670,13 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                 <FieldLines orientation={orientation} />
 
                 {/* Website Branding */}
-                <div className="absolute bottom-1 left-3 pointer-events-none z-0 opacity-30">
-                    <span className="text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase">zona14.app.br</span>
+                <div className="absolute pointer-events-none z-0 opacity-30" style={{ bottom: '3.5%', left: '3.5%' }}>
+                    <img
+                        src={theme === 'dark' ? '/url-branco.svg' : '/url-preto.svg'}
+                        alt="zona14.app.br"
+                        className="h-[8px] sm:h-[10px] w-auto"
+                        style={{ display: 'block' }}
+                    />
                 </div>
 
                 {/* BALL */}
