@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, type ReactNode } from 'react';
 import TacticalField from './TacticalField';
 import { type ToolType } from './Toolbar';
 import { FullAnalysisToolbar } from './FullAnalysisToolbar';
@@ -69,6 +69,7 @@ interface FullAnalysisModeProps {
     onMoveRectangle: (id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => void;
 
     readOnly?: boolean;
+    tabsSlot?: ReactNode;
 }
 
 export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
@@ -121,6 +122,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     onMoveRectangle,
 
     readOnly = false,
+    tabsSlot,
 }) => {
     // State
     const [possession, setPossession] = useState<'home' | 'away'>('home');
@@ -213,10 +215,10 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         isExpandedOnMobile?: boolean,
         onToggleMobileExpansion?: () => void
     }) => (
-        <div className="flex flex-col border-r border-l border-gray-800 bg-nav-dark w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden" >
+        <div className="flex flex-col border-r border-l border-gray-800 bg-[#070d0d] w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden" >
             {/* Header */}
             <div
-                className="p-4 border-b border-gray-700 bg-nav-dark cursor-pointer lg:cursor-default"
+                className="p-4 border-b border-gray-700 bg-[#070d0d] cursor-pointer lg:cursor-default"
                 onClick={() => {
                     // Only toggle on mobile if prop provided
                     if (onToggleMobileExpansion && window.innerWidth < 1024) {
@@ -287,7 +289,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             <div className={`${isExpandedOnMobile ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-h-0 overflow-hidden`}>
 
                 {/* Coach Name directly under Header */}
-                <div className="px-4 py-2 border-b border-gray-700/50 bg-nav-dark">
+                <div className="px-4 py-2 border-b border-gray-700/50 bg-[#070d0d]">
                     <CoachNameDisplay
                         coachName={coachName || ''}
                         onSave={onCoachChange || (() => { })}
@@ -331,7 +333,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const playerNotes = playersToRender.reduce((acc, p) => (p as any).note ? ({ ...acc, [p.id]: (p as any).note }) : acc, {} as Record<number, string>);
 
     return (
-        <div className="flex flex-col lg:flex-row flex-1 h-full overflow-y-auto lg:overflow-hidden relative bg-panel-dark">
+        <div className="flex flex-col lg:flex-row flex-1 h-full overflow-y-auto lg:overflow-hidden relative bg-[#0b1111]">
 
             {/* LEFT COLUMN: HOME */}
             <TeamColumn
@@ -351,6 +353,13 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 
             {/* CENTER: FIELD */}
             <div className="flex flex-col w-full lg:w-[64%] h-auto lg:h-full relative shrink-0 order-1 lg:order-none">
+
+                {/* Tabs Slot (Analysis Tabs) */}
+                {tabsSlot && (
+                    <div className="shrink-0">
+                        {tabsSlot}
+                    </div>
+                )}
 
                 {/* Switcher & Header & Toolbar Trigger */}
                 <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-30 shrink-0 relative">

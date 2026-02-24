@@ -47,7 +47,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
     };
 
     return (
-        <div className="flex items-end gap-0 overflow-x-auto bg-black pt-2 px-2 select-none">
+        <div className="flex items-end gap-0 overflow-x-auto bg-[#0b1111] pt-2 px-2 select-none">
             {/* Default Tab (Legacy/Root) */}
             <div
                 onClick={() => onSwitchBoard(null)}

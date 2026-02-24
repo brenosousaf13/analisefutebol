@@ -815,16 +815,7 @@ function FullAnalysisPage() {
             matchInfo={matchInfo}
             onHeaderTeamClick={handleTeamClick}
         >
-            <div className="z-20 bg-black">
-                <AnalysisTabs
-                    boards={boards}
-                    activeBoardId={activeBoardId}
-                    onSwitchBoard={handleSwitchBoard}
-                    onAddBoard={handleAddBoard}
-                    onUpdateBoardTitle={handleUpdateBoardTitle}
-                    onDeleteBoard={handleDeleteBoard}
-                />
-            </div>
+
 
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center bg-gray-900">
@@ -889,6 +880,16 @@ function FullAnalysisPage() {
                     hasUnsavedChanges={hasUnsavedChanges}
                     onShare={() => setIsShareModalOpen(true)}
                     onHeaderTeamClick={handleTeamClick}
+                    tabsSlot={
+                        <AnalysisTabs
+                            boards={boards}
+                            activeBoardId={activeBoardId}
+                            onSwitchBoard={handleSwitchBoard}
+                            onAddBoard={handleAddBoard}
+                            onUpdateBoardTitle={handleUpdateBoardTitle}
+                            onDeleteBoard={handleDeleteBoard}
+                        />
+                    }
                 />
             )}
 
