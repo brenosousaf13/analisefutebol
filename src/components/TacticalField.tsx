@@ -39,6 +39,7 @@ interface TacticalFieldProps {
     ballPosition?: { x: number, y: number };
     onBallMove?: (pos: { x: number, y: number }) => void;
     ballScale?: number;
+    tabsSlot?: React.ReactNode;
 }
 
 // ... (FieldLines component logic was updated in previous step via overwrite, but we need to match the previous tool call's expectation or just strictly follow the lines here)
@@ -145,7 +146,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     playerScale = 1,
     ballPosition,
     onBallMove,
-    ballScale = 1
+    ballScale = 1,
+    tabsSlot
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
@@ -640,249 +642,258 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const { theme } = useTheme();
 
     return (
-        <div ref={wrapperRef} className="w-full h-full flex items-center justify-center p-2 overflow-hidden">
+        <div ref={wrapperRef} className="w-full h-full flex items-center justify-center p-2 pt-12 overflow-hidden relative">
             <div
-                ref={containerRef}
-                className={`
-                    relative 
-                    ${theme === 'dark'
-                        ? 'bg-[#1a1a1a]'
-                        : 'bg-gradient-to-b from-field-green to-[#3d6a4d]'
-                    }
-                    rounded-lg shadow-2xl overflow-hidden select-none
-                    ${mode === 'draw' || mode === 'rectangle' ? 'cursor-crosshair' : ''}
-                    ${isEraserMode ? 'cursor-pointer' : ''}
-                    ${mode === 'move' && !isEraserMode ? 'cursor-default' : ''}
-                `}
+                className="relative flex flex-col items-start justify-center"
                 style={{
                     width: dimensions.width ? `${dimensions.width}px` : '100%',
                     height: dimensions.height ? `${dimensions.height}px` : 'auto',
-                    // Fallback Aspect Ratio if JS fails or loads slow
                     aspectRatio: !dimensions.width ? (orientation === 'vertical' ? '68 / 105' : '105 / 68') : undefined,
                     maxWidth: '100%',
-                    maxHeight: '100%',
-                    touchAction: 'none'
+                    maxHeight: '100%'
                 }}
-                onMouseDown={handleFieldMouseDown}
-                onTouchStart={handleFieldTouchStart}
             >
-                {/* Field Lines */}
-                <FieldLines orientation={orientation} />
-
-                {/* Website Branding */}
-                <div className="absolute pointer-events-none z-0 opacity-30" style={{ bottom: '3.5%', left: '3.5%' }}>
-                    <img
-                        src={theme === 'dark' ? '/url-branco.svg' : '/url-preto.svg'}
-                        alt="zona14.app.br"
-                        className="h-[8px] sm:h-[10px] w-auto"
-                        style={{ display: 'block' }}
-                    />
-                </div>
-
-                {/* BALL */}
-                {(ballPosition || tempBallPosition) && (
-                    <div
-                        className="absolute z-20 cursor-move"
-                        style={{
-                            left: `${(tempBallPosition || ballPosition)?.x}%`,
-                            top: `${(tempBallPosition || ballPosition)?.y}%`,
-                            width: `${2.5 * ballScale}%`, // Scaled size
-                            aspectRatio: '1/1',
-                            transform: 'translate(-50%, -50%)'
-                        }}
-                        onMouseDown={handleBallMouseDown}
-                        onTouchStart={handleBallMouseDown}
-                    >
-                        {/* SVG Soccer Ball */}
-                        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
-                            <circle cx="50" cy="50" r="48" fill="white" stroke="black" strokeWidth="4" />
-                            <path d="M50 50 L50 20 M50 50 L78 65 M50 50 L22 65" stroke="black" strokeWidth="4" fill="none" />
-                            <circle cx="50" cy="50" r="10" fill="black" />
-                            <circle cx="50" cy="20" r="5" fill="black" />
-                            <circle cx="78" cy="65" r="5" fill="black" />
-                            <circle cx="22" cy="65" r="5" fill="black" />
-                        </svg>
+                {tabsSlot && (
+                    <div className="absolute bottom-full left-0 z-10 w-full">
+                        {tabsSlot}
                     </div>
                 )}
 
-                {/* Arrows and Rectangles Layer - Using SVG */}
-                {/* SVG itself has pointer-events: none to allow clicks to pass through to players */}
-                {/* Individual elements (arrows/rectangles) have pointer-events: auto when interactive */}
-                <svg
-                    className={`absolute inset-0 w-full h-full overflow-visible ${(isEraserMode || mode === 'move') ? 'z-30' : 'z-10'}`}
-                    style={{ pointerEvents: 'none' }}
-                    preserveAspectRatio="none"
+                <div
+                    ref={containerRef}
+                    className={`
+                        w-full h-full relative 
+                        ${theme === 'dark'
+                            ? 'bg-[#1a1a1a]'
+                            : 'bg-gradient-to-b from-field-green to-[#3d6a4d]'
+                        }
+                        rounded-lg shadow-2xl overflow-hidden select-none
+                        ${mode === 'draw' || mode === 'rectangle' ? 'cursor-crosshair' : ''}
+                        ${isEraserMode ? 'cursor-pointer' : ''}
+                        ${mode === 'move' && !isEraserMode ? 'cursor-default' : ''}
+                    `}
+                    style={{ touchAction: 'none' }}
+                    onMouseDown={handleFieldMouseDown}
+                    onTouchStart={handleFieldTouchStart}
                 >
-                    {/* Arrow head marker definitions */}
-                    <defs>
-                        <marker
-                            id="arrowhead"
-                            markerWidth="10"
-                            markerHeight="10"
-                            refX="9"
-                            refY="5"
-                            orient="auto"
-                            markerUnits="userSpaceOnUse"
-                        >
-                            <polygon points="0,0 10,5 0,10 2,5" fill="white" />
-                        </marker>
-                        <marker
-                            id="arrowhead-temp"
-                            markerWidth="10"
-                            markerHeight="10"
-                            refX="9"
-                            refY="5"
-                            orient="auto"
-                            markerUnits="userSpaceOnUse"
-                        >
-                            <polygon points="0,0 10,5 0,10 2,5" fill="rgba(255,255,255,0.6)" />
-                        </marker>
-                    </defs>
+                    {/* Field Lines */}
+                    <FieldLines orientation={orientation} />
 
-                    {/* Saved arrows */}
-                    {arrows.map(arrow => (
-                        <line
-                            key={arrow.id}
-                            x1={`${arrow.startX}%`}
-                            y1={`${arrow.startY}%`}
-                            x2={`${arrow.endX}%`}
-                            y2={`${arrow.endY}%`}
-                            stroke="white"
-                            strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
-                            strokeDasharray="8,5"
-                            strokeLinecap="round"
-                            markerEnd="url(#arrowhead)"
-                            opacity="0.85"
-                            onClick={isEraserMode ? () => onRemoveArrow?.(arrow.id) : undefined}
+                    {/* Website Branding */}
+                    <div className="absolute pointer-events-none z-0 opacity-30" style={{ bottom: '3.5%', left: '3.5%' }}>
+                        <img
+                            src={theme === 'dark' ? '/url-branco.svg' : '/url-preto.svg'}
+                            alt="zona14.app.br"
+                            className="h-[8px] sm:h-[10px] w-auto"
+                            style={{ display: 'block' }}
+                        />
+                    </div>
+
+                    {/* BALL */}
+                    {(ballPosition || tempBallPosition) && (
+                        <div
+                            className="absolute z-20 cursor-move"
                             style={{
-                                cursor: isEraserMode ? 'pointer' : 'default',
-                                pointerEvents: isEraserMode ? 'auto' : 'none' // readOnly is handled by parent container pointer-events-none? No, arrows usually ignore readOnly except for eraser. 
+                                left: `${(tempBallPosition || ballPosition)?.x}%`,
+                                top: `${(tempBallPosition || ballPosition)?.y}%`,
+                                width: `${2.5 * ballScale}%`, // Scaled size
+                                aspectRatio: '1/1',
+                                transform: 'translate(-50%, -50%)'
                             }}
-                            className={isEraserMode ? 'hover:stroke-red-400 transition-colors' : ''}
-                        />
-                    ))}
-
-                    {/* Saved rectangles */}
-                    {rectangles.map(rect => (
-                        <rect
-                            key={rect.id}
-                            x={`${rect.startX}%`}
-                            y={`${rect.startY}%`}
-                            width={`${rect.endX - rect.startX}%`}
-                            height={`${rect.endY - rect.startY}%`}
-                            fill={rect.color}
-                            opacity={rect.opacity}
-                            stroke={isEraserMode ? 'rgba(255,100,100,0.8)' : (mode === 'move' ? 'rgba(255,255,100,0.8)' : 'rgba(255,255,255,0.5)')}
-                            strokeWidth={isEraserMode ? "3" : (mode === 'move' ? "2" : "1")}
-                            rx="2"
-                            onClick={isEraserMode ? () => onRemoveRectangle?.(rect.id) : undefined}
-                            onMouseDown={mode === 'move' && !isEraserMode ? (e) => {
-                                e.stopPropagation();
-                                handleElementDragStart('rectangle', rect.id, e.clientX, e.clientY);
-                            } : undefined}
-                            style={{
-                                cursor: isEraserMode ? 'pointer' : (mode === 'move' ? 'grab' : 'default'),
-                                pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none'
-                            }}
-                            className={isEraserMode ? 'hover:opacity-60 transition-opacity' : ''}
-                        />
-                    ))}
-
-                    {/* Arrow being drawn */}
-                    {isDrawing && currentArrow && currentArrow.startX !== undefined && (
-                        <line
-                            x1={`${currentArrow.startX}%`}
-                            y1={`${currentArrow.startY}%`}
-                            x2={`${currentArrow.endX}%`}
-                            y2={`${currentArrow.endY}%`}
-                            stroke="white"
-                            strokeWidth="2"
-                            strokeDasharray="8,5"
-                            strokeLinecap="round"
-                            markerEnd="url(#arrowhead-temp)"
-                            opacity="0.6"
-                        />
+                            onMouseDown={handleBallMouseDown}
+                            onTouchStart={handleBallMouseDown}
+                        >
+                            {/* SVG Soccer Ball */}
+                            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+                                <circle cx="50" cy="50" r="48" fill="white" stroke="black" strokeWidth="4" />
+                                <path d="M50 50 L50 20 M50 50 L78 65 M50 50 L22 65" stroke="black" strokeWidth="4" fill="none" />
+                                <circle cx="50" cy="50" r="10" fill="black" />
+                                <circle cx="50" cy="20" r="5" fill="black" />
+                                <circle cx="78" cy="65" r="5" fill="black" />
+                                <circle cx="22" cy="65" r="5" fill="black" />
+                            </svg>
+                        </div>
                     )}
 
-                    {/* Rectangle being drawn */}
-                    {isDrawingRect && currentRect && currentRect.startX !== undefined && (
-                        <rect
-                            x={`${Math.min(currentRect.startX, currentRect.endX ?? 0)}%`}
-                            y={`${Math.min(currentRect.startY!, currentRect.endY ?? 0)}%`}
-                            width={`${Math.abs((currentRect.endX ?? 0) - (currentRect.startX ?? 0))}%`}
-                            height={`${Math.abs((currentRect.endY ?? 0) - (currentRect.startY ?? 0))}%`}
-                            fill={rectangleColor}
-                            opacity="0.4"
-                            stroke="rgba(255,255,255,0.7)"
-                            strokeWidth="2"
-                            strokeDasharray="5,5"
-                            rx="2"
-                        />
-                    )}
-                </svg>
+                    {/* Arrows and Rectangles Layer - Using SVG */}
+                    {/* SVG itself has pointer-events: none to allow clicks to pass through to players */}
+                    {/* Individual elements (arrows/rectangles) have pointer-events: auto when interactive */}
+                    <svg
+                        className={`absolute inset-0 w-full h-full overflow-visible ${(isEraserMode || mode === 'move') ? 'z-30' : 'z-10'}`}
+                        style={{ pointerEvents: 'none' }}
+                        preserveAspectRatio="none"
+                    >
+                        {/* Arrow head marker definitions */}
+                        <defs>
+                            <marker
+                                id="arrowhead"
+                                markerWidth="10"
+                                markerHeight="10"
+                                refX="9"
+                                refY="5"
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                            >
+                                <polygon points="0,0 10,5 0,10 2,5" fill="white" />
+                            </marker>
+                            <marker
+                                id="arrowhead-temp"
+                                markerWidth="10"
+                                markerHeight="10"
+                                refX="9"
+                                refY="5"
+                                orient="auto"
+                                markerUnits="userSpaceOnUse"
+                            >
+                                <polygon points="0,0 10,5 0,10 2,5" fill="rgba(255,255,255,0.6)" />
+                            </marker>
+                        </defs>
 
-                {/* Players Layer */}
-                <div className="absolute inset-0 z-40 pointer-events-none">
-                    {players.map(player => {
-                        const isDragging = draggingPlayer?.id === player.id;
-                        const position = isDragging && tempPosition ? tempPosition : player.position;
+                        {/* Saved arrows */}
+                        {arrows.map(arrow => (
+                            <line
+                                key={arrow.id}
+                                x1={`${arrow.startX}%`}
+                                y1={`${arrow.startY}%`}
+                                x2={`${arrow.endX}%`}
+                                y2={`${arrow.endY}%`}
+                                stroke="white"
+                                strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
+                                strokeDasharray="8,5"
+                                strokeLinecap="round"
+                                markerEnd="url(#arrowhead)"
+                                opacity="0.85"
+                                onClick={isEraserMode ? () => onRemoveArrow?.(arrow.id) : undefined}
+                                style={{
+                                    cursor: isEraserMode ? 'pointer' : 'default',
+                                    pointerEvents: isEraserMode ? 'auto' : 'none' // readOnly is handled by parent container pointer-events-none? No, arrows usually ignore readOnly except for eraser. 
+                                }}
+                                className={isEraserMode ? 'hover:stroke-red-400 transition-colors' : ''}
+                            />
+                        ))}
 
-                        return (
-                            <div
-                                key={player.id}
-                                className={`
+                        {/* Saved rectangles */}
+                        {rectangles.map(rect => (
+                            <rect
+                                key={rect.id}
+                                x={`${rect.startX}%`}
+                                y={`${rect.startY}%`}
+                                width={`${rect.endX - rect.startX}%`}
+                                height={`${rect.endY - rect.startY}%`}
+                                fill={rect.color}
+                                opacity={rect.opacity}
+                                stroke={isEraserMode ? 'rgba(255,100,100,0.8)' : (mode === 'move' ? 'rgba(255,255,100,0.8)' : 'rgba(255,255,255,0.5)')}
+                                strokeWidth={isEraserMode ? "3" : (mode === 'move' ? "2" : "1")}
+                                rx="2"
+                                onClick={isEraserMode ? () => onRemoveRectangle?.(rect.id) : undefined}
+                                onMouseDown={mode === 'move' && !isEraserMode ? (e) => {
+                                    e.stopPropagation();
+                                    handleElementDragStart('rectangle', rect.id, e.clientX, e.clientY);
+                                } : undefined}
+                                style={{
+                                    cursor: isEraserMode ? 'pointer' : (mode === 'move' ? 'grab' : 'default'),
+                                    pointerEvents: (isEraserMode || mode === 'move') ? 'auto' : 'none'
+                                }}
+                                className={isEraserMode ? 'hover:opacity-60 transition-opacity' : ''}
+                            />
+                        ))}
+
+                        {/* Arrow being drawn */}
+                        {isDrawing && currentArrow && currentArrow.startX !== undefined && (
+                            <line
+                                x1={`${currentArrow.startX}%`}
+                                y1={`${currentArrow.startY}%`}
+                                x2={`${currentArrow.endX}%`}
+                                y2={`${currentArrow.endY}%`}
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeDasharray="8,5"
+                                strokeLinecap="round"
+                                markerEnd="url(#arrowhead-temp)"
+                                opacity="0.6"
+                            />
+                        )}
+
+                        {/* Rectangle being drawn */}
+                        {isDrawingRect && currentRect && currentRect.startX !== undefined && (
+                            <rect
+                                x={`${Math.min(currentRect.startX, currentRect.endX ?? 0)}%`}
+                                y={`${Math.min(currentRect.startY!, currentRect.endY ?? 0)}%`}
+                                width={`${Math.abs((currentRect.endX ?? 0) - (currentRect.startX ?? 0))}%`}
+                                height={`${Math.abs((currentRect.endY ?? 0) - (currentRect.startY ?? 0))}%`}
+                                fill={rectangleColor}
+                                opacity="0.4"
+                                stroke="rgba(255,255,255,0.7)"
+                                strokeWidth="2"
+                                strokeDasharray="5,5"
+                                rx="2"
+                            />
+                        )}
+                    </svg>
+
+                    {/* Players Layer */}
+                    <div className="absolute inset-0 z-40 pointer-events-none">
+                        {players.map(player => {
+                            const isDragging = draggingPlayer?.id === player.id;
+                            const position = isDragging && tempPosition ? tempPosition : player.position;
+
+                            return (
+                                <div
+                                    key={player.id}
+                                    className={`
                                     absolute select-none flex flex-col items-center justify-center
                                     ${isDragging ? 'z-50' : 'z-10'}
                                     ${readOnly
-                                        ? `pointer-events-auto ${playerNotes?.[player.id] ? 'cursor-pointer' : 'cursor-default'}`
-                                        : ((mode === 'draw' || mode === 'rectangle') ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto')
-                                    }
+                                            ? `pointer-events-auto ${playerNotes?.[player.id] ? 'cursor-pointer' : 'cursor-default'}`
+                                            : ((mode === 'draw' || mode === 'rectangle') ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto')
+                                        }
                                 `}
-                                style={{
-                                    left: `${position.x}%`,
-                                    top: `${position.y}%`,
-                                    transform: 'translate(-50%, -50%)',
-                                    touchAction: 'none'
-                                }}
-                                onMouseDown={(e) => !readOnly && handlePlayerMouseDown(e, player)}
-                                onTouchStart={(e) => !readOnly && handlePlayerMouseDown(e, player)}
-                                onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
-                                onDoubleClick={() => onPlayerDoubleClick?.(player)}
-                            >
-                                <div className="relative w-fit">
-                                    <div
-                                        className={`
+                                    style={{
+                                        left: `${position.x}%`,
+                                        top: `${position.y}%`,
+                                        transform: 'translate(-50%, -50%)',
+                                        touchAction: 'none'
+                                    }}
+                                    onMouseDown={(e) => !readOnly && handlePlayerMouseDown(e, player)}
+                                    onTouchStart={(e) => !readOnly && handlePlayerMouseDown(e, player)}
+                                    onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
+                                    onDoubleClick={() => onPlayerDoubleClick?.(player)}
+                                >
+                                    <div className="relative w-fit">
+                                        <div
+                                            className={`
                                             rounded-full 
                                             flex items-center justify-center text-gray-900 font-bold
                                             shadow-lg transition-transform duration-75
                                             ${isDragging ? 'scale-110 ring-2 ring-white' : (readOnly ? '' : 'hover:scale-105')}
                                             ${selectedPlayerId === player.id ? 'ring-2 ring-green-400' : ''}
                                         `}
-                                        style={{
-                                            width: compact ? 24 : playerSize,
-                                            height: compact ? 24 : playerSize,
-                                            fontSize: compact ? 10 : fontSizes.number,
-                                            backgroundColor: player.color || playerColor
-                                        }}
-                                    >
-                                        {player.number}
+                                            style={{
+                                                width: compact ? 24 : playerSize,
+                                                height: compact ? 24 : playerSize,
+                                                fontSize: compact ? 10 : fontSizes.number,
+                                                backgroundColor: player.color || playerColor
+                                            }}
+                                        >
+                                            {player.number}
+                                        </div>
+
+                                        {/* Note Indicator - Now relative to the circle container */}
+                                        {playerNotes[player.id] && (
+                                            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />
+                                        )}
                                     </div>
 
-                                    {/* Note Indicator - Now relative to the circle container */}
-                                    {playerNotes[player.id] && (
-                                        <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />
-                                    )}
+                                    <div
+                                        className="text-white text-center mt-0.5 whitespace-nowrap font-medium drop-shadow-md pointer-events-none"
+                                        style={{ fontSize: Math.max(8, fontSizes.name) }}
+                                    >
+                                        {player.name}
+                                    </div>
                                 </div>
-
-                                <div
-                                    className="text-white text-center mt-0.5 whitespace-nowrap font-medium drop-shadow-md pointer-events-none"
-                                    style={{ fontSize: Math.max(8, fontSizes.name) }}
-                                >
-                                    {player.name}
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

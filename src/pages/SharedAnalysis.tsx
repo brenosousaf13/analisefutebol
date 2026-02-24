@@ -197,20 +197,7 @@ export default function SharedAnalysis() {
                 </div>
             </header>
 
-            {/* Analysis Tabs (if multiple) */}
-            {isFullMode && (data.boards?.length || 0) > 0 && (
-                <div className="border-b border-gray-700 bg-gray-900 px-4 pt-2 shrink-0">
-                    <AnalysisTabs
-                        boards={data.boards || []}
-                        activeBoardId={activeBoardId}
-                        onSwitchBoard={setActiveBoardId}
-                        onAddBoard={() => { }} // Read only
-                        onUpdateBoardTitle={() => { }} // Read only
-                        onDeleteBoard={() => { }} // Read only
-                        readOnly={true}
-                    />
-                </div>
-            )}
+
 
             {/* Main Content */}
             <main className={`flex-1 overflow-y-auto ${isFullMode ? 'flex flex-col' : 'p-4 lg:p-6'}`}>
@@ -272,6 +259,19 @@ export default function SharedAnalysis() {
                             isSaving={false}
                             hasUnsavedChanges={false}
                             readOnly={true}
+                            tabsSlot={
+                                (data.boards?.length || 0) > 0 ? (
+                                    <AnalysisTabs
+                                        boards={data.boards || []}
+                                        activeBoardId={activeBoardId}
+                                        onSwitchBoard={setActiveBoardId}
+                                        onAddBoard={() => { }} // Read only
+                                        onUpdateBoardTitle={() => { }} // Read only
+                                        onDeleteBoard={() => { }} // Read only
+                                        readOnly={true}
+                                    />
+                                ) : undefined
+                            }
                         />
 
                         <AnalysisSidebar

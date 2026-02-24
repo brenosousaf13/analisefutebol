@@ -354,13 +354,6 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             {/* CENTER: FIELD */}
             <div className="flex flex-col w-full lg:w-[64%] h-auto lg:h-full relative shrink-0 order-1 lg:order-none">
 
-                {/* Tabs Slot (Analysis Tabs) */}
-                {tabsSlot && (
-                    <div className="shrink-0">
-                        {tabsSlot}
-                    </div>
-                )}
-
                 {/* Switcher & Header & Toolbar Trigger */}
                 <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-30 shrink-0 relative">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
@@ -431,37 +424,33 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 </div>
 
                 {/* Field Area */}
-                <div className="flex-1 w-full p-2 flex items-center justify-center relative overflow-hidden pb-4">
-                    <div className="w-full h-full relative" style={{ maxWidth: '100%', maxHeight: '100%', aspectRatio: '105/68' }}>
-                        {/* Wrapper to maintain aspect ratio but scale down if needed */}
-                        <div className="absolute inset-0 shadow-2xl rounded-lg overflow-hidden border border-white/10">
-                            <TacticalField
-                                players={playersToRender}
-                                onPlayerMove={(id, pos) => handlePlayerMove(id, pos)}
-                                onPlayerClick={onPlayerClick}
-                                onPlayerDoubleClick={onPlayerDoubleClick}
-                                orientation="horizontal"
-                                mode={activeTool === 'select' ? 'move' : activeTool === 'rectangle' ? 'rectangle' : 'draw'}
-                                isEraserMode={activeTool === 'eraser'}
-                                arrows={currentArrows || []}
-                                rectangles={currentRects || []}
-                                onAddArrow={(a) => onAddArrow(a, currentDrawTeam, currentPhaseKey)}
-                                onRemoveArrow={(id) => onRemoveArrow(id, currentDrawTeam, currentPhaseKey)}
-                                onMoveArrow={(id, x, y) => onMoveArrow(id, x, y, currentDrawTeam, currentPhaseKey)}
-                                onAddRectangle={(r) => onAddRectangle(r, currentDrawTeam, currentPhaseKey)}
-                                onRemoveRectangle={(id) => onRemoveRectangle(id, currentDrawTeam, currentPhaseKey)}
-                                onMoveRectangle={(id, x, y) => onMoveRectangle(id, x, y, currentDrawTeam, currentPhaseKey)}
-                                playerColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                rectangleColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
-                                playerScale={0.85}
-                                readOnly={readOnly}
-                                playerNotes={playerNotes}
-                                ballPosition={possession === 'home' ? ballPositions?.homeOff : ballPositions?.awayOff}
-                                onBallMove={(pos) => onBallMove?.(pos, possession, 'offensive')}
-                                ballScale={0.7}
-                            />
-                        </div>
-                    </div>
+                <div className="flex-1 w-full flex items-center justify-center relative pb-4">
+                    <TacticalField
+                        tabsSlot={tabsSlot}
+                        players={playersToRender}
+                        onPlayerMove={(id, pos) => handlePlayerMove(id, pos)}
+                        onPlayerClick={onPlayerClick}
+                        onPlayerDoubleClick={onPlayerDoubleClick}
+                        orientation="horizontal"
+                        mode={activeTool === 'select' ? 'move' : activeTool === 'rectangle' ? 'rectangle' : 'draw'}
+                        isEraserMode={activeTool === 'eraser'}
+                        arrows={currentArrows || []}
+                        rectangles={currentRects || []}
+                        onAddArrow={(a) => onAddArrow(a, currentDrawTeam, currentPhaseKey)}
+                        onRemoveArrow={(id) => onRemoveArrow(id, currentDrawTeam, currentPhaseKey)}
+                        onMoveArrow={(id, x, y) => onMoveArrow(id, x, y, currentDrawTeam, currentPhaseKey)}
+                        onAddRectangle={(r) => onAddRectangle(r, currentDrawTeam, currentPhaseKey)}
+                        onRemoveRectangle={(id) => onRemoveRectangle(id, currentDrawTeam, currentPhaseKey)}
+                        onMoveRectangle={(id, x, y) => onMoveRectangle(id, x, y, currentDrawTeam, currentPhaseKey)}
+                        playerColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
+                        rectangleColor={currentDrawTeam === 'home' ? homeTeamColor : awayTeamColor}
+                        playerScale={0.85}
+                        readOnly={readOnly}
+                        playerNotes={playerNotes}
+                        ballPosition={possession === 'home' ? ballPositions?.homeOff : ballPositions?.awayOff}
+                        onBallMove={(pos) => onBallMove?.(pos, possession, 'offensive')}
+                        ballScale={0.7}
+                    />
                 </div>
 
 

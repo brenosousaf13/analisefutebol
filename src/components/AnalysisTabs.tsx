@@ -47,15 +47,15 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
     };
 
     return (
-        <div className="flex items-end gap-0 overflow-x-auto bg-[#0b1111] pt-2 px-2 select-none">
+        <div className="flex items-end gap-0 overflow-x-auto bg-transparent pt-2 px-2 select-none">
             {/* Default Tab (Legacy/Root) */}
             <div
                 onClick={() => onSwitchBoard(null)}
                 className={`
                     group relative flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-all cursor-pointer min-w-[120px] justify-center
                     ${activeBoardId === null
-                        ? 'bg-[#141A1A] text-white z-10'
-                        : 'bg-[#0B1111] text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
+                        ? 'bg-[#1a1a1a] text-white z-10'
+                        : 'bg-black/40 text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
                 `}
                 style={{
                     boxShadow: activeBoardId === null ? '0 -4px 12px rgba(0,0,0,0.5)' : 'none',
@@ -82,8 +82,8 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                     className={`
                         group relative flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-all cursor-pointer min-w-[120px] justify-between
                         ${activeBoardId === board.id
-                            ? 'bg-[#141A1A] text-white z-10'
-                            : 'bg-[#0B1111] text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
+                            ? 'bg-[#1a1a1a] text-white z-10'
+                            : 'bg-black/40 text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
                     `}
                     style={{
                         boxShadow: activeBoardId === board.id ? '0 -4px 12px rgba(0,0,0,0.5)' : 'none',
