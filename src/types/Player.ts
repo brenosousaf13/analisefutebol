@@ -8,6 +8,8 @@ export interface Player {
     };
     isManual?: boolean;
     note?: string;
-    color?: string;
+    color?: string; // Legacy
+    backgroundColor?: string;
+    borderColor?: string;
     isStarter?: boolean;
 }

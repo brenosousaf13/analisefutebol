@@ -190,6 +190,8 @@ function Analysis() {
     // Team colors
     const [homeTeamColor, setHomeTeamColor] = useState('#EF4444');
     const [awayTeamColor, setAwayTeamColor] = useState('#3B82F6');
+    const [homeTeamBgColor, setHomeTeamBgColor] = useState('#090909');
+    const [awayTeamBgColor, setAwayTeamBgColor] = useState('#090909');
 
     // Modal states
     // Modal states
@@ -373,8 +375,9 @@ function Analysis() {
                     setAwayOffensiveNotes(data.awayOffensiveNotes || '');
                     setAwayBenchNotes(data.awayBenchNotes || '');
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
-                    setHomeTeamColor(data.homeTeamColor || '#EF4444');
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
+                    setHomeTeamBgColor(data.homeTeamBgColor || '#090909');
+                    setAwayTeamBgColor(data.awayTeamBgColor || '#090909');
 
                     setHomeCoach(data.homeCoach || '');
                     setAwayCoach(data.awayCoach || '');
@@ -546,6 +549,8 @@ function Analysis() {
                 awayBenchNotes,
                 homeTeamColor,
                 awayTeamColor,
+                homeTeamBgColor,
+                awayTeamBgColor,
                 homeTeamNotes,
                 homeOffNotes: '',
                 awayTeamNotes: '',
@@ -1038,6 +1043,8 @@ function Analysis() {
                             awayTeamName={matchInfo.awayTeam}
                             homeTeamColor={homeTeamColor}
                             awayTeamColor={awayTeamColor}
+                            homeTeamBgColor={homeTeamBgColor}
+                            awayTeamBgColor={awayTeamBgColor}
                             homeCoachName={homeCoach}
                             awayCoachName={awayCoach}
                             onHomeCoachChange={(name) => { setHomeCoach(name); setHasUnsavedChanges(true); }}
@@ -1353,8 +1360,12 @@ function Analysis() {
                         awayTeamName={matchInfo.awayTeam}
                         homeTeamColor={homeTeamColor}
                         awayTeamColor={awayTeamColor}
+                        homeTeamBgColor={homeTeamBgColor}
+                        awayTeamBgColor={awayTeamBgColor}
                         onHomeColorChange={setHomeTeamColor}
                         onAwayColorChange={setAwayTeamColor}
+                        onHomeBgColorChange={setHomeTeamBgColor}
+                        onAwayBgColorChange={setAwayTeamBgColor}
                     />
 
                     {/* Analysis Sidebar (slides from left) */}

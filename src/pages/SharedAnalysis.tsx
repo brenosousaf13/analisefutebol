@@ -208,6 +208,8 @@ export default function SharedAnalysis() {
                             awayTeamName={data.awayTeam}
                             homeTeamColor={data.homeTeamColor || '#EF4444'}
                             awayTeamColor={data.awayTeamColor || '#3B82F6'}
+                            homeTeamBgColor={data.homeTeamBgColor || '#090909'}
+                            awayTeamBgColor={data.awayTeamBgColor || '#090909'}
 
                             homePlayersDef={activeData.homePlayersDef}
                             homePlayersOff={activeData.homePlayersOff}

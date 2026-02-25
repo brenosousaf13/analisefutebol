@@ -103,6 +103,8 @@ function FullAnalysisPage() {
     const [activeTool, setActiveTool] = useState<ToolType>('select');
     const [homeTeamColor, setHomeTeamColor] = useState('#EF4444');
     const [awayTeamColor, setAwayTeamColor] = useState('#3B82F6');
+    const [homeTeamBgColor, setHomeTeamBgColor] = useState('#090909');
+    const [awayTeamBgColor, setAwayTeamBgColor] = useState('#090909');
     const [shareToken, setShareToken] = useState<string | undefined>(undefined);
     const [tags, setTags] = useState<string[]>([]); // Added state for tags
 
@@ -148,14 +150,16 @@ function FullAnalysisPage() {
                         time: data.matchTime
                     }));
 
-                    // Load Boards first to aggregate notes
+                    setHomeTeamColor(data.homeTeamColor || '#EF4444');
+                    setAwayTeamColor(data.awayTeamColor || '#3B82F6');
+                    setHomeTeamBgColor(data.homeTeamBgColor || '#090909');
+                    setAwayTeamBgColor(data.awayTeamBgColor || '#090909');
+
+                    const notesMap: Record<number, string> = {};
                     const loadedBoards = data.boards || [];
 
-                    // Aggregate notes from all boards and default board
-                    const notesMap: Record<number, string> = {};
-
-                    // Helper to collect notes
-                    const collectNotes = (players: Player[]) => {
+                    const collectNotes = (players?: Player[]) => {
+                        if (!players) return;
                         players.forEach(p => {
                             if (p.note) notesMap[p.id] = p.note;
                         });
@@ -644,6 +648,8 @@ function FullAnalysisPage() {
                 awayBenchNotes,
                 homeTeamColor,
                 awayTeamColor,
+                homeTeamBgColor,
+                awayTeamBgColor,
                 homeTeamNotes: '',
                 homeOffNotes: '',
                 awayTeamNotes: '',
@@ -828,6 +834,8 @@ function FullAnalysisPage() {
                     awayTeamName={matchInfo.awayTeam}
                     homeTeamColor={homeTeamColor}
                     awayTeamColor={awayTeamColor}
+                    homeTeamBgColor={homeTeamBgColor}
+                    awayTeamBgColor={awayTeamBgColor}
 
                     homePlayersDef={homePlayersDef}
                     homePlayersOff={homePlayersOff}
@@ -909,8 +917,12 @@ function FullAnalysisPage() {
                 awayTeamName={matchInfo.awayTeam}
                 homeTeamColor={homeTeamColor}
                 awayTeamColor={awayTeamColor}
+                homeTeamBgColor={homeTeamBgColor}
+                awayTeamBgColor={awayTeamBgColor}
                 onHomeColorChange={setHomeTeamColor}
                 onAwayColorChange={setAwayTeamColor}
+                onHomeBgColorChange={setHomeTeamBgColor}
+                onAwayBgColorChange={setAwayTeamBgColor}
             />
             <AnalysisSidebar
                 isOpen={isAnalysisSidebarOpen}

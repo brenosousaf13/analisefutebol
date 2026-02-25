@@ -46,7 +46,6 @@ export default function PlayerEditModal({
 
     const handleSave = () => {
         if (!player) return;
-
         onSave({
             ...player,
             name,

@@ -872,9 +872,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                                 width: compact ? 24 : playerSize,
                                                 height: compact ? 24 : playerSize,
                                                 fontSize: compact ? 10 : fontSizes.number,
-                                                backgroundColor: '#090909',
-                                                color: player.color || playerColor,
-                                                border: `2px solid ${player.color || playerColor}`
+                                                backgroundColor: player.backgroundColor || '#090909',
+                                                color: player.borderColor || player.color || playerColor,
+                                                border: `2px solid ${player.borderColor || player.color || playerColor}`
                                             }}
                                         >
                                             {player.number}

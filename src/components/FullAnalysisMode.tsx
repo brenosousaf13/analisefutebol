@@ -14,6 +14,8 @@ interface FullAnalysisModeProps {
     awayTeamName: string;
     homeTeamColor: string;
     awayTeamColor: string;
+    homeTeamBgColor?: string;
+    awayTeamBgColor?: string;
     homeCoachName: string;
     awayCoachName: string;
     onHomeCoachChange?: (name: string) => void;
@@ -77,6 +79,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     awayTeamName,
     homeTeamColor,
     awayTeamColor,
+    homeTeamBgColor = '#090909',
+    awayTeamBgColor = '#090909',
     homeCoachName,
     awayCoachName,
     onHomeCoachChange,
@@ -147,25 +151,25 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         // Show Home Offensive players + Away Defensive players
         if (possession === 'home') {
             if (showHomePlayers) {
-                list.push(...homePlayersOff.map(p => ({ ...p, color: homeTeamColor })));
+                list.push(...homePlayersOff.map(p => ({ ...p, color: homeTeamColor, backgroundColor: homeTeamBgColor, borderColor: homeTeamColor })));
             }
             if (showAwayPlayers) {
-                list.push(...awayPlayersDef.map(p => ({ ...p, color: awayTeamColor })));
+                list.push(...awayPlayersDef.map(p => ({ ...p, color: awayTeamColor, backgroundColor: awayTeamBgColor, borderColor: awayTeamColor })));
             }
         }
         // If Away has possession:
         // Show Away Offensive players + Home Defensive players
         else {
             if (showAwayPlayers) {
-                list.push(...awayPlayersOff.map(p => ({ ...p, color: awayTeamColor })));
+                list.push(...awayPlayersOff.map(p => ({ ...p, color: awayTeamColor, backgroundColor: awayTeamBgColor, borderColor: awayTeamColor })));
             }
             if (showHomePlayers) {
-                list.push(...homePlayersDef.map(p => ({ ...p, color: homeTeamColor })));
+                list.push(...homePlayersDef.map(p => ({ ...p, color: homeTeamColor, backgroundColor: homeTeamBgColor, borderColor: homeTeamColor })));
             }
         }
 
         return list;
-    }, [possession, showHomePlayers, showAwayPlayers, homePlayersOff, homePlayersDef, awayPlayersOff, awayPlayersDef, homeTeamColor, awayTeamColor]);
+    }, [possession, showHomePlayers, showAwayPlayers, homePlayersOff, homePlayersDef, awayPlayersOff, awayPlayersDef, homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor]);
 
     // Helper to handle moves
     const handlePlayerMove = (id: number, pos: { x: number, y: number }) => {
@@ -191,6 +195,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         players,
         substitutes,
         color,
+        bgColor = '#090909',
         isVisible,
         onToggleVisibility,
         team,
@@ -205,6 +210,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         players: Player[],
         substitutes: Player[],
         color: string,
+        bgColor?: string,
         isVisible: boolean,
         onToggleVisibility: () => void,
         team: 'home' | 'away',
@@ -305,6 +311,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         players={substitutes}
                         team={team}
                         teamColor={color}
+                        teamBgColor={bgColor}
                         orientation="vertical"
                         align={align || 'left'}
                         onPromotePlayer={readOnly ? () => { } : (p) => onBenchPlayerClick(p, team)}
@@ -464,6 +471,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 players={awayPlayersDef}
                 substitutes={awaySubstitutes}
                 color={awayTeamColor}
+                bgColor={awayTeamBgColor}
                 isVisible={showAwayPlayers}
                 onToggleVisibility={() => setShowAwayPlayers(!showAwayPlayers)}
                 team="away"

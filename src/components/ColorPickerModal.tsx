@@ -2,17 +2,6 @@ import React from 'react';
 import { X } from 'lucide-react';
 
 const PRESET_COLORS = [
-    '#EF4444', // Red
-    '#F97316', // Orange
-    '#EAB308', // Yellow
-    '#22C55E', // Green
-    '#14B8A6', // Teal
-    '#3B82F6', // Blue
-    '#8B5CF6', // Purple
-    '#EC4899', // Pink
-    '#FFFFFF', // White
-    '#374151', // Gray
-    // Add specifically requested colors
     '#FDB913',
     '#005E36',
     '#ED7203',
@@ -22,6 +11,7 @@ const PRESET_COLORS = [
     '#DA291C',
     '#862633',
     '#090909',
+    '#FFFFFF'
 ];
 
 interface ColorPickerModalProps {
@@ -31,8 +21,12 @@ interface ColorPickerModalProps {
     awayTeamName: string;
     homeTeamColor: string;
     awayTeamColor: string;
+    homeTeamBgColor: string;
+    awayTeamBgColor: string;
     onHomeColorChange: (color: string) => void;
     onAwayColorChange: (color: string) => void;
+    onHomeBgColorChange: (color: string) => void;
+    onAwayBgColorChange: (color: string) => void;
 }
 
 const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
@@ -42,8 +36,12 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
     awayTeamName,
     homeTeamColor,
     awayTeamColor,
+    homeTeamBgColor,
+    awayTeamBgColor,
     onHomeColorChange,
-    onAwayColorChange
+    onAwayColorChange,
+    onHomeBgColorChange,
+    onAwayBgColorChange
 }) => {
     if (!isOpen) return null;
 
@@ -69,23 +67,50 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                     <label className="text-gray-400 text-sm mb-3 block font-medium">
                         {homeTeamName} (Casa)
                     </label>
-                    <div className="flex items-center gap-3">
-                        <div
-                            className="w-12 h-12 rounded-lg border-2 border-gray-600 shadow-lg"
-                            style={{ backgroundColor: homeTeamColor }}
-                        />
-                        <div className="flex flex-wrap gap-2 flex-1">
-                            {PRESET_COLORS.map(color => (
-                                <button
-                                    key={`home-${color}`}
-                                    onClick={() => onHomeColorChange(color)}
-                                    className={`w-7 h-7 rounded-full border-2 transition-all ${homeTeamColor === color
-                                        ? 'border-white scale-110 shadow-lg'
-                                        : 'border-transparent hover:border-gray-400 hover:scale-105'
-                                        }`}
-                                    style={{ backgroundColor: color }}
-                                />
-                            ))}
+                    <div className="space-y-4">
+                        {/* Background */}
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-12 h-12 rounded-lg border-2 border-gray-600 shadow-lg flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                                style={{ backgroundColor: homeTeamBgColor, color: homeTeamColor, borderColor: homeTeamColor }}
+                            >
+                                Fundo
+                            </div>
+                            <div className="flex flex-wrap gap-2 flex-1">
+                                {PRESET_COLORS.map(color => (
+                                    <button
+                                        key={`home-bg-${color}`}
+                                        onClick={() => onHomeBgColorChange(color)}
+                                        className={`w-7 h-7 rounded-full border-2 transition-all ${homeTeamBgColor === color
+                                            ? 'border-white scale-110 shadow-lg'
+                                            : 'border-transparent hover:border-gray-400 hover:scale-105'
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        {/* Border */}
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-12 h-12 rounded-lg border-2 border-gray-600 shadow-lg flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                                style={{ backgroundColor: homeTeamBgColor, color: homeTeamColor, borderColor: homeTeamColor }}
+                            >
+                                Borda
+                            </div>
+                            <div className="flex flex-wrap gap-2 flex-1">
+                                {PRESET_COLORS.map(color => (
+                                    <button
+                                        key={`home-${color}`}
+                                        onClick={() => onHomeColorChange(color)}
+                                        className={`w-7 h-7 rounded-full border-2 transition-all ${homeTeamColor === color
+                                            ? 'border-white scale-110 shadow-lg'
+                                            : 'border-transparent hover:border-gray-400 hover:scale-105'
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -95,23 +120,50 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                     <label className="text-gray-400 text-sm mb-3 block font-medium">
                         {awayTeamName} (Visitante)
                     </label>
-                    <div className="flex items-center gap-3">
-                        <div
-                            className="w-12 h-12 rounded-lg border-2 border-gray-600 shadow-lg"
-                            style={{ backgroundColor: awayTeamColor }}
-                        />
-                        <div className="flex flex-wrap gap-2 flex-1">
-                            {PRESET_COLORS.map(color => (
-                                <button
-                                    key={`away-${color}`}
-                                    onClick={() => onAwayColorChange(color)}
-                                    className={`w-7 h-7 rounded-full border-2 transition-all ${awayTeamColor === color
-                                        ? 'border-white scale-110 shadow-lg'
-                                        : 'border-transparent hover:border-gray-400 hover:scale-105'
-                                        }`}
-                                    style={{ backgroundColor: color }}
-                                />
-                            ))}
+                    <div className="space-y-4">
+                        {/* Background */}
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-12 h-12 rounded-lg border-2 border-gray-600 shadow-lg flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                                style={{ backgroundColor: awayTeamBgColor, color: awayTeamColor, borderColor: awayTeamColor }}
+                            >
+                                Fundo
+                            </div>
+                            <div className="flex flex-wrap gap-2 flex-1">
+                                {PRESET_COLORS.map(color => (
+                                    <button
+                                        key={`away-bg-${color}`}
+                                        onClick={() => onAwayBgColorChange(color)}
+                                        className={`w-7 h-7 rounded-full border-2 transition-all ${awayTeamBgColor === color
+                                            ? 'border-white scale-110 shadow-lg'
+                                            : 'border-transparent hover:border-gray-400 hover:scale-105'
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        {/* Border */}
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-12 h-12 rounded-lg border-2 border-gray-600 shadow-lg flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                                style={{ backgroundColor: awayTeamBgColor, color: awayTeamColor, borderColor: awayTeamColor }}
+                            >
+                                Borda
+                            </div>
+                            <div className="flex flex-wrap gap-2 flex-1">
+                                {PRESET_COLORS.map(color => (
+                                    <button
+                                        key={`away-${color}`}
+                                        onClick={() => onAwayColorChange(color)}
+                                        className={`w-7 h-7 rounded-full border-2 transition-all ${awayTeamColor === color
+                                            ? 'border-white scale-110 shadow-lg'
+                                            : 'border-transparent hover:border-gray-400 hover:scale-105'
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

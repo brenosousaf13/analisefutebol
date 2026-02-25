@@ -74,6 +74,8 @@ export interface AnalysisData {
 
     homeTeamColor: string;
     awayTeamColor: string;
+    homeTeamBgColor?: string;
+    awayTeamBgColor?: string;
 
     // Events
     events?: any[];
@@ -122,6 +124,8 @@ export interface SavedAnalysisSummary {
     away_team_logo: string;
     home_team_color?: string;
     away_team_color?: string;
+    home_team_bg_color?: string;
+    away_team_bg_color?: string;
     home_score: number;
     away_score: number;
     created_at: string;
@@ -170,6 +174,8 @@ export const analysisService = {
                 away_score: data.awayScore,
                 home_team_color: data.homeTeamColor, // Added missing field
                 away_team_color: data.awayTeamColor, // Added missing field
+                home_team_bg_color: data.homeTeamBgColor,
+                away_team_bg_color: data.awayTeamBgColor,
 
                 // Old notes
                 notas_casa: data.notasCasa,
@@ -290,7 +296,9 @@ export const analysisService = {
                     x: p.position.x,
                     y: p.position.y,
                     note: p.note || null,
-                    is_manual: false
+                    is_manual: false,
+                    background_color: p.backgroundColor || null,
+                    border_color: p.borderColor || null
                 }));
             };
 
@@ -491,6 +499,8 @@ export const analysisService = {
             away_team_logo: item.away_team_logo,
             home_team_color: item.home_team_color,
             away_team_color: item.away_team_color,
+            home_team_bg_color: (item as any).home_team_bg_color,
+            away_team_bg_color: (item as any).away_team_bg_color,
             home_score: item.home_score,
             away_score: item.away_score,
             created_at: item.created_at,
@@ -535,7 +545,13 @@ export const analysisService = {
 
             players?.filter(p => (p.board_id === boardId) || (boardId === null && !p.board_id)).forEach(p => {
                 const playerObj: Player = {
-                    id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note
+                    id: p.player_id,
+                    name: p.name,
+                    number: p.number,
+                    position: { x: p.x, y: p.y },
+                    note: p.note,
+                    backgroundColor: p.background_color,
+                    borderColor: p.border_color
                 };
                 const variant = p.variant || 'defensive';
                 if (p.team === 'home') {
@@ -662,6 +678,8 @@ export const analysisService = {
             offensiveNotes: analysis.offensive_notes || '',
             homeTeamColor: analysis.home_team_color || '#EF4444',
             awayTeamColor: analysis.away_team_color || '#3B82F6',
+            homeTeamBgColor: analysis.home_team_bg_color || '#090909',
+            awayTeamBgColor: analysis.away_team_bg_color || '#090909',
 
             // Default Board Items (Legacy/Root)
             ...defaultBoardItems,
@@ -899,7 +917,9 @@ export const analysisService = {
             players?.filter(p => p.board_id === boardId).forEach(p => {
                 const playerObj: Player = {
                     id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note,
-                    color: p.color // Ensure color is passed if saved
+                    color: p.color, // Ensure color is passed if saved
+                    backgroundColor: p.background_color,
+                    borderColor: p.border_color
                 };
                 const variant = p.variant || 'defensive';
                 if (p.team === 'home') {
@@ -1013,6 +1033,8 @@ export const analysisService = {
             offensiveNotes: analysis.offensive_notes || '',
             homeTeamColor: analysis.home_team_color || '#EF4444',
             awayTeamColor: analysis.away_team_color || '#3B82F6',
+            homeTeamBgColor: analysis.home_team_bg_color || '#090909',
+            awayTeamBgColor: analysis.away_team_bg_color || '#090909',
 
             // Spread default board items to root
             ...defaultBoardItems,
