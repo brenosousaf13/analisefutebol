@@ -919,10 +919,10 @@ function FullAnalysisPage() {
                 awayTeamColor={awayTeamColor}
                 homeTeamBgColor={homeTeamBgColor}
                 awayTeamBgColor={awayTeamBgColor}
-                onHomeColorChange={setHomeTeamColor}
-                onAwayColorChange={setAwayTeamColor}
-                onHomeBgColorChange={setHomeTeamBgColor}
-                onAwayBgColorChange={setAwayTeamBgColor}
+                onHomeColorChange={(c) => { setHomeTeamColor(c); setHasUnsavedChanges(true); }}
+                onAwayColorChange={(c) => { setAwayTeamColor(c); setHasUnsavedChanges(true); }}
+                onHomeBgColorChange={(c) => { setHomeTeamBgColor(c); setHasUnsavedChanges(true); }}
+                onAwayBgColorChange={(c) => { setAwayTeamBgColor(c); setHasUnsavedChanges(true); }}
             />
             <AnalysisSidebar
                 isOpen={isAnalysisSidebarOpen}
