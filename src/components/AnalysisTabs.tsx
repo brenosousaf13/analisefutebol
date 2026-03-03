@@ -47,25 +47,31 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
     };
 
     return (
-        <div className="flex items-end gap-0 overflow-x-auto bg-transparent pt-2 px-2 select-none">
+        <div className="flex items-end gap-1 overflow-x-auto pt-2 px-2 select-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <style>
+                {`
+                .flex::-webkit-scrollbar {
+                    display: none;
+                }
+                `}
+            </style>
             {/* Default Tab (Legacy/Root) */}
             <div
                 onClick={() => onSwitchBoard(null)}
                 className={`
-                    group relative flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-all cursor-pointer min-w-[120px] justify-center
+                    group relative flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors cursor-pointer min-w-[120px] justify-center
                     ${activeBoardId === null
-                        ? 'bg-[#1a1a1a] text-white z-10'
-                        : 'bg-black/40 text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
+                        ? 'bg-[#1a1a1a] text-white'
+                        : 'bg-black/60 text-gray-500 hover:text-gray-300 hover:bg-black/80'}
                 `}
                 style={{
-                    boxShadow: activeBoardId === null ? '0 -4px 12px rgba(0,0,0,0.5)' : 'none',
-                    marginBottom: activeBoardId === null ? '-1px' : '0'
+                    zIndex: activeBoardId === null ? 10 : 1
                 }}
             >
                 <span>Principal</span>
-                {/* Active Indicator Line on Top (Optional, Chrome doesn't have it but it looks nice) */}
+                {/* Active Indicator Line on Top */}
                 {activeBoardId === null && (
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-primary rounded-t-xl" />
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-primary rounded-t-lg" />
                 )}
             </div>
 
@@ -80,15 +86,13 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                         startEditing(board);
                     }}
                     className={`
-                        group relative flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-all cursor-pointer min-w-[120px] justify-between
+                        group relative flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors cursor-pointer min-w-[120px] justify-between
                         ${activeBoardId === board.id
-                            ? 'bg-[#1a1a1a] text-white z-10'
-                            : 'bg-black/40 text-gray-500 hover:bg-[#141A1A]/50 hover:text-gray-300'}
+                            ? 'bg-[#1a1a1a] text-white'
+                            : 'bg-black/60 text-gray-500 hover:text-gray-300 hover:bg-black/80'}
                     `}
                     style={{
-                        boxShadow: activeBoardId === board.id ? '0 -4px 12px rgba(0,0,0,0.5)' : 'none',
-                        marginBottom: activeBoardId === board.id ? '-1px' : '0',
-                        marginLeft: '-8px' // Overlap effect like Chrome
+                        zIndex: activeBoardId === board.id ? 10 : 1
                     }}
                 >
                     {editingBoardId === board.id ? (
@@ -137,7 +141,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                     )}
                     {/* Active Indicator Line */}
                     {activeBoardId === board.id && (
-                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-primary rounded-t-xl" />
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-primary rounded-t-lg" />
                     )}
                 </div>
             ))}
@@ -146,10 +150,10 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
             {!readOnly && (
                 <button
                     onClick={onAddBoard}
-                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-800 text-gray-500 hover:text-white transition-colors ml-2"
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-gray-400 hover:text-white transition-colors ml-2 mb-1"
                     title="Nova Aba"
                 >
-                    <Plus size={18} />
+                    <Plus size={16} />
                 </button>
             )}
         </div>

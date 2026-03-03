@@ -569,8 +569,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         const updateDimensions = () => {
             if (wrapperRef.current) {
                 const parent = wrapperRef.current;
-                const parentWidth = parent.clientWidth;
-                const parentHeight = parent.clientHeight;
+                const style = window.getComputedStyle(parent);
+                const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+
+                const parentWidth = parent.clientWidth - paddingX;
+                const parentHeight = parent.clientHeight - paddingY;
 
                 const isVertical = orientation === 'vertical';
                 const targetRatio = isVertical ? 68 / 105 : 105 / 68;
