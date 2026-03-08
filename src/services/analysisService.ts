@@ -296,9 +296,7 @@ export const analysisService = {
                     x: p.position.x,
                     y: p.position.y,
                     note: p.note || null,
-                    is_manual: false,
-                    background_color: p.backgroundColor || null,
-                    border_color: p.borderColor || null
+                    is_manual: false
                 }));
             };
 
@@ -549,9 +547,7 @@ export const analysisService = {
                     name: p.name,
                     number: p.number,
                     position: { x: p.x, y: p.y },
-                    note: p.note,
-                    backgroundColor: p.background_color,
-                    borderColor: p.border_color
+                    note: p.note
                 };
                 const variant = p.variant || 'defensive';
                 if (p.team === 'home') {
@@ -917,9 +913,7 @@ export const analysisService = {
             players?.filter(p => p.board_id === boardId).forEach(p => {
                 const playerObj: Player = {
                     id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note,
-                    color: p.color, // Ensure color is passed if saved
-                    backgroundColor: p.background_color,
-                    borderColor: p.border_color
+                    color: p.color // Ensure color is passed if saved
                 };
                 const variant = p.variant || 'defensive';
                 if (p.team === 'home') {
