@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FolderOpen, LogOut, User, Menu, X, PlusCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import TeamLogoImage from './TeamLogoImage';
 
 interface MatchInfo {
     homeTeam: string;
@@ -79,9 +80,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                             <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.homeTeam}
                             </span>
-                            {matchInfo.homeTeamLogo && (
-                                <img src={matchInfo.homeTeamLogo} alt={matchInfo.homeTeam} className="w-5 h-5 sm:w-8 sm:h-8 object-contain shrink-0" />
-                            )}
+                            <TeamLogoImage logoUrl={matchInfo.homeTeamLogo} teamName={matchInfo.homeTeam} className="w-5 h-5 sm:w-8 sm:h-8 shrink-0" />
                         </div>
 
                         <span className="text-gray-600 text-xs sm:text-sm font-bold shrink-0">VS</span>
@@ -94,9 +93,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                                 onHeaderTeamClick && onHeaderTeamClick('away');
                             }}
                         >
-                            {matchInfo.awayTeamLogo && (
-                                <img src={matchInfo.awayTeamLogo} alt={matchInfo.awayTeam} className="w-5 h-5 sm:w-8 sm:h-8 object-contain shrink-0" />
-                            )}
+                            <TeamLogoImage logoUrl={matchInfo.awayTeamLogo} teamName={matchInfo.awayTeam} className="w-5 h-5 sm:w-8 sm:h-8 shrink-0" />
                             <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.awayTeam}
                             </span>
