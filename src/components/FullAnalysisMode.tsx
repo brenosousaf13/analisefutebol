@@ -302,6 +302,13 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         return (
             <div className="flex flex-col h-full bg-[#0b1111] overflow-hidden">
 
+                {/* Board tabs (e.g. Principal/Ofensivo/Defensivo) — rendered above the field */}
+                {tabsSlot && (
+                    <div className="shrink-0 border-b border-gray-800/50">
+                        {tabsSlot}
+                    </div>
+                )}
+
                 {/* Possession switcher */}
                 <div className="shrink-0 flex items-center justify-center gap-3 px-3 py-2 border-b border-gray-800/50 bg-[#0b1111]">
                     <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 font-bold shrink-0">
@@ -324,8 +331,9 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 </div>
 
                 {/* Field + bottom sheet (share the same relative container) */}
-                <div className="flex-1 relative min-h-0">
-                    <TacticalField {...tacticalFieldProps} orientation="vertical" />
+                <div className="flex-1 relative min-h-0 overflow-hidden">
+                    {/* tabsSlot=undefined: tabs are shown above this container, not inside the field */}
+                    <TacticalField {...tacticalFieldProps} orientation="vertical" tabsSlot={undefined} />
 
                     <MobileBottomSheet
                         homeTeamName={homeTeamName}

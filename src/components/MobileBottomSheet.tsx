@@ -59,7 +59,7 @@ export default function MobileBottomSheet({
 
     return (
         <div
-            className="absolute left-0 right-0 bottom-0 flex flex-col bg-[#0a1010] rounded-t-2xl border-t border-gray-700/60 shadow-[0_-8px_32px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-out z-20"
+            className="absolute left-0 right-0 bottom-0 flex flex-col bg-[#0a1010] rounded-t-2xl border-t border-gray-700/60 shadow-[0_-8px_32px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-out z-[60]"
             style={{
                 height: '72%',
                 transform: isExpanded
