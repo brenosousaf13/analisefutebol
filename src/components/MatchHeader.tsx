@@ -1,4 +1,5 @@
 import React from 'react';
+import TeamLogoImage from './TeamLogoImage';
 
 interface MatchHeaderProps {
     homeTeam: string;
@@ -29,15 +30,11 @@ const MatchHeader: React.FC<MatchHeaderProps> = ({
             {/* Center - Match Info */}
             <div className="text-center">
                 <div className="flex items-center gap-3 justify-center">
-                    {homeTeamLogo && (
-                        <img src={homeTeamLogo} alt={homeTeam} className="w-6 h-6 object-contain" />
-                    )}
+                    <TeamLogoImage logoUrl={homeTeamLogo} teamName={homeTeam} className="w-6 h-6" />
                     <span className="text-white font-bold text-lg uppercase">{homeTeam}</span>
                     <span className="text-gray-500 text-sm">vs</span>
                     <span className="text-white font-bold text-lg uppercase">{awayTeam}</span>
-                    {awayTeamLogo && (
-                        <img src={awayTeamLogo} alt={awayTeam} className="w-6 h-6 object-contain" />
-                    )}
+                    <TeamLogoImage logoUrl={awayTeamLogo} teamName={awayTeam} className="w-6 h-6" />
                 </div>
                 {(competition || date) && (
                     <p className="text-gray-500 text-xs uppercase tracking-wider">
