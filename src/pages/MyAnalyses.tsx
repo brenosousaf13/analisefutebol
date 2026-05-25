@@ -6,6 +6,7 @@ import {
     Copy, Clock, Grid, List, ChevronDown
 } from 'lucide-react';
 import Header from '../components/Header';
+import TeamLogoImage from '../components/TeamLogoImage';
 import NewAnalysisModal from '../components/NewAnalysisModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
@@ -175,17 +176,11 @@ const MyAnalyses = () => {
                         <div className="flex items-center justify-center gap-6 w-full transform transition-transform duration-300 group-hover:scale-105">
                             {/* Home Team */}
                             <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-                                {analysis.home_team_logo ? (
-                                    <img
-                                        src={analysis.home_team_logo}
-                                        className="w-16 h-16 object-contain drop-shadow-lg"
-                                        alt={analysis.home_team_name}
-                                    />
-                                ) : (
-                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                        <div className="h-8 w-8 rounded bg-red-500/80" />
-                                    </div>
-                                )}
+                                <TeamLogoImage
+                                    logoUrl={analysis.home_team_logo}
+                                    teamName={analysis.home_team_name}
+                                    className="w-16 h-16 drop-shadow-lg"
+                                />
                             </div>
 
                             {/* VS */}
@@ -193,17 +188,11 @@ const MyAnalyses = () => {
 
                             {/* Away Team */}
                             <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-                                {analysis.away_team_logo ? (
-                                    <img
-                                        src={analysis.away_team_logo}
-                                        className="w-16 h-16 object-contain drop-shadow-lg"
-                                        alt={analysis.away_team_name}
-                                    />
-                                ) : (
-                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                        <div className="h-8 w-8 rounded bg-blue-500/80" />
-                                    </div>
-                                )}
+                                <TeamLogoImage
+                                    logoUrl={analysis.away_team_logo}
+                                    teamName={analysis.away_team_name}
+                                    className="w-16 h-16 drop-shadow-lg"
+                                />
                             </div>
                         </div>
                     </div>

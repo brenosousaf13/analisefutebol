@@ -14,6 +14,16 @@ export default defineConfig({
             proxyReq.setHeader('x-apisports-key', '41fda5802abf527cbc9b2d80c0c54514')
           })
         }
+      },
+      '/api-football-media': {
+        target: 'https://media.api-sports.io',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-football-media/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('x-apisports-key', '41fda5802abf527cbc9b2d80c0c54514')
+          })
+        }
       }
     }
   }

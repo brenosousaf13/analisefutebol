@@ -3,6 +3,7 @@ import { apiFootballService } from '../services/apiFootballService';
 import type { ApiCountry, ApiTeam } from '../types/api-football';
 import { Loader2, Search, ChevronDown, Check } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
+import TeamLogoImage from './TeamLogoImage';
 
 interface TeamSelectionProps {
     label: string;
@@ -142,7 +143,7 @@ export default function TeamSelection({ label, onSelect }: TeamSelectionProps) {
                                     onClick={() => handleTeamSelect(t)}
                                     className="w-full flex items-center gap-3 p-3 hover:bg-[#242938] transition border-b border-gray-800 last:border-0 text-left"
                                 >
-                                    <img src={t.team.logo} alt={t.team.name} className="w-8 h-8 object-contain" />
+                                    <TeamLogoImage logoUrl={t.team.logo} teamName={t.team.name} className="w-8 h-8 flex-shrink-0" />
                                     <div>
                                         <p className="font-semibold text-white text-sm">{t.team.name}</p>
                                         <p className="text-xs text-gray-500">{t.venue.city}</p>

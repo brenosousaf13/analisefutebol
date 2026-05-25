@@ -3,6 +3,7 @@ import { X, Plus, FileText, Calendar, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Fixture } from '../services/apiFootball';
 import { analysisService, type SavedAnalysisSummary } from '../services/analysisService';
+import TeamLogoImage from './TeamLogoImage';
 
 interface MatchDetailsModalProps {
     match: Fixture;
@@ -80,7 +81,7 @@ const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({ match, onClose })
 
                     <div className="flex items-center justify-between px-4 mb-4">
                         <div className="flex flex-col items-center w-1/3">
-                            <img src={match.teams.home.logo} alt={match.teams.home.name} className="w-16 h-16 object-contain mb-2" />
+                            <TeamLogoImage logoUrl={match.teams.home.logo} teamName={match.teams.home.name} className="w-16 h-16 mb-2" />
                             <span className="text-white font-bold text-lg leading-tight">{match.teams.home.name}</span>
                         </div>
 
@@ -94,7 +95,7 @@ const MatchDetailsModal: React.FC<MatchDetailsModalProps> = ({ match, onClose })
                         </div>
 
                         <div className="flex flex-col items-center w-1/3">
-                            <img src={match.teams.away.logo} alt={match.teams.away.name} className="w-16 h-16 object-contain mb-2" />
+                            <TeamLogoImage logoUrl={match.teams.away.logo} teamName={match.teams.away.name} className="w-16 h-16 mb-2" />
                             <span className="text-white font-bold text-lg leading-tight">{match.teams.away.name}</span>
                         </div>
                     </div>
