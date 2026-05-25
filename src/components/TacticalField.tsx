@@ -167,6 +167,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // Element Dragging State (for arrows and rectangles in move mode)
     const [draggingElement, setDraggingElement] = useState<{ type: 'arrow' | 'rectangle'; id: string; startX: number; startY: number } | null>(null);
 
+    // Vertical orientation: positions stored as horizontal (x=goal-to-goal, y=touchline).
+    // On vertical display we swap x↔y. Function is self-inverse.
+    const isVertical = orientation === 'vertical';
+    const orientPos = (pos: { x: number; y: number }) =>
+        isVertical ? { x: pos.y, y: pos.x } : pos;
+
     // Get field position as percentage - CORRECT: X uses width, Y uses height
     const getFieldPosition = useCallback((clientX: number, clientY: number) => {
         if (!containerRef.current) return null;
@@ -207,10 +213,11 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         e.preventDefault();
         e.stopPropagation();
 
-        // Calculate offset: difference between player's center and mouse position
+        // Calculate offset in visual coords (player.position is stored → transform first)
+        const visPos = orientPos(player.position);
         setDragOffset({
-            x: player.position.x - mousePos.x,
-            y: player.position.y - mousePos.y
+            x: visPos.x - mousePos.x,
+            y: visPos.y - mousePos.y
         });
         setDraggingPlayer(player);
     };
@@ -249,12 +256,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     const finalX = Math.max(3, Math.min(97, newX));
                     const finalY = Math.max(3, Math.min(97, newY));
 
-                    // Only update if position actually changed significantly
-                    if (Math.abs(finalX - draggingPlayer.position.x) > 0.01 || Math.abs(finalY - draggingPlayer.position.y) > 0.01) {
-                        onPlayerMove(draggingPlayer.id, {
-                            x: finalX,
-                            y: finalY
-                        });
+                    // Compare against visual position; save as stored coords (orientPos reverses)
+                    const origVis = orientPos(draggingPlayer.position);
+                    if (Math.abs(finalX - origVis.x) > 0.01 || Math.abs(finalY - origVis.y) > 0.01) {
+                        onPlayerMove(draggingPlayer.id, orientPos({ x: finalX, y: finalY }));
                     }
                 }
             }
@@ -310,10 +315,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             if (coords && onBallMove) {
                 const pos = getFieldPosition(coords.clientX, coords.clientY);
                 if (pos) {
-                    onBallMove({
+                    onBallMove(orientPos({
                         x: Math.max(1, Math.min(99, pos.x)),
                         y: Math.max(1, Math.min(99, pos.y))
-                    });
+                    }));
                 }
             }
             setDraggingBall(false);
@@ -366,13 +371,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         const dy = Math.abs((currentArrow.endY ?? 0) - (currentArrow.startY ?? 0));
 
         if ((dx > 2 || dy > 2) && onAddArrow) {
-            onAddArrow({
-                startX: currentArrow.startX!,
-                startY: currentArrow.startY!,
-                endX: currentArrow.endX!,
-                endY: currentArrow.endY!,
-                color: 'white'
-            });
+            const s = orientPos({ x: currentArrow.startX!, y: currentArrow.startY! });
+            const e2 = orientPos({ x: currentArrow.endX!, y: currentArrow.endY! });
+            onAddArrow({ startX: s.x, startY: s.y, endX: e2.x, endY: e2.y, color: 'white' });
         }
 
         setIsDrawing(false);
@@ -411,11 +412,14 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
         // Only create rectangle if it has sufficient size
         if ((width > 3 || height > 3) && onAddRectangle) {
+            // currentRect coords are visual → convert to stored
+            const s = orientPos({ x: Math.min(currentRect.startX!, currentRect.endX!), y: Math.min(currentRect.startY!, currentRect.endY!) });
+            const e2 = orientPos({ x: Math.max(currentRect.startX!, currentRect.endX!), y: Math.max(currentRect.startY!, currentRect.endY!) });
             onAddRectangle({
-                startX: Math.min(currentRect.startX!, currentRect.endX!),
-                startY: Math.min(currentRect.startY!, currentRect.endY!),
-                endX: Math.max(currentRect.startX!, currentRect.endX!),
-                endY: Math.max(currentRect.startY!, currentRect.endY!),
+                startX: Math.min(s.x, e2.x),
+                startY: Math.min(s.y, e2.y),
+                endX: Math.max(s.x, e2.x),
+                endY: Math.max(s.y, e2.y),
                 color: rectangleColor,
                 opacity: 0.3
             });
@@ -468,11 +472,13 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
         const deltaX = pos.x - draggingElement.startX;
         const deltaY = pos.y - draggingElement.startY;
+        // Visual delta → stored delta (swap for vertical)
+        const storedDelta = orientPos({ x: deltaX, y: deltaY });
 
         if (draggingElement.type === 'arrow' && onMoveArrow) {
-            onMoveArrow(draggingElement.id, deltaX, deltaY);
+            onMoveArrow(draggingElement.id, storedDelta.x, storedDelta.y);
         } else if (draggingElement.type === 'rectangle' && onMoveRectangle) {
-            onMoveRectangle(draggingElement.id, deltaX, deltaY);
+            onMoveRectangle(draggingElement.id, storedDelta.x, storedDelta.y);
         }
 
         // Update start position for next delta calculation
@@ -694,12 +700,17 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     </div>
 
                     {/* BALL */}
-                    {(ballPosition || tempBallPosition) && (
+                    {(ballPosition || tempBallPosition) && (() => {
+                        // tempBallPosition is visual; ballPosition is stored → transform
+                        const bp = (draggingBall && tempBallPosition)
+                            ? tempBallPosition
+                            : orientPos(ballPosition!);
+                        return (
                         <div
                             className="absolute z-20 cursor-move"
                             style={{
-                                left: `${(tempBallPosition || ballPosition)?.x}%`,
-                                top: `${(tempBallPosition || ballPosition)?.y}%`,
+                                left: `${bp.x}%`,
+                                top: `${bp.y}%`,
                                 width: `${2.5 * ballScale}%`, // Scaled size
                                 aspectRatio: '1/1',
                                 transform: 'translate(-50%, -50%)'
@@ -717,7 +728,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 <circle cx="22" cy="65" r="5" fill="black" />
                             </svg>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Arrows and Rectangles Layer - Using SVG */}
                     {/* SVG itself has pointer-events: none to allow clicks to pass through to players */}
@@ -757,10 +769,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                         {arrows.map(arrow => (
                             <line
                                 key={arrow.id}
-                                x1={`${arrow.startX}%`}
-                                y1={`${arrow.startY}%`}
-                                x2={`${arrow.endX}%`}
-                                y2={`${arrow.endY}%`}
+                                x1={`${isVertical ? arrow.startY : arrow.startX}%`}
+                                y1={`${isVertical ? arrow.startX : arrow.startY}%`}
+                                x2={`${isVertical ? arrow.endY : arrow.endX}%`}
+                                y2={`${isVertical ? arrow.endX : arrow.endY}%`}
                                 stroke="white"
                                 strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
                                 strokeDasharray="8,5"
@@ -777,13 +789,18 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                         ))}
 
                         {/* Saved rectangles */}
-                        {rectangles.map(rect => (
+                        {rectangles.map(rect => {
+                            const rx = isVertical ? rect.startY : rect.startX;
+                            const ry = isVertical ? rect.startX : rect.startY;
+                            const rw = isVertical ? rect.endY - rect.startY : rect.endX - rect.startX;
+                            const rh = isVertical ? rect.endX - rect.startX : rect.endY - rect.startY;
+                            return (
                             <rect
                                 key={rect.id}
-                                x={`${rect.startX}%`}
-                                y={`${rect.startY}%`}
-                                width={`${rect.endX - rect.startX}%`}
-                                height={`${rect.endY - rect.startY}%`}
+                                x={`${rx}%`}
+                                y={`${ry}%`}
+                                width={`${rw}%`}
+                                height={`${rh}%`}
                                 fill={rect.color}
                                 opacity={rect.opacity}
                                 stroke={isEraserMode ? 'rgba(255,100,100,0.8)' : (mode === 'move' ? 'rgba(255,255,100,0.8)' : 'rgba(255,255,255,0.5)')}
@@ -800,7 +817,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                 }}
                                 className={isEraserMode ? 'hover:opacity-60 transition-opacity' : ''}
                             />
-                        ))}
+                            );
+                        })}
 
                         {/* Arrow being drawn */}
                         {isDrawing && currentArrow && currentArrow.startX !== undefined && (
@@ -839,7 +857,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     <div className="absolute inset-0 z-40 pointer-events-none">
                         {players.map(player => {
                             const isDragging = draggingPlayer?.id === player.id;
-                            const position = isDragging && tempPosition ? tempPosition : player.position;
+                            // tempPosition is in visual coords; player.position is stored → transform
+                            const dPos = (isDragging && tempPosition)
+                                ? tempPosition
+                                : orientPos(player.position);
 
                             return (
                                 <div
@@ -853,8 +874,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         }
                                 `}
                                     style={{
-                                        left: `${position.x}%`,
-                                        top: `${position.y}%`,
+                                        left: `${dPos.x}%`,
+                                        top: `${dPos.y}%`,
                                         transform: 'translate(-50%, -50%)',
                                         touchAction: 'none'
                                     }}

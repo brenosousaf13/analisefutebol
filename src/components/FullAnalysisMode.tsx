@@ -330,24 +330,24 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     </div>
                 </div>
 
-                {/* Field + bottom sheet (share the same relative container) */}
-                <div className="flex-1 relative min-h-0 overflow-hidden">
-                    {/* tabsSlot=undefined: tabs are shown above this container, not inside the field */}
+                {/* Field — fills available space, never covered */}
+                <div className="flex-1 min-h-0 overflow-hidden">
                     <TacticalField {...tacticalFieldProps} orientation="vertical" tabsSlot={undefined} />
-
-                    <MobileBottomSheet
-                        homeTeamName={homeTeamName}
-                        awayTeamName={awayTeamName}
-                        homeTeamColor={homeTeamColor}
-                        awayTeamColor={awayTeamColor}
-                        homeSubstitutes={homeSubstitutes}
-                        awaySubstitutes={awaySubstitutes}
-                        activePossession={possession}
-                        onBenchPlayerClick={onBenchPlayerClick}
-                        onPlayerDoubleClick={onPlayerDoubleClick}
-                        readOnly={readOnly}
-                    />
                 </div>
+
+                {/* Bench panel — sits below the field, pushes it up when expanded */}
+                <MobileBottomSheet
+                    homeTeamName={homeTeamName}
+                    awayTeamName={awayTeamName}
+                    homeTeamColor={homeTeamColor}
+                    awayTeamColor={awayTeamColor}
+                    homeSubstitutes={homeSubstitutes}
+                    awaySubstitutes={awaySubstitutes}
+                    activePossession={possession}
+                    onBenchPlayerClick={onBenchPlayerClick}
+                    onPlayerDoubleClick={onPlayerDoubleClick}
+                    readOnly={readOnly}
+                />
 
                 {/* Mobile toolbar */}
                 {!readOnly && (

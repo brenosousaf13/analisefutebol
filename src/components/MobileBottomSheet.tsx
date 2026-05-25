@@ -1,9 +1,7 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { Player } from '../types/Player';
 import BenchArea from './BenchArea';
-import { ChevronDown } from 'lucide-react';
-
-const PEEK_HEIGHT = 144;
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface MobileBottomSheetProps {
     homeTeamName: string;
@@ -32,23 +30,10 @@ export default function MobileBottomSheet({
 }: MobileBottomSheetProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState<'home' | 'away'>(activePossession);
-    const touchStartY = useRef<number | null>(null);
 
     useEffect(() => {
         setActiveTab(activePossession);
     }, [activePossession]);
-
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        touchStartY.current = e.touches[0].clientY;
-    }, []);
-
-    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        if (touchStartY.current === null) return;
-        const dy = touchStartY.current - e.changedTouches[0].clientY;
-        if (dy > 30) setIsExpanded(true);
-        else if (dy < -30) setIsExpanded(false);
-        touchStartY.current = null;
-    }, []);
 
     const tabs = [
         { key: 'home' as const, name: homeTeamName, color: homeTeamColor, players: homeSubstitutes },
@@ -58,33 +43,18 @@ export default function MobileBottomSheet({
     const activeData = tabs.find(t => t.key === activeTab)!;
 
     return (
-        <div
-            className="absolute left-0 right-0 bottom-0 flex flex-col bg-[#0a1010] rounded-t-2xl border-t border-gray-700/60 shadow-[0_-8px_32px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-out z-[60]"
-            style={{
-                height: '72%',
-                transform: isExpanded
-                    ? 'translateY(0)'
-                    : `translateY(calc(100% - ${PEEK_HEIGHT}px))`,
-            }}
-        >
-            {/* Drag handle — touch here to expand/collapse */}
+        <div className={`shrink-0 flex flex-col bg-[#0a1010] border-t border-gray-700/60 transition-all duration-300 ease-out overflow-hidden ${isExpanded ? 'h-[42%]' : 'h-11'}`}>
+            {/* Header row — always visible, tap to expand/collapse */}
             <div
-                className="flex flex-col items-center justify-center pt-3 pb-2 shrink-0 cursor-pointer select-none"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
+                className="flex items-center gap-3 px-3 h-11 shrink-0 cursor-pointer select-none"
                 onClick={() => setIsExpanded(v => !v)}
             >
-                <div className="w-10 h-1 bg-gray-600 rounded-full" />
-            </div>
-
-            {/* Team tabs + meta */}
-            <div className="flex items-center px-4 pb-3 gap-3 shrink-0 border-b border-gray-800/60">
-                <div className="flex bg-gray-800/80 rounded-lg p-1 gap-1">
+                <div className="flex bg-gray-800/80 rounded-lg p-0.5 gap-0.5">
                     {tabs.map(({ key, name, color }) => (
                         <button
                             key={key}
-                            onClick={() => setActiveTab(key)}
-                            className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${activeTab === key ? 'text-white shadow' : 'text-gray-500'}`}
+                            onClick={(e) => { e.stopPropagation(); setActiveTab(key); }}
+                            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${activeTab === key ? 'text-white shadow' : 'text-gray-500'}`}
                             style={activeTab === key ? { backgroundColor: color } : {}}
                         >
                             {name}
@@ -92,32 +62,27 @@ export default function MobileBottomSheet({
                     ))}
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                        {activeData.players.length} reservas
-                    </span>
-                    {isExpanded && (
-                        <button
-                            onClick={() => setIsExpanded(false)}
-                            className="p-1 text-gray-500 hover:text-white transition-colors"
-                        >
-                            <ChevronDown size={16} />
-                        </button>
-                    )}
+                <span className="text-[11px] text-gray-500 ml-auto">
+                    {activeData.players.length} reservas
+                </span>
+                <div className="text-gray-500">
+                    {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                 </div>
             </div>
 
-            {/* Bench content */}
-            <div className="flex-1 overflow-y-auto min-h-0 px-2 py-1">
-                <BenchArea
-                    players={activeData.players}
-                    team={activeData.key}
-                    teamColor={activeData.color}
-                    orientation="vertical"
-                    onPromotePlayer={readOnly ? () => {} : (p) => onBenchPlayerClick(p, activeData.key)}
-                    onPlayerDoubleClick={onPlayerDoubleClick}
-                />
-            </div>
+            {/* Bench content — only mounted when expanded */}
+            {isExpanded && (
+                <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-1">
+                    <BenchArea
+                        players={activeData.players}
+                        team={activeData.key}
+                        teamColor={activeData.color}
+                        orientation="vertical"
+                        onPromotePlayer={readOnly ? () => {} : (p) => onBenchPlayerClick(p, activeData.key)}
+                        onPlayerDoubleClick={onPlayerDoubleClick}
+                    />
+                </div>
+            )}
         </div>
     );
 }
