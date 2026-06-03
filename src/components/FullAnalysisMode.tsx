@@ -307,15 +307,15 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     >
                         <button
                             onClick={() => setPossession('home')}
-                            className={`flex-1 py-0.5 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
-                            style={possession === 'home' ? { backgroundColor: homeTeamColor } : {}}
+                            className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
+                            style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'home' ? { backgroundColor: homeTeamColor } : {}) }}
                         >
                             {homeTeamName}
                         </button>
                         <button
                             onClick={() => setPossession('away')}
-                            className={`flex-1 py-0.5 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
-                            style={possession === 'away' ? { backgroundColor: awayTeamColor } : {}}
+                            className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
+                            style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'away' ? { backgroundColor: awayTeamColor } : {}) }}
                         >
                             {awayTeamName}
                         </button>
