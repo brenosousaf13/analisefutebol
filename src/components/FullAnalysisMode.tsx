@@ -12,6 +12,7 @@ import {
     Eye, EyeOff, Menu, X, ChevronDown, ChevronUp,
     Hand, MoveRight, Square, Palette, Eraser,
     FileText, Zap, Share2, Save, Loader2, UserPlus,
+    Pencil, Users,
 } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
 
@@ -76,35 +77,6 @@ interface FullAnalysisModeProps {
     tabsSlot?: ReactNode;
 }
 
-// ─── Mobile toolbar button (icon-only, compact) ──────────────────────────────
-const MobileToolBtn: React.FC<{
-    icon: React.ReactNode;
-    label: string;
-    active?: boolean;
-    onClick: () => void;
-    loading?: boolean;
-    badge?: boolean;
-}> = ({ icon, label, active = false, onClick, loading = false, badge = false }) => (
-    <button
-        onClick={onClick}
-        disabled={loading}
-        title={label}
-        className={`
-            relative flex items-center justify-center shrink-0
-            w-10 h-10 rounded-xl transition-all active:scale-95
-            ${active ? 'bg-brand-primary/20 text-brand-primary' : 'text-gray-400 hover:text-white'}
-            ${loading ? 'opacity-50' : ''}
-        `}
-    >
-        {loading
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <span className="w-4 h-4 flex items-center justify-center">{icon}</span>
-        }
-        {badge && !loading && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border border-[#030909] animate-pulse" />
-        )}
-    </button>
-);
 
 // ─── Desktop TeamColumn (unchanged) ─────────────────────────────────────────
 const TeamColumn: React.FC<{
@@ -230,6 +202,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const [showHomePlayers, setShowHomePlayers] = useState(true);
     const [showAwayPlayers, setShowAwayPlayers] = useState(true);
     const [mobileExpandedTeam, setMobileExpandedTeam] = useState<'home' | 'away' | null>(null);
+    const [isBenchSheetOpen, setIsBenchSheetOpen] = useState(false);
+    const [isToolsSheetOpen, setIsToolsSheetOpen] = useState(false);
 
     const toggleMobileExpansion = (team: 'home' | 'away') =>
         setMobileExpandedTeam(prev => prev === team ? null : team);
@@ -299,85 +273,189 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 
     // ── MOBILE LAYOUT ────────────────────────────────────────────────────────
     if (isMobile) {
+        const totalBench = homeSubstitutes.length + awaySubstitutes.length;
+
+        // Active tool icon for the FAB
+        const fabToolIcon = activeTool === 'arrow' ? <MoveRight className="w-5 h-5" />
+            : activeTool === 'rectangle' ? <Square className="w-5 h-5" />
+            : activeTool === 'eraser' ? <Eraser className="w-5 h-5" />
+            : <Pencil className="w-5 h-5" />;
+
         return (
             <div className="flex flex-col h-full bg-[#0b1111] overflow-hidden">
 
-                {/* Board tabs — ultra-compact row */}
+                {/* Board tabs — ultra-compact, only when present */}
                 {tabsSlot && (
                     <div className="shrink-0 border-b border-gray-800/60 bg-[#0b1111]">
                         {tabsSlot}
                     </div>
                 )}
 
-                {/* Possession + bench-expand in one compact row */}
-                <div className="shrink-0 flex items-center gap-2 px-2 h-8 border-b border-gray-800/50 bg-[#0b1111]">
-                    <div className="flex items-center bg-gray-800/70 rounded-full p-0.5 border border-gray-700/60 flex-1">
+                {/* ── Campo: protagonista absoluto ───────────────────────── */}
+                <div className="flex-1 relative min-h-0 overflow-hidden">
+                    <TacticalField
+                        {...tacticalFieldProps}
+                        orientation="vertical"
+                        tabsSlot={undefined}
+                        playerScale={1.15}
+                    />
+
+                    {/* Possession pill — sobreposto no canto superior direito */}
+                    <div
+                        className="absolute top-2 right-2 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
+                        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                    >
                         <button
                             onClick={() => setPossession('home')}
-                            className={`flex-1 py-0.5 rounded-full text-[11px] font-bold transition-all truncate px-2 ${possession === 'home' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'}`}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all truncate max-w-[80px] ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
+                            style={possession === 'home' ? { backgroundColor: homeTeamColor } : {}}
                         >
                             {homeTeamName}
                         </button>
                         <button
                             onClick={() => setPossession('away')}
-                            className={`flex-1 py-0.5 rounded-full text-[11px] font-bold transition-all truncate px-2 ${possession === 'away' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'}`}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all truncate max-w-[80px] ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
+                            style={possession === 'away' ? { backgroundColor: awayTeamColor } : {}}
                         >
                             {awayTeamName}
                         </button>
                     </div>
-                </div>
 
-                {/* Field — fills all remaining space */}
-                <div className="flex-1 min-h-0 overflow-hidden">
-                    <TacticalField {...tacticalFieldProps} orientation="vertical" tabsSlot={undefined} />
-                </div>
-
-                {/* Bench panel */}
-                <MobileBottomSheet
-                    homeTeamName={homeTeamName}
-                    awayTeamName={awayTeamName}
-                    homeTeamColor={homeTeamColor}
-                    awayTeamColor={awayTeamColor}
-                    homeSubstitutes={homeSubstitutes}
-                    awaySubstitutes={awaySubstitutes}
-                    activePossession={possession}
-                    onBenchPlayerClick={onBenchPlayerClick}
-                    onPlayerDoubleClick={onPlayerDoubleClick}
-                    readOnly={readOnly}
-                />
-
-                {/* Toolbar — icon-only, primary tools always visible, extras in overflow */}
-                {!readOnly && (
-                    <div
-                        className="shrink-0 bg-[#030909] border-t border-gray-800 flex items-center justify-between px-1"
-                        style={{ paddingBottom: 'env(safe-area-inset-bottom)', height: `calc(2.75rem + env(safe-area-inset-bottom))` }}
+                    {/* Bench FAB — canto inferior esquerdo */}
+                    <button
+                        onClick={() => setIsBenchSheetOpen(true)}
+                        className="absolute bottom-3 left-3 z-[60] flex items-center gap-1.5 rounded-2xl px-3 py-2.5 border border-white/10 active:scale-95 transition-transform"
+                        style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                        title="Banco de reservas"
                     >
-                        {/* Primary tools */}
-                        <div className="flex items-center">
-                            <MobileToolBtn icon={<Hand className="w-4 h-4" />} label="Mover" active={activeTool === 'select'} onClick={() => onToolChange('select')} />
-                            <MobileToolBtn icon={<MoveRight className="w-4 h-4" />} label="Seta" active={activeTool === 'arrow'} onClick={() => onToolChange('arrow')} />
-                            <MobileToolBtn icon={<Square className="w-4 h-4" />} label="Área" active={activeTool === 'rectangle'} onClick={() => onToolChange('rectangle')} />
-                            <MobileToolBtn icon={<Eraser className="w-4 h-4" />} label="Apagar" active={activeTool === 'eraser'} onClick={() => onToolChange('eraser')} />
+                        <Users className="w-4 h-4 text-gray-300" />
+                        {totalBench > 0 && (
+                            <span className="text-xs font-bold text-gray-300">{totalBench}</span>
+                        )}
+                    </button>
+
+                    {/* Tools FAB — canto inferior direito (somente edit) */}
+                    {!readOnly && (
+                        <button
+                            onClick={() => setIsToolsSheetOpen(true)}
+                            className={`absolute bottom-3 right-3 z-[60] w-12 h-12 rounded-2xl flex items-center justify-center border border-white/10 active:scale-95 transition-transform ${activeTool !== 'select' ? 'text-gray-900' : 'text-white'}`}
+                            style={{
+                                background: activeTool !== 'select' ? homeTeamColor : 'rgba(0,0,0,0.7)',
+                                backdropFilter: activeTool === 'select' ? 'blur(8px)' : undefined,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                            }}
+                            title="Ferramentas"
+                        >
+                            {fabToolIcon}
+                            {hasUnsavedChanges && !isSaving && (
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border border-[#0b1111]" />
+                            )}
+                        </button>
+                    )}
+                </div>
+
+                {/* ── Bench bottom sheet ─────────────────────────────────── */}
+                {isBenchSheetOpen && (
+                    <MobileBottomSheet
+                        homeTeamName={homeTeamName}
+                        awayTeamName={awayTeamName}
+                        homeTeamColor={homeTeamColor}
+                        awayTeamColor={awayTeamColor}
+                        homeSubstitutes={homeSubstitutes}
+                        awaySubstitutes={awaySubstitutes}
+                        activePossession={possession}
+                        onBenchPlayerClick={onBenchPlayerClick}
+                        onPlayerDoubleClick={onPlayerDoubleClick}
+                        onClose={() => setIsBenchSheetOpen(false)}
+                        readOnly={readOnly}
+                    />
+                )}
+
+                {/* ── Tools bottom sheet ─────────────────────────────────── */}
+                {isToolsSheetOpen && !readOnly && (
+                    <>
+                        <div
+                            className="fixed inset-0 z-[75] bg-black/40"
+                            onClick={() => setIsToolsSheetOpen(false)}
+                        />
+                        <div
+                            className="fixed bottom-0 left-0 right-0 z-[80] flex flex-col rounded-t-2xl border-t border-gray-700/50"
+                            style={{ background: '#0d1414', boxShadow: '0 -8px 40px rgba(0,0,0,0.7)' }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Drag handle */}
+                            <div className="flex justify-center pt-3 pb-1 shrink-0">
+                                <div className="w-10 h-1 bg-gray-600 rounded-full" />
+                            </div>
+
+                            <div className="px-4 pb-4">
+                                {/* Tool grid — row 1: drawing tools */}
+                                <div className="grid grid-cols-4 gap-2 mb-2">
+                                    {[
+                                        { tool: 'select' as const, icon: <Hand className="w-5 h-5" />, label: 'Mover' },
+                                        { tool: 'arrow' as const, icon: <MoveRight className="w-5 h-5" />, label: 'Seta' },
+                                        { tool: 'rectangle' as const, icon: <Square className="w-5 h-5" />, label: 'Área' },
+                                        { tool: 'eraser' as const, icon: <Eraser className="w-5 h-5" />, label: 'Apagar' },
+                                    ].map(({ tool, icon, label }) => (
+                                        <button
+                                            key={tool}
+                                            onClick={() => { onToolChange(tool); setIsToolsSheetOpen(false); }}
+                                            className={`flex flex-col items-center justify-center h-16 rounded-xl gap-1.5 transition-all active:scale-95 border ${
+                                                activeTool === tool
+                                                    ? 'bg-brand-primary/15 border-brand-primary/40 text-brand-primary'
+                                                    : 'bg-gray-800/70 border-gray-700/40 text-gray-300 hover:text-white'
+                                            }`}
+                                        >
+                                            {icon}
+                                            <span className="text-[10px] font-medium">{label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Tool grid — row 2: create/secondary */}
+                                <div className="grid grid-cols-4 gap-2 mb-3">
+                                    {[
+                                        { icon: <Palette className="w-5 h-5" />, label: 'Cor', action: () => { onOpenColorPicker(); setIsToolsSheetOpen(false); } },
+                                        { icon: <UserPlus className="w-5 h-5" />, label: 'Jogador', action: () => { onAddPlayer(); setIsToolsSheetOpen(false); } },
+                                        { icon: <FileText className="w-5 h-5" />, label: 'Notas', action: () => { onOpenAnalysis(); setIsToolsSheetOpen(false); } },
+                                        { icon: <Zap className="w-5 h-5" />, label: 'Eventos', action: () => { onOpenEvents(); setIsToolsSheetOpen(false); } },
+                                    ].map(({ icon, label, action }) => (
+                                        <button
+                                            key={label}
+                                            onClick={action}
+                                            className="flex flex-col items-center justify-center h-16 rounded-xl gap-1.5 bg-gray-800/70 border border-gray-700/40 text-gray-300 hover:text-white transition-all active:scale-95"
+                                        >
+                                            {icon}
+                                            <span className="text-[10px] font-medium">{label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Save + Share row */}
+                                <div className="flex gap-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                                    <button
+                                        onClick={() => { onShare(); setIsToolsSheetOpen(false); }}
+                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-gray-800/80 border border-gray-700/40 text-gray-300 text-sm font-medium active:scale-95 transition-all"
+                                    >
+                                        <Share2 className="w-4 h-4" />
+                                        Compartilhar
+                                    </button>
+                                    <button
+                                        onClick={() => { onSave(); setIsToolsSheetOpen(false); }}
+                                        disabled={isSaving}
+                                        className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-bold active:scale-95 transition-all border ${
+                                            hasUnsavedChanges
+                                                ? 'bg-brand-primary/20 border-brand-primary/40 text-brand-primary'
+                                                : 'bg-gray-800/80 border-gray-700/40 text-gray-300'
+                                        }`}
+                                    >
+                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                        {isSaving ? 'Salvando…' : 'Salvar'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-
-                        <div className="w-px h-6 bg-gray-800 shrink-0" />
-
-                        {/* Secondary tools */}
-                        <div className="flex items-center">
-                            <MobileToolBtn icon={<UserPlus className="w-4 h-4" />} label="Jogador" onClick={onAddPlayer} />
-                            <MobileToolBtn icon={<Palette className="w-4 h-4" />} label="Cor" onClick={onOpenColorPicker} />
-                            <MobileToolBtn icon={<FileText className="w-4 h-4" />} label="Notas" onClick={onOpenAnalysis} />
-                            <MobileToolBtn icon={<Zap className="w-4 h-4" />} label="Eventos" onClick={onOpenEvents} />
-                        </div>
-
-                        <div className="w-px h-6 bg-gray-800 shrink-0" />
-
-                        {/* Actions */}
-                        <div className="flex items-center">
-                            <MobileToolBtn icon={<Share2 className="w-4 h-4" />} label="Compartilhar" onClick={onShare} />
-                            <MobileToolBtn icon={<Save className="w-4 h-4" />} label="Salvar" loading={isSaving} badge={hasUnsavedChanges} onClick={onSave} />
-                        </div>
-                    </div>
+                    </>
                 )}
             </div>
         );

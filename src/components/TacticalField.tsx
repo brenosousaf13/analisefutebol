@@ -912,8 +912,13 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                     </div>
 
                                     <div
-                                        className="text-white text-center mt-0.5 whitespace-nowrap font-medium drop-shadow-md pointer-events-none"
-                                        style={{ fontSize: Math.max(8, fontSizes.name) }}
+                                        className="text-white text-center mt-0.5 font-medium drop-shadow-md pointer-events-none overflow-hidden"
+                                        style={{
+                                            fontSize: Math.max(8, fontSizes.name),
+                                            maxWidth: '60px',
+                                            whiteSpace: 'nowrap',
+                                            textOverflow: 'ellipsis',
+                                        }}
                                     >
                                         {player.name}
                                     </div>

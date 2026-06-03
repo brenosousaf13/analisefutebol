@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Player } from '../types/Player';
 import BenchArea from './BenchArea';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface MobileBottomSheetProps {
     homeTeamName: string;
@@ -13,66 +13,98 @@ interface MobileBottomSheetProps {
     activePossession: 'home' | 'away';
     onBenchPlayerClick: (player: Player, team: 'home' | 'away') => void;
     onPlayerDoubleClick: (player: Player) => void;
+    onClose: () => void;
     readOnly?: boolean;
 }
 
 export default function MobileBottomSheet({
-    homeTeamName,
-    awayTeamName,
-    homeTeamColor,
-    awayTeamColor,
-    homeSubstitutes,
-    awaySubstitutes,
+    homeTeamName, awayTeamName,
+    homeTeamColor, awayTeamColor,
+    homeSubstitutes, awaySubstitutes,
     activePossession,
-    onBenchPlayerClick,
-    onPlayerDoubleClick,
+    onBenchPlayerClick, onPlayerDoubleClick,
+    onClose,
     readOnly = false,
 }: MobileBottomSheetProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState<'home' | 'away'>(activePossession);
+    const touchStartY = useRef<number | null>(null);
+    const sheetRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         setActiveTab(activePossession);
     }, [activePossession]);
 
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY;
+    }, []);
+
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (touchStartY.current === null) return;
+        const dy = e.changedTouches[0].clientY - touchStartY.current;
+        if (dy > 60) onClose();
+        touchStartY.current = null;
+    }, [onClose]);
+
     const tabs = [
         { key: 'home' as const, name: homeTeamName, color: homeTeamColor, players: homeSubstitutes },
         { key: 'away' as const, name: awayTeamName, color: awayTeamColor, players: awaySubstitutes },
     ];
-
     const activeData = tabs.find(t => t.key === activeTab)!;
 
     return (
-        <div className={`shrink-0 flex flex-col bg-[#0a1010] border-t border-gray-700/60 transition-all duration-300 ease-out overflow-hidden ${isExpanded ? 'h-[42%]' : 'h-11'}`}>
-            {/* Header row — always visible, tap to expand/collapse */}
+        <>
+            {/* Backdrop */}
             <div
-                className="flex items-center gap-3 px-3 h-11 shrink-0 cursor-pointer select-none"
-                onClick={() => setIsExpanded(v => !v)}
+                className="fixed inset-0 z-[75] bg-black/50 backdrop-blur-[1px]"
+                onClick={onClose}
+            />
+
+            {/* Sheet */}
+            <div
+                ref={sheetRef}
+                className="fixed bottom-0 left-0 right-0 z-[80] flex flex-col bg-[#0d1414] rounded-t-2xl border-t border-gray-700/50"
+                style={{
+                    height: '55%',
+                    maxHeight: '75dvh',
+                    boxShadow: '0 -8px 40px rgba(0,0,0,0.7)',
+                }}
             >
-                <div className="flex bg-gray-800/80 rounded-lg p-0.5 gap-0.5">
-                    {tabs.map(({ key, name, color }) => (
-                        <button
-                            key={key}
-                            onClick={(e) => { e.stopPropagation(); setActiveTab(key); }}
-                            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${activeTab === key ? 'text-white shadow' : 'text-gray-500'}`}
-                            style={activeTab === key ? { backgroundColor: color } : {}}
-                        >
-                            {name}
-                        </button>
-                    ))}
+                {/* Drag handle */}
+                <div
+                    className="flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing"
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <div className="w-10 h-1 bg-gray-600 rounded-full" />
                 </div>
 
-                <span className="text-[11px] text-gray-500 ml-auto">
-                    {activeData.players.length} reservas
-                </span>
-                <div className="text-gray-500">
-                    {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                {/* Header: team tabs + close */}
+                <div className="flex items-center px-4 pb-2 gap-3 shrink-0">
+                    <div className="flex bg-gray-800/80 rounded-xl p-0.5 gap-0.5">
+                        {tabs.map(({ key, name, color }) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveTab(key)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === key ? 'text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                                style={activeTab === key ? { backgroundColor: color } : {}}
+                            >
+                                {name}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-xs text-gray-500 ml-auto">
+                        {activeData.players.length} reservas
+                    </span>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
                 </div>
-            </div>
 
-            {/* Bench content — only mounted when expanded */}
-            {isExpanded && (
-                <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-1">
+                {/* Player list */}
+                <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4">
                     <BenchArea
                         players={activeData.players}
                         team={activeData.key}
@@ -82,7 +114,7 @@ export default function MobileBottomSheet({
                         onPlayerDoubleClick={onPlayerDoubleClick}
                     />
                 </div>
-            )}
-        </div>
+            </div>
+        </>
     );
 }
