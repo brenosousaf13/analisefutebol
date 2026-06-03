@@ -300,21 +300,21 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         playerScale={1.15}
                     />
 
-                    {/* Possession pill — canto inferior, centralizado, acima dos FABs */}
+                    {/* Possession pill — bottom, entre os FABs */}
                     <div
-                        className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
-                        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                        className="absolute bottom-3 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
+                        style={{ left: '4.5rem', right: '4.5rem', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
                     >
                         <button
                             onClick={() => setPossession('home')}
-                            className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold transition-all truncate max-w-[52px] ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
+                            className={`flex-1 py-0.5 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
                             style={possession === 'home' ? { backgroundColor: homeTeamColor } : {}}
                         >
                             {homeTeamName}
                         </button>
                         <button
                             onClick={() => setPossession('away')}
-                            className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold transition-all truncate max-w-[52px] ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
+                            className={`flex-1 py-0.5 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
                             style={possession === 'away' ? { backgroundColor: awayTeamColor } : {}}
                         >
                             {awayTeamName}
