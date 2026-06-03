@@ -300,21 +300,21 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         playerScale={1.15}
                     />
 
-                    {/* Possession pill — sobreposto no canto superior direito */}
+                    {/* Possession pill — canto inferior, centralizado, acima dos FABs */}
                     <div
-                        className="absolute top-2 right-2 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
+                        className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
                         style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
                     >
                         <button
                             onClick={() => setPossession('home')}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all truncate max-w-[80px] ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
+                            className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all truncate max-w-[64px] ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
                             style={possession === 'home' ? { backgroundColor: homeTeamColor } : {}}
                         >
                             {homeTeamName}
                         </button>
                         <button
                             onClick={() => setPossession('away')}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all truncate max-w-[80px] ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
+                            className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all truncate max-w-[64px] ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
                             style={possession === 'away' ? { backgroundColor: awayTeamColor } : {}}
                         >
                             {awayTeamName}
