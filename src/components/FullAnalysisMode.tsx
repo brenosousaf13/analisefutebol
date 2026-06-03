@@ -76,7 +76,7 @@ interface FullAnalysisModeProps {
     tabsSlot?: ReactNode;
 }
 
-// ─── Mobile toolbar button ───────────────────────────────────────────────────
+// ─── Mobile toolbar button (icon-only, compact) ──────────────────────────────
 const MobileToolBtn: React.FC<{
     icon: React.ReactNode;
     label: string;
@@ -88,20 +88,20 @@ const MobileToolBtn: React.FC<{
     <button
         onClick={onClick}
         disabled={loading}
+        title={label}
         className={`
-            relative flex flex-col items-center justify-center gap-0.5 shrink-0
-            w-14 h-14 rounded-xl transition-all active:scale-95
-            ${active ? 'bg-brand-primary/15 text-brand-primary' : 'text-gray-400'}
+            relative flex items-center justify-center shrink-0
+            w-10 h-10 rounded-xl transition-all active:scale-95
+            ${active ? 'bg-brand-primary/20 text-brand-primary' : 'text-gray-400 hover:text-white'}
             ${loading ? 'opacity-50' : ''}
         `}
     >
         {loading
-            ? <Loader2 className="w-5 h-5 animate-spin" />
-            : <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <span className="w-4 h-4 flex items-center justify-center">{icon}</span>
         }
-        <span className="text-[9px] font-medium leading-none">{label}</span>
         {badge && !loading && (
-            <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border border-[#030909] animate-pulse" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border border-[#030909] animate-pulse" />
         )}
     </button>
 );
@@ -302,40 +302,37 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         return (
             <div className="flex flex-col h-full bg-[#0b1111] overflow-hidden">
 
-                {/* Board tabs (e.g. Principal/Ofensivo/Defensivo) — rendered above the field */}
+                {/* Board tabs — ultra-compact row */}
                 {tabsSlot && (
-                    <div className="shrink-0 border-b border-gray-800/50">
+                    <div className="shrink-0 border-b border-gray-800/60 bg-[#0b1111]">
                         {tabsSlot}
                     </div>
                 )}
 
-                {/* Possession switcher */}
-                <div className="shrink-0 flex items-center justify-center gap-3 px-3 py-2 border-b border-gray-800/50 bg-[#0b1111]">
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 font-bold shrink-0">
-                        Posse
-                    </span>
-                    <div className="flex items-center bg-gray-800 rounded-full p-0.5 border border-gray-700/80 flex-1 max-w-xs">
+                {/* Possession + bench-expand in one compact row */}
+                <div className="shrink-0 flex items-center gap-2 px-2 h-8 border-b border-gray-800/50 bg-[#0b1111]">
+                    <div className="flex items-center bg-gray-800/70 rounded-full p-0.5 border border-gray-700/60 flex-1">
                         <button
                             onClick={() => setPossession('home')}
-                            className={`flex-1 py-2 rounded-full text-xs font-bold transition-all duration-200 truncate px-2 ${possession === 'home' ? 'bg-white text-gray-900 shadow-md' : 'text-gray-400'}`}
+                            className={`flex-1 py-0.5 rounded-full text-[11px] font-bold transition-all truncate px-2 ${possession === 'home' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'}`}
                         >
                             {homeTeamName}
                         </button>
                         <button
                             onClick={() => setPossession('away')}
-                            className={`flex-1 py-2 rounded-full text-xs font-bold transition-all duration-200 truncate px-2 ${possession === 'away' ? 'bg-white text-gray-900 shadow-md' : 'text-gray-400'}`}
+                            className={`flex-1 py-0.5 rounded-full text-[11px] font-bold transition-all truncate px-2 ${possession === 'away' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'}`}
                         >
                             {awayTeamName}
                         </button>
                     </div>
                 </div>
 
-                {/* Field — fills available space, never covered */}
+                {/* Field — fills all remaining space */}
                 <div className="flex-1 min-h-0 overflow-hidden">
                     <TacticalField {...tacticalFieldProps} orientation="vertical" tabsSlot={undefined} />
                 </div>
 
-                {/* Bench panel — sits below the field, pushes it up when expanded */}
+                {/* Bench panel */}
                 <MobileBottomSheet
                     homeTeamName={homeTeamName}
                     awayTeamName={awayTeamName}
@@ -349,26 +346,36 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     readOnly={readOnly}
                 />
 
-                {/* Mobile toolbar */}
+                {/* Toolbar — icon-only, primary tools always visible, extras in overflow */}
                 {!readOnly && (
                     <div
-                        className="shrink-0 bg-[#030909] border-t border-gray-800 overflow-x-auto [&::-webkit-scrollbar]:hidden"
-                        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                        className="shrink-0 bg-[#030909] border-t border-gray-800 flex items-center justify-between px-1"
+                        style={{ paddingBottom: 'env(safe-area-inset-bottom)', height: `calc(2.75rem + env(safe-area-inset-bottom))` }}
                     >
-                        <div className="flex items-center px-1 py-0.5 gap-0 min-w-max">
-                            <MobileToolBtn icon={<Hand className="w-5 h-5" />} label="Mover" active={activeTool === 'select'} onClick={() => onToolChange('select')} />
-                            <MobileToolBtn icon={<MoveRight className="w-5 h-5" />} label="Seta" active={activeTool === 'arrow'} onClick={() => onToolChange('arrow')} />
-                            <MobileToolBtn icon={<Square className="w-5 h-5" />} label="Área" active={activeTool === 'rectangle'} onClick={() => onToolChange('rectangle')} />
-                            <div className="w-px h-8 bg-gray-800 mx-0.5 shrink-0" />
-                            <MobileToolBtn icon={<Palette className="w-5 h-5" />} label="Cor" onClick={onOpenColorPicker} />
-                            <MobileToolBtn icon={<Eraser className="w-5 h-5" />} label="Apagar" active={activeTool === 'eraser'} onClick={() => onToolChange('eraser')} />
-                            <div className="w-px h-8 bg-gray-800 mx-0.5 shrink-0" />
-                            <MobileToolBtn icon={<UserPlus className="w-5 h-5" />} label="Jogador" onClick={onAddPlayer} />
-                            <MobileToolBtn icon={<FileText className="w-5 h-5" />} label="Notas" onClick={onOpenAnalysis} />
-                            <MobileToolBtn icon={<Zap className="w-5 h-5" />} label="Eventos" onClick={onOpenEvents} />
-                            <div className="w-px h-8 bg-gray-800 mx-0.5 shrink-0" />
-                            <MobileToolBtn icon={<Share2 className="w-5 h-5" />} label="Compartilhar" onClick={onShare} />
-                            <MobileToolBtn icon={<Save className="w-5 h-5" />} label="Salvar" loading={isSaving} badge={hasUnsavedChanges} onClick={onSave} />
+                        {/* Primary tools */}
+                        <div className="flex items-center">
+                            <MobileToolBtn icon={<Hand className="w-4 h-4" />} label="Mover" active={activeTool === 'select'} onClick={() => onToolChange('select')} />
+                            <MobileToolBtn icon={<MoveRight className="w-4 h-4" />} label="Seta" active={activeTool === 'arrow'} onClick={() => onToolChange('arrow')} />
+                            <MobileToolBtn icon={<Square className="w-4 h-4" />} label="Área" active={activeTool === 'rectangle'} onClick={() => onToolChange('rectangle')} />
+                            <MobileToolBtn icon={<Eraser className="w-4 h-4" />} label="Apagar" active={activeTool === 'eraser'} onClick={() => onToolChange('eraser')} />
+                        </div>
+
+                        <div className="w-px h-6 bg-gray-800 shrink-0" />
+
+                        {/* Secondary tools */}
+                        <div className="flex items-center">
+                            <MobileToolBtn icon={<UserPlus className="w-4 h-4" />} label="Jogador" onClick={onAddPlayer} />
+                            <MobileToolBtn icon={<Palette className="w-4 h-4" />} label="Cor" onClick={onOpenColorPicker} />
+                            <MobileToolBtn icon={<FileText className="w-4 h-4" />} label="Notas" onClick={onOpenAnalysis} />
+                            <MobileToolBtn icon={<Zap className="w-4 h-4" />} label="Eventos" onClick={onOpenEvents} />
+                        </div>
+
+                        <div className="w-px h-6 bg-gray-800 shrink-0" />
+
+                        {/* Actions */}
+                        <div className="flex items-center">
+                            <MobileToolBtn icon={<Share2 className="w-4 h-4" />} label="Compartilhar" onClick={onShare} />
+                            <MobileToolBtn icon={<Save className="w-4 h-4" />} label="Salvar" loading={isSaving} badge={hasUnsavedChanges} onClick={onSave} />
                         </div>
                     </div>
                 )}

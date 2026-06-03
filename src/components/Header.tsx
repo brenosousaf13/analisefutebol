@@ -54,102 +54,86 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
     const isAnalysisPage = location.pathname.includes('/analysis') || location.pathname.includes('/analise');
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 bg-nav-dark/50 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between shrink-0 z-50">
+        <header className="fixed top-0 left-0 right-0 h-10 lg:h-16 bg-nav-dark/50 backdrop-blur-md border-b border-white/5 px-2 lg:px-4 flex items-center justify-between shrink-0 z-50">
             {/* Left: Hamburger Menu */}
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="flex items-center shrink-0">
                 <button
                     onClick={() => setIsMenuOpen(true)}
-                    className="p-1.5 sm:p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
+                    className="p-1.5 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
                 >
-                    <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <Menu className="w-5 h-5" />
                 </button>
             </div>
 
             {/* Center: Match Info (Team Names) */}
             {matchInfo ? (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center max-w-[50%] sm:max-w-none">
-                    <div className="flex items-center gap-2 sm:gap-6">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                    <div className="flex items-center gap-1.5 lg:gap-6">
                         {/* Home Team */}
                         <div
-                            className="flex items-center gap-1 sm:gap-3 justify-end min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => {
-
-                                onHeaderTeamClick && onHeaderTeamClick('home');
-                            }}
+                            className="flex items-center gap-1 lg:gap-3 justify-end min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => onHeaderTeamClick && onHeaderTeamClick('home')}
                         >
-                            <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
+                            <span className={`text-xs lg:text-lg font-bold truncate max-w-[72px] lg:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.homeTeam}
                             </span>
-                            <TeamLogoImage logoUrl={matchInfo.homeTeamLogo} teamName={matchInfo.homeTeam} className="w-5 h-5 sm:w-8 sm:h-8 shrink-0" />
+                            <TeamLogoImage logoUrl={matchInfo.homeTeamLogo} teamName={matchInfo.homeTeam} className="w-5 h-5 lg:w-8 lg:h-8 shrink-0" />
                         </div>
 
-                        <span className="text-gray-600 text-xs sm:text-sm font-bold shrink-0">VS</span>
+                        <span className="text-gray-600 text-[10px] lg:text-sm font-bold shrink-0">VS</span>
 
                         {/* Away Team */}
                         <div
-                            className="flex items-center gap-1 sm:gap-3 justify-start min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => {
-
-                                onHeaderTeamClick && onHeaderTeamClick('away');
-                            }}
+                            className="flex items-center gap-1 lg:gap-3 justify-start min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => onHeaderTeamClick && onHeaderTeamClick('away')}
                         >
-                            <TeamLogoImage logoUrl={matchInfo.awayTeamLogo} teamName={matchInfo.awayTeam} className="w-5 h-5 sm:w-8 sm:h-8 shrink-0" />
-                            <span className={`text-sm sm:text-lg font-bold truncate max-w-[80px] sm:max-w-none ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
+                            <TeamLogoImage logoUrl={matchInfo.awayTeamLogo} teamName={matchInfo.awayTeam} className="w-5 h-5 lg:w-8 lg:h-8 shrink-0" />
+                            <span className={`text-xs lg:text-lg font-bold truncate max-w-[72px] lg:max-w-none ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
                                 {matchInfo.awayTeam}
                             </span>
                         </div>
                     </div>
 
-                    {/* Date & Time */}
+                    {/* Date & Time — desktop only */}
                     {(matchInfo.date || matchInfo.time) && (
-                        <div className="hidden sm:flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium tracking-wide">
+                        <div className="hidden lg:flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium tracking-wide">
                             {matchInfo.date && (
                                 <span>
                                     {new Date(matchInfo.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })}
                                 </span>
                             )}
                             {matchInfo.date && matchInfo.time && <span>•</span>}
-                            {matchInfo.time && (
-                                <span className="flex items-center gap-1">
-                                    {matchInfo.time.slice(0, 5)}
-                                </span>
-                            )}
+                            {matchInfo.time && <span>{matchInfo.time.slice(0, 5)}</span>}
                         </div>
                     )}
                 </div>
             ) : (
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <img src="/zona14-logo-branco.svg" alt="Zona 14" className="h-8 w-auto object-contain" />
+                    <img src="/zona14-logo-branco.svg" alt="Zona 14" className="h-6 lg:h-8 w-auto object-contain" />
                 </div>
             )}
 
-            {/* Right: Team Switcher & Theme Toggle */}
-            <div className="flex items-center justify-end w-auto sm:w-auto shrink-0 gap-4">
+            {/* Right: Team Switcher (desktop) & Theme Toggle (desktop) */}
+            <div className="flex items-center justify-end shrink-0 gap-2 lg:gap-4">
                 {matchInfo && activeTeam && onTeamChange && (
-                    <div className="bg-gray-800/50 sm:bg-gray-800 rounded-lg p-0.5 sm:p-1 flex items-center">
+                    <div className="hidden lg:flex bg-gray-800 rounded-lg p-1 items-center">
                         <button
                             onClick={() => onTeamChange('home')}
-                            className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-all ${activeTeam === 'home'
-                                ? 'bg-accent-green text-white shadow'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
+                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTeam === 'home' ? 'bg-accent-green text-white shadow' : 'text-gray-400 hover:text-white'}`}
                         >
                             CASA
                         </button>
                         <button
                             onClick={() => onTeamChange('away')}
-                            className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-all ${activeTeam === 'away'
-                                ? 'bg-accent-green text-white shadow'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
+                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTeam === 'away' ? 'bg-accent-green text-white shadow' : 'text-gray-400 hover:text-white'}`}
                         >
                             VISIT
                         </button>
                     </div>
                 )}
 
-                {/* Theme Toggle - Only on Analysis Pages */}
-                {isAnalysisPage && <ThemeToggle />}
+                {/* Theme Toggle — desktop only on analysis pages */}
+                {isAnalysisPage && <div className="hidden lg:block"><ThemeToggle /></div>}
             </div>
 
             {/* Sidebar Overlay - Rendered outside the header flow conceptually via fixed positioning */}
