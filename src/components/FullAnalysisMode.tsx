@@ -297,7 +297,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         {...tacticalFieldProps}
                         orientation="vertical"
                         tabsSlot={undefined}
-                        playerScale={1.15}
+                        playerScale={1.5}
                     />
 
                     {/* Possession pill — bottom, entre os FABs */}
