@@ -44,7 +44,6 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
   const isFinished = FINISHED.has(status);
   const isLive     = LIVE.has(status);
   const hasScore   = isFinished || isLive;
-  const hasPostMatch = isFinished || isLive;
 
   // Time in BRT
   const matchDate = new Date(`${fixture.dateEvent}T${fixture.strTime ?? '00:00:00'}Z`);
@@ -116,13 +115,21 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
               awayTeamId={fixture.idAwayTeam}
             />
           ) : (
-            <p className="text-center text-xs text-gray-500 py-4">Escalação não disponível.</p>
+            <p className="text-center text-xs text-gray-500 py-4">
+              {isFinished || isLive ? 'Escalação não disponível.' : 'Escalação disponível próximo ao início do jogo.'}
+            </p>
           )
         ) : activePanel === 'timeline' ? (
-          <CopaTimeline
-            events={timeline ?? []}
-            homeTeamId={fixture.idHomeTeam}
-          />
+          (timeline ?? []).length > 0 ? (
+            <CopaTimeline
+              events={timeline!}
+              homeTeamId={fixture.idHomeTeam}
+            />
+          ) : (
+            <p className="text-center text-xs text-gray-500 py-4">
+              {isFinished || isLive ? 'Nenhum evento registrado.' : 'Eventos disponíveis durante e após o jogo.'}
+            </p>
+          )
         ) : activePanel === 'stats' ? (
           matchStats ? (
             <CopaMatchStats
@@ -131,7 +138,9 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
               awayTeam={fixture.strAwayTeam}
             />
           ) : (
-            <p className="text-center text-xs text-gray-500 py-4">Estatísticas não disponíveis.</p>
+            <p className="text-center text-xs text-gray-500 py-4">
+              {isFinished || isLive ? 'Estatísticas não disponíveis.' : 'Estatísticas disponíveis durante e após o jogo.'}
+            </p>
           )
         ) : null}
       </div>
@@ -256,13 +265,9 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
 
       {/* Actions */}
       <div className="px-4 pb-3 flex items-center gap-1.5 flex-wrap">
-        {hasPostMatch && (
-          <>
-            <PanelToggle panel="lineup"   icon={<Users size={11} />}    label="Escalação" />
-            <PanelToggle panel="timeline" icon={<List size={11} />}     label="Eventos" />
-            <PanelToggle panel="stats"    icon={<BarChart2 size={11} />} label="Stats" />
-          </>
-        )}
+        <PanelToggle panel="lineup"   icon={<Users size={11} />}    label="Escalação" />
+        <PanelToggle panel="timeline" icon={<List size={11} />}     label="Eventos" />
+        <PanelToggle panel="stats"    icon={<BarChart2 size={11} />} label="Stats" />
 
         {fixture.strVideo && (
           <a
