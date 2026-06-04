@@ -1,0 +1,223 @@
+// TheSportsDB service — COPA 2026 feature (easy to remove after tournament)
+import type {
+  TsdbEvent,
+  TsdbLineupPlayer,
+  TsdbTimeline,
+  TsdbStanding,
+  TsdbTeam,
+  TsdbPlayer,
+  TsdbEventStats,
+  TsdbLivescore,
+} from '../types/thesportsdb';
+
+const KEY = import.meta.env.VITE_THESPORTSDB_KEY ?? '6452773356';
+const V1 = `https://www.thesportsdb.com/api/v1/json/${KEY}`;
+
+const WC_LEAGUE = '4429';
+const WC_SEASON = '2026';
+
+// ── Cache helpers ──────────────────────────────────────────────
+function getCache<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { data, ts, ttl } = JSON.parse(raw) as { data: T; ts: number; ttl: number };
+    if (Date.now() - ts > ttl) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setCache<T>(key: string, data: T, ttlMs: number): void {
+  try {
+    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now(), ttl: ttlMs }));
+  } catch { /* storage full or disabled */ }
+}
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${V1}/${path}`);
+  if (!res.ok) throw new Error(`TSDB ${res.status}: ${path}`);
+  return res.json() as Promise<T>;
+}
+
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+
+// ── Service ───────────────────────────────────────────────────
+export const theSportsDbService = {
+  /** All Copa 2026 fixtures — cached 1 h */
+  async getAllFixtures(): Promise<TsdbEvent[]> {
+    const ck = `tsdb_wc_fixtures_2026`;
+    const cached = getCache<TsdbEvent[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ events: TsdbEvent[] | null }>(
+        `eventsseason.php?id=${WC_LEAGUE}&s=${WC_SEASON}`
+      );
+      const data = json.events ?? [];
+      setCache(ck, data, HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getAllFixtures', e);
+      return [];
+    }
+  },
+
+  /** Live Copa 2026 matches — cached 2 min */
+  async getLiveFixtures(): Promise<TsdbEvent[]> {
+    const ck = `tsdb_wc_live`;
+    const cached = getCache<TsdbEvent[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ events: TsdbEvent[] | null }>(
+        `livescore.php?s=Soccer`
+      );
+      const all = json.events ?? [];
+      const wc = all.filter(e => e.idLeague === WC_LEAGUE);
+      setCache(ck, wc, 2 * MIN);
+      return wc;
+    } catch (e) {
+      console.error('[TSDB] getLiveFixtures', e);
+      return [];
+    }
+  },
+
+  /** Lineup for a match — cached 6 h (populated only post-kickoff) */
+  async getLineup(eventId: string): Promise<TsdbLineupPlayer[]> {
+    const ck = `tsdb_lineup_${eventId}`;
+    const cached = getCache<TsdbLineupPlayer[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ lineup: TsdbLineupPlayer[] | null }>(
+        `lookuplineup.php?id=${eventId}`
+      );
+      const data = json.lineup ?? [];
+      if (data.length > 0) setCache(ck, data, 6 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getLineup', e);
+      return [];
+    }
+  },
+
+  /** Match timeline (goals, cards, subs) — cached 5 min during live, 1 h after */
+  async getTimeline(eventId: string, isLive = false): Promise<TsdbTimeline[]> {
+    const ck = `tsdb_timeline_${eventId}`;
+    const cached = getCache<TsdbTimeline[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ timeline: TsdbTimeline[] | null }>(
+        `lookuptimeline.php?id=${eventId}`
+      );
+      const data = json.timeline ?? [];
+      setCache(ck, data, isLive ? 5 * MIN : HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTimeline', e);
+      return [];
+    }
+  },
+
+  /** Match statistics — cached 5 min during live, 1 h after */
+  async getEventStats(eventId: string, isLive = false): Promise<TsdbEventStats | null> {
+    const ck = `tsdb_stats_${eventId}`;
+    const cached = getCache<TsdbEventStats>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ eventstats: TsdbEventStats[] | null }>(
+        `lookupeventstats.php?id=${eventId}`
+      );
+      const data = json.eventstats?.[0] ?? null;
+      if (data) setCache(ck, data, isLive ? 5 * MIN : HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getEventStats', e);
+      return null;
+    }
+  },
+
+  /** Group standings — cached 30 min */
+  async getStandings(): Promise<TsdbStanding[]> {
+    const ck = `tsdb_wc_standings_2026`;
+    const cached = getCache<TsdbStanding[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ table: TsdbStanding[] | null }>(
+        `lookuptable.php?l=${WC_LEAGUE}&s=${WC_SEASON}`
+      );
+      const data = json.table ?? [];
+      setCache(ck, data, 30 * MIN);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getStandings', e);
+      return [];
+    }
+  },
+
+  /** Team details — cached 24 h */
+  async getTeam(teamId: string): Promise<TsdbTeam | null> {
+    const ck = `tsdb_team_${teamId}`;
+    const cached = getCache<TsdbTeam>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ teams: TsdbTeam[] | null }>(
+        `lookupteam.php?id=${teamId}`
+      );
+      const data = json.teams?.[0] ?? null;
+      if (data) setCache(ck, data, 24 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTeam', e);
+      return null;
+    }
+  },
+
+  /** Search players by name — no cache (user typed query) */
+  async searchPlayers(name: string): Promise<TsdbPlayer[]> {
+    if (name.length < 3) return [];
+    try {
+      const json = await get<{ player: TsdbPlayer[] | null }>(
+        `searchplayers.php?p=${encodeURIComponent(name)}`
+      );
+      return json.player ?? [];
+    } catch (e) {
+      console.error('[TSDB] searchPlayers', e);
+      return [];
+    }
+  },
+
+  /** Livescores from V2 — cached 2 min (requires CORS support from TSDB) */
+  async getLivescoresV2(): Promise<TsdbLivescore[]> {
+    const ck = `tsdb_v2_live`;
+    const cached = getCache<TsdbLivescore[]>(ck);
+    if (cached) return cached;
+    try {
+      const res = await fetch('https://www.thesportsdb.com/api/v2/json/livescore/soccer', {
+        headers: { 'X-API-KEY': KEY },
+      });
+      if (!res.ok) throw new Error(`TSDB V2 ${res.status}`);
+      const json = await res.json() as { events?: TsdbLivescore[] | null };
+      const all = json.events ?? [];
+      const wc = all.filter(e => e.idLeague === WC_LEAGUE);
+      setCache(ck, wc, 2 * MIN);
+      return wc;
+    } catch (e) {
+      console.error('[TSDB] getLivescoresV2', e);
+      return [];
+    }
+  },
+
+  /** Invalidate a cached key (e.g. after creating analysis) */
+  invalidate(key: string): void {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  },
+
+  /** Clear all Copa-related cache entries */
+  clearCopaCache(): void {
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('tsdb_'));
+      keys.forEach(k => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  },
+};
