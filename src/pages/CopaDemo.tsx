@@ -4,9 +4,10 @@ import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
 import { useAuth } from '../contexts/AuthContext';
-import type { TsdbEvent, TsdbLineupPlayer } from '../types/thesportsdb';
+import type { TsdbEvent, TsdbLineupPlayer, TsdbStanding } from '../types/thesportsdb';
 import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
+import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
 
 // ── Design tokens (v2) ────────────────────────────────────────
 const BG  = '#07090c';
@@ -65,11 +66,17 @@ export default function CopaDemo() {
   const [fixtures, setFixtures] = useState<TsdbEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [copaFixtures, setCopaFixtures] = useState<TsdbEvent[]>([]);
+  const [copaStandings, setCopaStandings] = useState<TsdbStanding[]>([]);
+  const [savedTeams] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     theSportsDbService.getLeaguePastFixtures(DEMO_LEAGUE)
       .then(data => setFixtures(data.slice(0, 5)))
       .finally(() => setLoading(false));
+    // Also fetch Copa fixtures for the groups table
+    Promise.all([theSportsDbService.getAllFixtures(), theSportsDbService.getStandings()])
+      .then(([fx, st]) => { setCopaFixtures(fx); setCopaStandings(st); });
   }, []);
 
   const handleCreateAnalysis = async (fixture: TsdbEvent) => {
@@ -155,32 +162,53 @@ export default function CopaDemo() {
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Content — two columns on desktop ── */}
       <div style={{ padding:'0 24px', paddingBottom:64 }}>
-        <div style={{ paddingTop:20 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-            <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:800, letterSpacing:'.09em', textTransform:'uppercase', color:T2, whiteSpace:'nowrap' }}>
-              Rodada recente
-            </span>
-            <div style={{ flex:1, height:1, background:BDR }} />
+        <div style={{ display:'grid', gridTemplateColumns:'1fr min(400px, 38%)', gap:32, alignItems:'start', paddingTop:20 }}>
+
+          {/* Left: demo fixtures */}
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+              <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:800, letterSpacing:'.09em', textTransform:'uppercase', color:T2, whiteSpace:'nowrap' }}>
+                Rodada recente
+              </span>
+              <div style={{ flex:1, height:1, background:BDR }} />
+            </div>
+
+            {loading ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                {[1,2,3].map(i => <div key={i} style={{ height:130, background:S, borderRadius:6, opacity:.5 }} />)}
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                {fixtures.map(f => (
+                  <CopaFixtureCard
+                    key={f.idEvent}
+                    fixture={f}
+                    onCreateAnalysis={handleCreateAnalysis}
+                    isCreating={creatingId === f.idEvent}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-              {[1,2,3].map(i => <div key={i} style={{ height:130, background:S, borderRadius:6, opacity:.5 }} />)}
+          {/* Right: Copa 2026 groups table */}
+          <div style={{ position:'sticky', top:52 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+              <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:800, letterSpacing:'.09em', textTransform:'uppercase', color:T2, whiteSpace:'nowrap' }}>
+                Copa 2026 · Grupos
+              </span>
+              <div style={{ flex:1, height:1, background:BDR }} />
             </div>
-          ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-              {fixtures.map(f => (
-                <CopaFixtureCard
-                  key={f.idEvent}
-                  fixture={f}
-                  onCreateAnalysis={handleCreateAnalysis}
-                  isCreating={creatingId === f.idEvent}
-                />
-              ))}
-            </div>
-          )}
+            <CopaGroupsDisplay
+              fixtures={copaFixtures}
+              standings={copaStandings}
+              savedTeams={savedTeams}
+              onToggleTeam={() => {}}
+            />
+          </div>
+
         </div>
       </div>
 

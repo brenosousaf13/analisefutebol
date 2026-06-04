@@ -8,7 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import type { TsdbEvent, TsdbLineupPlayer, TsdbStanding } from '../types/thesportsdb';
 import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
-import CopaStandings from '../components/copa/CopaStandings';
+import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
+import { teamPt } from '../utils/teamNames';
 
 // ── Design tokens (v2) ────────────────────────────────────────
 const BG  = '#07090c';
@@ -182,7 +183,126 @@ function SearchFilter({ q, setQ, grp, setGrp }: {
   );
 }
 
-// ── Sidebar: Next Brazil card ─────────────────────────────────
+// ── Sidebar: Favorited teams' games ──────────────────────────
+function FavoritesSidebar({ savedTeams, fixtures, onCreateAnalysis, creatingId }: {
+  savedTeams: Set<string>;
+  fixtures: TsdbEvent[];
+  onCreateAnalysis: (f: TsdbEvent) => void;
+  creatingId: string | null;
+}) {
+  if (savedTeams.size === 0) {
+    return (
+      <div style={{ background:S, borderRadius:6, padding:'20px 16px', border:`1px solid ${BDR}` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span style={{ fontFamily:BC, fontSize:12, fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', color:T3 }}>
+            Favoritos
+          </span>
+        </div>
+        <p style={{ fontSize:12, color:T3, lineHeight:1.6 }}>
+          Na aba <strong style={{ color:T2 }}>Tabela</strong>, clique em ⭐ ao lado de uma seleção para acompanhar os jogos dela aqui.
+        </p>
+      </div>
+    );
+  }
+
+  const savedFixtures = fixtures.filter(f =>
+    savedTeams.has(f.strHomeTeam) || savedTeams.has(f.strAwayTeam)
+  );
+  const unique = savedFixtures.filter((f, i, arr) => arr.findIndex(x => x.idEvent === f.idEvent) === i);
+
+  return (
+    <div style={{ background:S, borderRadius:6, overflow:'hidden', border:`1px solid ${BDR}` }}>
+      <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill={GD} stroke={GD} strokeWidth="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <span style={{ fontFamily:BC, fontSize:12, fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', color:T }}>
+          Favoritos
+        </span>
+        <span style={{ marginLeft:'auto', fontSize:10, color:T3 }}>
+          {[...savedTeams].map(n => teamPt(n)).join(', ')}
+        </span>
+      </div>
+      {unique.length === 0 ? (
+        <p style={{ fontSize:12, color:T3, padding:'14px', lineHeight:1.5 }}>Nenhum jogo encontrado.</p>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+          {unique.map((f, i) => {
+            const bra = f.strHomeTeam === 'Brazil' || f.strAwayTeam === 'Brazil';
+            const matchDate = new Date(`${f.dateEvent}T${f.strTime ?? '00:00:00'}Z`);
+            const timeStr = matchDate.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+            const [y,m,d] = f.dateEvent.split('-').map(Number);
+            const dt = new Date(y,m-1,d);
+            const dateShort = `${DAYS_SHORT[dt.getDay()]}. ${d} ${MONTHS_SHORT[m-1]}.`;
+            const hasScore = ['FT','AET','PEN','1H','HT','2H','ET','P'].includes(f.strStatus);
+            const col = bra ? GD : AC;
+
+            function Bdg({ src, name }: { src: string|null; name: string }) {
+              const [err, setErr] = useState(false);
+              return (
+                <div style={{ width:28, height:28, borderRadius:'50%', overflow:'hidden', background:S2, border:`1px solid ${BDR}`, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {src && !err ? <img src={src} alt={name} onError={()=>setErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ fontSize:7, color:T3 }}>{name.slice(0,2)}</span>}
+                </div>
+              );
+            }
+
+            return (
+              <div key={f.idEvent} style={{
+                padding:'10px 14px',
+                borderTop: i > 0 ? `1px solid ${BDR}` : undefined,
+                borderLeft: bra ? `2px solid ${GD}` : '2px solid transparent',
+                background: bra ? 'rgba(245,158,11,0.04)' : 'transparent',
+              }}>
+                {f.strGroup && (
+                  <div style={{ fontSize:9, fontWeight:700, color:T3, letterSpacing:'.05em', textTransform:'uppercase', marginBottom:6 }}>
+                    Grupo {f.strGroup}
+                  </div>
+                )}
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <Bdg src={f.strHomeTeamBadge} name={f.strHomeTeam} />
+                  <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
+                    <span style={{ fontSize:11.5, fontWeight:600, color:T, lineHeight:1.2 }}>{teamPt(f.strHomeTeam)}</span>
+                    <span style={{ fontSize:10, color:T2 }}>vs {teamPt(f.strAwayTeam)}</span>
+                  </div>
+                  <Bdg src={f.strAwayTeamBadge} name={f.strAwayTeam} />
+                  <div style={{ textAlign:'right', minWidth:44 }}>
+                    {hasScore ? (
+                      <span style={{ fontFamily:BC, fontSize:16, fontWeight:900, color:T }}>{f.intHomeScore ?? 0}–{f.intAwayScore ?? 0}</span>
+                    ) : (
+                      <>
+                        <span style={{ fontFamily:BC, fontSize:14, fontWeight:900, color:col, display:'block', lineHeight:1 }}>{timeStr}</span>
+                        <span style={{ fontSize:9, color:T3 }}>{dateShort}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onCreateAnalysis(f)}
+                  disabled={creatingId === f.idEvent}
+                  style={{
+                    width:'100%', padding:'5px 0', borderRadius:5,
+                    background:`${col}14`, color:col, fontSize:11, fontWeight:600,
+                    border:`1px solid ${col}30`, cursor:'pointer',
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:4,
+                    opacity: creatingId === f.idEvent ? 0.6 : 1,
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                  Criar análise
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── OLD: Next Brazil card (replaced by FavoritesSidebar) ──────
 function NextBrazilCard({ fixture, onCreateAnalysis, isCreating }: {
   fixture: TsdbEvent; onCreateAnalysis: (f:TsdbEvent)=>void; isCreating: boolean;
 }) {
@@ -414,6 +534,15 @@ export default function Copa() {
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Favorites: set of team names (e.g. "Brazil", "Germany")
+  const [savedTeams, setSavedTeams] = useState<Set<string>>(new Set());
+  const onToggleTeam = useCallback((name: string) => {
+    setSavedTeams(prev => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  }, []);
 
   const todayStr = useMemo(() => {
     const now = new Date();
@@ -574,17 +703,15 @@ export default function Copa() {
           )}
         </div>
 
-        {/* Right sidebar (desktop only) */}
+        {/* Right sidebar (desktop only) — favorited teams' games */}
         {lg && (
           <div style={{ position:'sticky', top:112, paddingTop:16 }}>
-            {nextBrazilGame && (
-              <NextBrazilCard
-                fixture={nextBrazilGame}
-                onCreateAnalysis={handleCreateAnalysis}
-                isCreating={creatingId === nextBrazilGame.idEvent}
-              />
-            )}
-            <MiniGroupTable standings={standings} brazilGroup={brazilGroup} />
+            <FavoritesSidebar
+              savedTeams={savedTeams}
+              fixtures={[...liveAndToday, ...upcomingFixtures]}
+              onCreateAnalysis={handleCreateAnalysis}
+              creatingId={creatingId}
+            />
           </div>
         )}
       </div>
@@ -632,7 +759,12 @@ export default function Copa() {
   function TabelaTab() {
     return (
       <div style={{ paddingTop:16 }}>
-        <CopaStandings standings={standings} />
+        <CopaGroupsDisplay
+          fixtures={fixtures}
+          standings={standings}
+          savedTeams={savedTeams}
+          onToggleTeam={onToggleTeam}
+        />
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { theSportsDbService } from '../../services/theSportsDbService';
 import type { TsdbEvent, TsdbLineupPlayer, TsdbTimeline, TsdbEventStats } from '../../types/thesportsdb';
+import { teamPt } from '../../utils/teamNames';
 import CopaLineupList from './CopaLineupList';
 import CopaTimeline from './CopaTimeline';
 import CopaMatchStats from './CopaMatchStats';
@@ -25,6 +26,8 @@ interface Props {
   fixture: TsdbEvent;
   onCreateAnalysis: (fixture: TsdbEvent) => void;
   isCreating: boolean;
+  isSaved?: boolean;
+  onToggleSave?: (id: string) => void;
 }
 
 type Panel = 'lineup' | 'timeline' | 'stats' | 'highlight';
@@ -115,15 +118,21 @@ function TeamBadge({ src, name, size = 42 }: { src: string | null; name: string;
   );
 }
 
-export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating }: Props) {
+export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating, isSaved, onToggleSave }: Props) {
   const [activePanel, setActivePanel] = useState<Panel | null>(null);
   const [lineup, setLineup] = useState<TsdbLineupPlayer[] | null>(null);
   const [timeline, setTimeline] = useState<TsdbTimeline[] | null>(null);
   const [matchStats, setMatchStats] = useState<TsdbEventStats | null | undefined>(undefined);
   const [loadingPanel, setLoadingPanel] = useState<Panel | null>(null);
   const [notif, setNotif] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [localSaved, setLocalSaved] = useState(false);
   const [hov, setHov] = useState(false);
+  const saved = isSaved !== undefined ? isSaved : localSaved;
+  const handleToggleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleSave) onToggleSave(fixture.idEvent);
+    else setLocalSaved(p => !p);
+  };
 
   const bra     = isBrazil(fixture);
   const a       = bra ? GD : AC;
@@ -211,7 +220,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <TeamBadge src={fixture.strHomeTeamBadge} name={fixture.strHomeTeam} />
           <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'center', lineHeight: 1.2, color: T }}>
-            {fixture.strHomeTeam}
+            {teamPt(fixture.strHomeTeam)}
           </span>
         </div>
 
@@ -249,7 +258,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <TeamBadge src={fixture.strAwayTeamBadge} name={fixture.strAwayTeam} />
           <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'center', lineHeight: 1.2, color: T }}>
-            {fixture.strAwayTeam}
+            {teamPt(fixture.strAwayTeam)}
           </span>
         </div>
       </div>
@@ -266,7 +275,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
           </IconBtn28>
-          <IconBtn28 active={saved} col={GD} title="Favoritar" onClick={e => { e.stopPropagation(); setSaved(p => !p); }}>
+          <IconBtn28 active={saved} col={GD} title="Favoritar" onClick={handleToggleSave}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
