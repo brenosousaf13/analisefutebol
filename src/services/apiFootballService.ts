@@ -220,6 +220,36 @@ export const apiFootballService = {
     },
 
     /**
+     * Get FIFA World Cup 2026 fixtures (league 1, season 2026).
+     * Caches in localStorage for 10 minutes to avoid quota waste.
+     * COPA 2026 — easy to remove after tournament.
+     */
+    async getWorldCupFixtures(date?: string): Promise<ApiFixture[]> {
+        const cacheKey = `wc2026_fixtures_${date ?? 'all'}`;
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const { data, ts } = JSON.parse(cached) as { data: ApiFixture[]; ts: number };
+                if (Date.now() - ts < 10 * 60 * 1000) return data;
+            }
+        } catch { /* ignore storage errors */ }
+
+        try {
+            const params: Record<string, unknown> = { league: 1, season: 2026 };
+            if (date) params.date = date;
+            const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', { params });
+            const data = response.data.response;
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() }));
+            } catch { /* storage full or disabled */ }
+            return data;
+        } catch (error) {
+            console.error('Error fetching World Cup fixtures:', error);
+            return [];
+        }
+    },
+
+    /**
      * Search teams by country and name
      */
     async searchTeams(country: string, search: string): Promise<ApiTeam[]> {
