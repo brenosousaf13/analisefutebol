@@ -80,7 +80,6 @@ function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
   onToggleTeam: (name: string) => void;
 }) {
   const isBrazilGroup = teams.some(t => t.name === 'Brazil');
-  const accentCol = isBrazilGroup ? GD : AC;
 
   return (
     <div style={{

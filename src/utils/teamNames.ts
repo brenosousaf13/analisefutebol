@@ -47,7 +47,6 @@ const PT: Record<string, string> = {
   'Haiti': 'Haiti',
   'Qatar': 'Catar',
   'Ivory Coast': 'Costa do Marfim',
-  'Ghana': 'Gana',
 };
 
 export function teamPt(name: string | null | undefined): string {
