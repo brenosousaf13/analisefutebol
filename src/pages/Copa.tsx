@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
@@ -16,9 +16,7 @@ const BG  = '#07090c';
 const S   = '#0c1016';
 const S2  = '#111820';
 const BDR = 'rgba(255,255,255,0.06)';
-const BDR2= 'rgba(255,255,255,0.11)';
 const AC  = '#00e676';
-const AC1 = 'rgba(0,230,118,0.16)';
 const GD  = '#f59e0b';
 const T   = '#dde5ef';
 const T2  = '#566b82';
