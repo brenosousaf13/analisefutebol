@@ -134,10 +134,9 @@ export default function Copa() {
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
                     >
-                        <span className="text-[#27D888] font-black text-lg leading-none">Z14</span>
+                        <img src="/zona14-logo-branco.svg" alt="Zona 14" className="h-5 w-auto object-contain" />
                         <span className="text-gray-700 text-xs">×</span>
-                        <Trophy size={14} className="text-yellow-400" />
-                        <span>Copa 2026</span>
+                        <img src="/World-Cup-2026-Logo-PNG.webp" alt="Copa 2026" className="h-6 w-auto object-contain rounded bg-white px-1" />
                     </button>
 
                     {user ? (
@@ -161,9 +160,12 @@ export default function Copa() {
 
             {/* ── Hero ── */}
             <div className="max-w-2xl mx-auto px-4 pt-10 pb-8 text-center">
-                <div className="inline-flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 text-[11px] font-bold px-3 py-1 rounded-full mb-5">
-                    <Trophy size={11} />
-                    FIFA WORLD CUP 2026
+                <div className="flex justify-center mb-5">
+                    <img
+                        src="/World-Cup-2026-Logo-PNG.webp"
+                        alt="FIFA World Cup 2026"
+                        className="h-28 sm:h-36 w-auto object-contain rounded-2xl bg-white p-3"
+                    />
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight mb-2">
