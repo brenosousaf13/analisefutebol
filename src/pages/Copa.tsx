@@ -1,208 +1,403 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, LogIn, Zap, AlertCircle, RefreshCw, Wifi, Search, X, ChevronRight } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
 import { useAuth } from '../contexts/AuthContext';
-import type { TsdbEvent, TsdbLineupPlayer } from '../types/thesportsdb';
+import type { TsdbEvent, TsdbLineupPlayer, TsdbStanding } from '../types/thesportsdb';
 import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaStandings from '../components/copa/CopaStandings';
-import type { TsdbStanding } from '../types/thesportsdb';
 
-// FIFA World Cup 2026 — June 11 to July 19, 2026 (BRT)
-const WC_START = new Date('2026-06-11T12:00:00-03:00');
+// ── Design tokens (v2) ────────────────────────────────────────
+const BG  = '#07090c';
+const S   = '#0c1016';
+const S2  = '#111820';
+const BDR = 'rgba(255,255,255,0.06)';
+const BDR2= 'rgba(255,255,255,0.11)';
+const AC  = '#00e676';
+const AC0 = 'rgba(0,230,118,0.08)';
+const AC1 = 'rgba(0,230,118,0.16)';
+const GD  = '#f59e0b';
+const GD0 = 'rgba(245,158,11,0.08)';
+const GD1 = 'rgba(245,158,11,0.18)';
+const T   = '#dde5ef';
+const T2  = '#566b82';
+const T3  = '#243040';
+const BC  = "'Barlow Condensed', sans-serif";
 
-type Tab = 'ao_vivo' | 'hoje' | 'proximos' | 'resultados' | 'tabela';
+const WC_START = new Date('2026-06-11T19:00:00-03:00');
 
-// ── Lineup → Player[] converter ──────────────────────────────
-function posToRow(pos: string): number {
-  const p = pos.toUpperCase().trim();
-  if (p === 'GK' || p.includes('GOALKEEPER')) return 0;
-  if (
-    ['CB', 'RB', 'LB', 'RWB', 'LWB'].includes(p) ||
-    ['DEFENDER', 'CENTRE-BACK', 'RIGHT BACK', 'LEFT BACK', 'WING BACK', 'FULLBACK', 'CENTRE BACK'].some(x => p.includes(x))
-  ) return 1;
-  if (
-    ['CF', 'ST', 'RW', 'LW'].includes(p) ||
-    ['STRIKER', 'FORWARD', 'WINGER', 'WING', 'CENTRE-FORWARD', 'SECOND STRIKER'].some(x => p.includes(x))
-  ) return 3;
-  return 2;
+const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
+
+const DAYS_FULL  = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
+const MONTHS_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DAYS_SHORT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MONTHS_SHORT= ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+type Tab = 'calendario' | 'resultados' | 'tabela';
+
+// ── Helpers ───────────────────────────────────────────────────
+function isBrazilGame(f: TsdbEvent) {
+  return f.strHomeTeam === 'Brazil' || f.strAwayTeam === 'Brazil';
 }
 
-function tsdbLineupToPlayers(lineup: TsdbLineupPlayer[], isHome: boolean): Player[] {
-  const starters = lineup.filter(
-    p => p.strSubstitute === 'No' && (isHome ? p.strHome === 'Yes' : p.strHome === 'No')
-  );
-  if (starters.length === 0) return [];
-
-  const rowMap: Record<number, TsdbLineupPlayer[]> = { 0: [], 1: [], 2: [], 3: [] };
-  starters.forEach(p => rowMap[posToRow(p.strPosition)].push(p));
-
-  const usedRows = ([0, 1, 2, 3] as const).filter(r => rowMap[r].length > 0);
-  const totalRows = usedRows.length;
-  const result: Player[] = [];
-
-  usedRows.forEach((row, ri) => {
-    const xPct = totalRows > 1 ? ri / (totalRows - 1) : 0;
-    // Home: GK at x≈5, FWD at x≈45 — Away: GK at x≈95, FWD at x≈55
-    const x = isHome ? 5 + xPct * 40 : 95 - xPct * 40;
-    const rowPlayers = rowMap[row];
-    const count = rowPlayers.length;
-
-    rowPlayers.forEach((p, i) => {
-      const y = (100 / (count + 1)) * (i + 1);
-      const numId = parseInt(p.idPlayer.replace(/\D/g, '').slice(-7), 10);
-      result.push({
-        id: isNaN(numId) ? (isHome ? 1000 : 2000) + ri * 100 + i : numId,
-        name: p.strPlayer,
-        number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
-        position: { x, y },
-        isStarter: true,
-      });
-    });
-  });
-
-  return result;
+function fmtFull(dateStr: string): string {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return `${DAYS_FULL[dt.getDay()]}, ${d} de ${MONTHS_FULL[m-1]}`;
 }
 
-// ── Countdown ─────────────────────────────────────────────────
-function useCountdown() {
-  const [ms, setMs] = useState(() => Math.max(0, WC_START.getTime() - Date.now()));
-  useEffect(() => {
-    if (ms === 0) return;
-    const id = setInterval(() => setMs(Math.max(0, WC_START.getTime() - Date.now())), 1000);
-    return () => clearInterval(id);
-  }, [ms]);
-  return {
-    done:    ms === 0,
-    days:    Math.floor(ms / 864e5),
-    hours:   Math.floor((ms % 864e5) / 36e5),
-    minutes: Math.floor((ms % 36e5) / 6e4),
-    seconds: Math.floor((ms % 6e4) / 1e3),
-  };
-}
-
-function CountdownUnit({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="bg-gray-900 border border-gray-700/60 rounded-xl px-3 py-2 min-w-[58px] text-center">
-        <span className="text-2xl sm:text-3xl font-black text-white tabular-nums">
-          {String(value).padStart(2, '0')}
-        </span>
-      </div>
-      <span className="text-[11px] text-gray-500">{label}</span>
-    </div>
-  );
-}
-
-// ── Date grouping helpers ─────────────────────────────────────
-function groupByDate(fixtures: TsdbEvent[]): Map<string, TsdbEvent[]> {
+function groupByDate(fixtures: TsdbEvent[]): [string, TsdbEvent[]][] {
   const map = new Map<string, TsdbEvent[]>();
   fixtures.forEach(f => {
     if (!map.has(f.dateEvent)) map.set(f.dateEvent, []);
     map.get(f.dateEvent)!.push(f);
   });
-  return map;
+  return [...map.entries()].sort(([a],[b]) => a < b ? -1 : 1);
 }
 
-function formatDateHeader(dateStr: string): string {
-  const d = new Date(`${dateStr}T12:00:00Z`);
-  return d.toLocaleDateString('pt-BR', {
-    weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC'
+// ── Lineup → Player[] ─────────────────────────────────────────
+function posToRow(pos: string): number {
+  const p = pos.toUpperCase().trim();
+  if (p === 'GK' || p.includes('GOALKEEPER')) return 0;
+  if (['CB','RB','LB','RWB','LWB'].includes(p) ||
+      ['DEFENDER','CENTRE-BACK','RIGHT BACK','LEFT BACK','WING BACK','FULLBACK','CENTRE BACK'].some(x => p.includes(x))) return 1;
+  if (['CF','ST','RW','LW'].includes(p) ||
+      ['STRIKER','FORWARD','WINGER','WING','CENTRE-FORWARD'].some(x => p.includes(x))) return 3;
+  return 2;
+}
+
+function tsdbLineupToPlayers(lineup: TsdbLineupPlayer[], isHome: boolean): Player[] {
+  const starters = lineup.filter(p => p.strSubstitute === 'No' && (isHome ? p.strHome === 'Yes' : p.strHome === 'No'));
+  if (starters.length === 0) return [];
+  const rowMap: Record<number, TsdbLineupPlayer[]> = { 0:[], 1:[], 2:[], 3:[] };
+  starters.forEach(p => rowMap[posToRow(p.strPosition)].push(p));
+  const usedRows = ([0,1,2,3] as const).filter(r => rowMap[r].length > 0);
+  const totalRows = usedRows.length;
+  const result: Player[] = [];
+  usedRows.forEach((row, ri) => {
+    const xPct = totalRows > 1 ? ri / (totalRows - 1) : 0;
+    const x = isHome ? 5 + xPct * 40 : 95 - xPct * 40;
+    const rowPlayers = rowMap[row];
+    rowPlayers.forEach((p, i) => {
+      const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
+      result.push({
+        id: isNaN(numId) ? (isHome ? 1000 : 2000) + ri*100 + i : numId,
+        name: p.strPlayer,
+        number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
+        position: { x, y: (100 / (rowPlayers.length + 1)) * (i + 1) },
+        isStarter: true,
+      });
+    });
   });
+  return result;
 }
 
-function FixtureGroup({
-  dateStr, fixtures, onCreateAnalysis, creatingId,
-}: {
-  dateStr: string;
-  fixtures: TsdbEvent[];
-  onCreateAnalysis: (f: TsdbEvent) => void;
-  creatingId: string | null;
-}) {
+// ── Countdown hook ────────────────────────────────────────────
+function useCountdown() {
+  const [t, setT] = useState<{d:number;h:number;m:number;s:number} | null>(null);
+  useEffect(() => {
+    const tick = () => {
+      const diff = WC_START.getTime() - Date.now();
+      if (diff <= 0) { setT({d:0,h:0,m:0,s:0}); return; }
+      setT({d:Math.floor(diff/86400000),h:Math.floor(diff%86400000/3600000),m:Math.floor(diff%3600000/60000),s:Math.floor(diff%60000/1000)});
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return t;
+}
+
+// ── Breakpoint hook ───────────────────────────────────────────
+function useBreakpoint() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return { lg: w >= 960 };
+}
+
+// ── Date header ───────────────────────────────────────────────
+function DateHeader({ dateStr }: { dateStr: string }) {
   return (
-    <div className="mb-5">
-      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-1 capitalize">
-        {formatDateHeader(dateStr)}
-      </h3>
-      <div className="flex flex-col gap-3">
-        {fixtures.map(f => (
-          <CopaFixtureCard
-            key={f.idEvent}
-            fixture={f}
-            onCreateAnalysis={onCreateAnalysis}
-            isCreating={creatingId === f.idEvent}
-          />
-        ))}
+    <div style={{
+      display:'flex', alignItems:'center', gap:12,
+      padding:'20px 0 10px',
+      position:'sticky', top:104, zIndex:3, background:BG,
+    }}>
+      <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:800, letterSpacing:'.09em', textTransform:'uppercase', color:T2, whiteSpace:'nowrap' }}>
+        {fmtFull(dateStr)}
+      </span>
+      <div style={{ flex:1, height:1, background:BDR }} />
+    </div>
+  );
+}
+
+// ── Search + chips ────────────────────────────────────────────
+function SearchFilter({ q, setQ, grp, setGrp }: {
+  q: string; setQ: (v:string)=>void; grp: string; setGrp: (v:string)=>void;
+}) {
+  const [foc, setFoc] = useState(false);
+  return (
+    <div style={{ paddingTop:16 }}>
+      <div style={{
+        display:'flex', alignItems:'center', gap:10,
+        background:S, borderRadius:8, padding:'9px 13px', marginBottom:10,
+        border:`1px solid ${foc ? 'rgba(0,230,118,0.5)' : BDR}`, transition:'border-color .15s',
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          onFocus={() => setFoc(true)}
+          onBlur={() => setFoc(false)}
+          placeholder="Buscar seleção ou grupo..."
+          style={{ flex:1, background:'transparent', border:'none', outline:'none', fontSize:13.5, color:T }}
+        />
+        {q && (
+          <button onClick={() => setQ('')} style={{ color:T3, lineHeight:0, border:'none', background:'none', cursor:'pointer' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        )}
+      </div>
+      <div style={{ display:'flex', gap:5, overflowX:'auto', paddingBottom:3, scrollbarWidth:'none' }}>
+        {['TODOS','BRASIL',...ALL_GROUPS].map(g => {
+          const on = grp === g;
+          const col = g === 'BRASIL' ? GD : AC;
+          return (
+            <button key={g} onClick={() => setGrp(g)} style={{
+              padding:'4px 11px', borderRadius:5, flexShrink:0, fontSize:11,
+              fontWeight:700, letterSpacing:'.04em',
+              background: on ? col : S, color: on ? '#000' : T2,
+              border:`1px solid ${on ? col : BDR}`, transition:'all .12s', cursor:'pointer',
+            }}>
+              {g}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ── Compact sidebar fixture ───────────────────────────────────
-function SidebarFixture({ f, onSelect }: { f: TsdbEvent; onSelect: () => void }) {
-  const matchDate = new Date(`${f.dateEvent}T${f.strTime ?? '00:00:00'}Z`);
-  const timeStr = matchDate.toLocaleTimeString('pt-BR', {
-    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'
-  });
-  const dateStr = matchDate.toLocaleDateString('pt-BR', {
-    day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo'
-  });
+// ── Sidebar: Next Brazil card ─────────────────────────────────
+function NextBrazilCard({ fixture, onCreateAnalysis, isCreating }: {
+  fixture: TsdbEvent; onCreateAnalysis: (f:TsdbEvent)=>void; isCreating: boolean;
+}) {
+  const [notif, setNotif] = useState(false);
+  const matchDate = new Date(`${fixture.dateEvent}T${fixture.strTime ?? '00:00:00'}Z`);
+  const timeStr = matchDate.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+  const [dy,dm,dd] = fixture.dateEvent.split('-').map(Number);
+  const dt = new Date(dy,dm-1,dd);
+  const dateShort = `${DAYS_SHORT[dt.getDay()]}. ${dd} ${MONTHS_SHORT[dm-1]}.`;
 
-  const isLive = ['1H', 'HT', '2H', 'ET', 'P'].includes(f.strStatus);
+  function TeamBadge({ src, name }: { src: string|null; name: string }) {
+    const [err, setErr] = useState(false);
+    return (
+      <div style={{ width:44, height:44, borderRadius:'50%', overflow:'hidden', background:S2, border:`1.5px solid ${BDR2}`, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        {src && !err
+          ? <img src={src} alt={name} onError={() => setErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+          : <span style={{ fontSize:12, color:T3, fontWeight:700 }}>{name.slice(0,2).toUpperCase()}</span>
+        }
+      </div>
+    );
+  }
 
   return (
-    <button
-      onClick={onSelect}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.04] transition-colors text-left group"
-    >
-      {/* Home badge */}
-      {f.strHomeTeamBadge ? (
-        <img src={f.strHomeTeamBadge} alt={f.strHomeTeam} className="w-5 h-5 object-contain shrink-0" />
-      ) : (
-        <div className="w-5 h-5 rounded-full bg-gray-700 shrink-0 flex items-center justify-center text-[8px] font-bold text-gray-400">
-          {f.strHomeTeam.slice(0, 2)}
-        </div>
-      )}
-
-      {/* Teams */}
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-semibold text-white truncate leading-tight">
-          {f.strHomeTeam} × {f.strAwayTeam}
-        </p>
-        {f.strGroup && (
-          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Grupo {f.strGroup}</p>
-        )}
+    <div style={{ background:S, borderRadius:6, overflow:'hidden', marginBottom:14, border:`1px solid rgba(245,158,11,0.2)`, borderTop:`2px solid ${GD}` }}>
+      <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
+        <div style={{ width:6, height:6, borderRadius:'50%', background:GD, flexShrink:0 }} />
+        <span style={{ fontSize:10.5, fontWeight:800, letterSpacing:'.08em', textTransform:'uppercase', color:GD }}>
+          Próximo jogo · Brasil
+        </span>
+        <span style={{ marginLeft:'auto', fontSize:10, color:T3, letterSpacing:'.03em' }}>
+          {fixture.strGroup ? `G${fixture.strGroup}` : ''}
+        </span>
       </div>
-
-      {/* Away badge */}
-      {f.strAwayTeamBadge ? (
-        <img src={f.strAwayTeamBadge} alt={f.strAwayTeam} className="w-5 h-5 object-contain shrink-0" />
-      ) : (
-        <div className="w-5 h-5 rounded-full bg-gray-700 shrink-0 flex items-center justify-center text-[8px] font-bold text-gray-400">
-          {f.strAwayTeam.slice(0, 2)}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', padding:'16px 14px 12px', gap:6 }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+          <TeamBadge src={fixture.strHomeTeamBadge} name={fixture.strHomeTeam} />
+          <span style={{ fontSize:12.5, fontWeight:600, textAlign:'center', color:T }}>{fixture.strHomeTeam}</span>
         </div>
-      )}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+          <span style={{ fontFamily:BC, fontSize:28, fontWeight:900, color:GD, letterSpacing:'-0.02em', lineHeight:1 }}>{timeStr}</span>
+          <span style={{ fontSize:10.5, color:T2, textAlign:'center' }}>{dateShort}</span>
+          {fixture.strVenue && <span style={{ fontSize:10, color:T3, textAlign:'center', marginTop:2 }}>{fixture.strVenue}</span>}
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+          <TeamBadge src={fixture.strAwayTeamBadge} name={fixture.strAwayTeam} />
+          <span style={{ fontSize:12.5, fontWeight:600, textAlign:'center', color:T }}>{fixture.strAwayTeam}</span>
+        </div>
+      </div>
+      <div style={{ display:'flex', gap:8, padding:'0 14px 14px' }}>
+        <button onClick={() => setNotif(p=>!p)} style={{
+          flex:1, padding:'8px', borderRadius:6, fontSize:12, fontWeight:600,
+          background: notif ? AC1 : S2,
+          color: notif ? AC : T2,
+          border:`1px solid ${notif ? AC1 : BDR}`,
+          display:'flex', alignItems:'center', justifyContent:'center', gap:5, transition:'all .12s', cursor:'pointer',
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill={notif?'currentColor':'none'} stroke="currentColor" strokeWidth="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          Notificar
+        </button>
+        <button
+          onClick={() => onCreateAnalysis(fixture)}
+          disabled={isCreating}
+          style={{ flex:2, padding:'8px', borderRadius:6, background:GD, color:'#000', fontSize:12, fontWeight:700, border:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:5, cursor: isCreating ? 'not-allowed' : 'pointer', opacity: isCreating ? 0.7 : 1 }}
+        >
+          {isCreating
+            ? <Loader2 size={11} style={{ animation:'spin 1s linear infinite' }} />
+            : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          }
+          Criar análise
+        </button>
+      </div>
+    </div>
+  );
+}
 
-      {/* Time */}
-      <div className="shrink-0 text-right ml-1">
-        {isLive ? (
-          <span className="text-[10px] font-bold text-[#22c55e] flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse inline-block" />
-            AO VIVO
-          </span>
+// ── Sidebar: Mini Group table ─────────────────────────────────
+function MiniGroupTable({ standings, brazilGroup }: { standings: TsdbStanding[]; brazilGroup: string | null }) {
+  const groupKey = brazilGroup ?? 'C';
+  const groupTeams = standings.filter(s => s.strDescription === groupKey || s.strDescription === `Grupo ${groupKey}`);
+
+  const fallbackTeams = ['Brazil','Morocco','Scotland','Haiti'];
+
+  function TeamBadge({ src, name }: { src: string|null; name: string }) {
+    const [err, setErr] = useState(false);
+    return (
+      <div style={{ width:20, height:20, borderRadius:'50%', overflow:'hidden', background:S2, border:`1px solid ${BDR}`, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        {src && !err ? <img src={src} alt={name} onError={()=>setErr(true)} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ fontSize:6, color:T3 }}>{name.slice(0,2)}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background:S, borderRadius:6, border:`1px solid rgba(245,158,11,0.15)`, overflow:'hidden' }}>
+      <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
+        <div style={{ width:5, height:5, borderRadius:'50%', background:GD, flexShrink:0 }} />
+        <span style={{ fontFamily:BC, fontSize:12, fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', color:GD }}>
+          Grupo {groupKey} — classificação
+        </span>
+      </div>
+      <div>
+        {groupTeams.length > 0 ? (
+          groupTeams.sort((a,b)=>parseInt(a.intRank)-parseInt(b.intRank)).map((tm,i) => (
+            <div key={tm.idTeam} style={{
+              display:'grid', gridTemplateColumns:'auto 1fr auto auto auto',
+              borderTop: i>0 ? `1px solid ${BDR}` : undefined,
+              background: tm.strTeam==='Brazil' ? 'rgba(245,158,11,0.05)' : 'transparent',
+            }}>
+              <div style={{ padding:'8px 6px 8px 14px', display:'flex', alignItems:'center' }}>
+                <span style={{ fontSize:11, fontWeight:700, color:T3, width:12 }}>{tm.intRank}</span>
+              </div>
+              <div style={{ padding:'8px 6px', display:'flex', alignItems:'center', gap:7 }}>
+                <TeamBadge src={tm.strBadge} name={tm.strTeam} />
+                <span style={{ fontSize:12.5, fontWeight:tm.strTeam==='Brazil'?600:400, color:tm.strTeam==='Brazil'?GD:T }}>{tm.strTeam}</span>
+              </div>
+              {['J','SG','PTS'].map((k,ki) => (
+                <div key={k} style={{ padding:'8px 8px 8px 4px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {i===0
+                    ? <span style={{ fontSize:9, fontWeight:700, color:T3, textTransform:'uppercase', letterSpacing:'.05em' }}>{k}</span>
+                    : <span style={{ fontSize:12, fontWeight:ki===2?700:400, color:T3 }}>
+                        {ki===0?tm.intPlayed:ki===1?tm.intGoalDifference:tm.intPoints}
+                      </span>
+                  }
+                </div>
+              ))}
+            </div>
+          ))
         ) : (
-          <>
-            <p className="text-[11px] font-bold text-[#27D888] tabular-nums">{timeStr}</p>
-            <p className="text-[9px] text-gray-600 tabular-nums">{dateStr}</p>
-          </>
+          fallbackTeams.map((name, i) => (
+            <div key={name} style={{
+              display:'grid', gridTemplateColumns:'auto 1fr auto auto auto',
+              borderTop: i>0 ? `1px solid ${BDR}` : undefined,
+              background: name==='Brazil' ? 'rgba(245,158,11,0.05)' : 'transparent',
+            }}>
+              <div style={{ padding:'8px 6px 8px 14px', display:'flex', alignItems:'center' }}>
+                <span style={{ fontSize:11, fontWeight:700, color:T3, width:12 }}>{i+1}</span>
+              </div>
+              <div style={{ padding:'8px 6px', display:'flex', alignItems:'center', gap:7 }}>
+                <div style={{ width:20, height:20, borderRadius:'50%', background:S2, border:`1px solid ${BDR}`, flexShrink:0 }}/>
+                <span style={{ fontSize:12.5, fontWeight:name==='Brazil'?600:400, color:name==='Brazil'?GD:T }}>{name}</span>
+              </div>
+              {['J','SG','PTS'].map((k,ki) => (
+                <div key={k} style={{ padding:'8px 8px 8px 4px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {i===0
+                    ? <span style={{ fontSize:9, fontWeight:700, color:T3, textTransform:'uppercase', letterSpacing:'.05em' }}>{k}</span>
+                    : <span style={{ fontSize:12, fontWeight:ki===2?700:400, color:T3 }}>0</span>
+                  }
+                </div>
+              ))}
+            </div>
+          ))
         )}
       </div>
+    </div>
+  );
+}
 
-      <ChevronRight size={10} className="text-gray-700 group-hover:text-gray-500 shrink-0" />
-    </button>
+// ── Hero ──────────────────────────────────────────────────────
+function Hero({ cd }: { cd: ReturnType<typeof useCountdown> }) {
+  return (
+    <div style={{ borderBottom:`1px solid ${BDR}` }}>
+      {/* Info strip */}
+      <div style={{
+        padding:'7px 24px', borderBottom:`1px solid ${BDR}`,
+        display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap',
+      }}>
+        <span style={{ fontSize:10.5, fontWeight:600, letterSpacing:'.07em', color:T2, textTransform:'uppercase' }}>
+          ⚽ FIFA Copa do Mundo 2026™ · USA · Canadá · México
+        </span>
+        <span style={{ fontSize:10.5, fontWeight:600, color:T3, letterSpacing:'.04em' }}>
+          11 Jun – 19 Jul 2026
+        </span>
+      </div>
+      {/* Main */}
+      <div style={{ padding:'28px 24px 24px', display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:24, flexWrap:'wrap' }}>
+        {/* Title */}
+        <div>
+          <h1 style={{ fontFamily:BC, fontSize:'clamp(44px,6.5vw,80px)', fontWeight:900, color:'#fff', lineHeight:.92, letterSpacing:'-.01em', marginBottom:10 }}>
+            COPA DO<br/>MUNDO
+          </h1>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:28, height:2.5, background:AC, borderRadius:2 }}/>
+            <span style={{ fontFamily:BC, fontSize:22, fontWeight:700, color:AC, letterSpacing:'.01em' }}>no Zona 14</span>
+          </div>
+        </div>
+        {/* Countdown */}
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', color:T2, textTransform:'uppercase', marginBottom:10 }}>
+            Começa em
+          </div>
+          {cd ? (
+            <div style={{ display:'flex', alignItems:'baseline', gap:4, flexWrap:'wrap' }}>
+              {([{v:cd.d,l:'D'},{v:cd.h,l:'H'},{v:cd.m,l:'M'},{v:cd.s,l:'S'}] as {v:number;l:string}[]).map(({v,l},i) => (
+                <span key={l} style={{ display:'flex', alignItems:'baseline' }}>
+                  {i>0 && <span style={{ fontFamily:BC, fontSize:30, fontWeight:700, color:T3, lineHeight:1, padding:'0 4px' }}>·</span>}
+                  <span style={{ fontFamily:BC, fontSize:48, fontWeight:900, color:'#fff', lineHeight:1, letterSpacing:'-0.02em' }}>
+                    {String(v).padStart(2,'0')}
+                  </span>
+                  <span style={{ fontSize:11, fontWeight:700, color:T2, letterSpacing:'.07em', paddingBottom:5 }}>{l}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontFamily:BC, fontSize:48, fontWeight:900, color:T3, letterSpacing:'-0.02em' }}>——</div>
+          )}
+          <p style={{ fontSize:11.5, color:T2, marginTop:10, lineHeight:1.6 }}>
+            Escalações reais · Análise de formações · Táticas da Copa
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -210,61 +405,47 @@ function SidebarFixture({ f, onSelect }: { f: TsdbEvent; onSelect: () => void })
 export default function Copa() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const countdown = useCountdown();
+  const cd = useCountdown();
+  const { lg } = useBreakpoint();
 
   const [fixtures, setFixtures] = useState<TsdbEvent[]>([]);
   const [liveFixtures, setLiveFixtures] = useState<TsdbEvent[]>([]);
   const [standings, setStandings] = useState<TsdbStanding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [tab, setTab] = useState<Tab>('proximos');
+  const [tab, setTab] = useState<Tab>('calendario');
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [mainRef, setMainRef] = useState<HTMLDivElement | null>(null);
 
   const todayStr = useMemo(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   }, []);
 
-  // ── Fetch all fixtures ────────────────────────────────────
+  // ── Fetch ─────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([
-      theSportsDbService.getAllFixtures(),
-      theSportsDbService.getStandings(),
-    ])
+    Promise.all([theSportsDbService.getAllFixtures(), theSportsDbService.getStandings()])
       .then(([data, table]) => {
         setFixtures(data);
         setStandings(table);
         setLastRefresh(new Date());
-
-        const hasLive  = data.some(f => ['1H','HT','2H','ET','P'].includes(f.strStatus));
-        const hasToday = data.some(f => f.dateEvent === todayStr);
-        if (hasLive)    setTab('ao_vivo');
-        else if (hasToday) setTab('hoje');
-        else if (countdown.done) setTab('resultados');
-        else setTab('proximos');
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Live-score refresh every 2 min ────────────────────────
   const fetchLive = useCallback(async () => {
     const live = await theSportsDbService.getLiveFixtures();
     setLiveFixtures(live);
-    if (live.length > 0) setTab('ao_vivo');
   }, []);
 
   useEffect(() => {
     fetchLive();
-    const id = setInterval(fetchLive, 2 * 60 * 1000);
+    const id = setInterval(fetchLive, 2*60*1000);
     return () => clearInterval(id);
   }, [fetchLive]);
 
-  // ── Manual refresh ────────────────────────────────────────
   const handleRefresh = async () => {
     setRefreshing(true);
     theSportsDbService.clearCopaCache();
@@ -274,72 +455,58 @@ export default function Copa() {
         theSportsDbService.getLiveFixtures(),
         theSportsDbService.getStandings(),
       ]);
-      setFixtures(data);
-      setLiveFixtures(live);
-      setStandings(table);
+      setFixtures(data); setLiveFixtures(live); setStandings(table);
       setLastRefresh(new Date());
-    } finally {
-      setRefreshing(false);
-    }
+    } finally { setRefreshing(false); }
   };
 
-  // ── Derived views ─────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────
   const upcomingFixtures = useMemo(() =>
     fixtures
       .filter(f => (f.dateEvent > todayStr || (f.dateEvent === todayStr && f.strStatus === 'NS')) && ['NS','TBD'].includes(f.strStatus))
-      .sort((a, b) => a.strTimestamp.localeCompare(b.strTimestamp)),
-    [fixtures, todayStr]
-  );
-
-  const todayFixtures = useMemo(() =>
-    fixtures
-      .filter(f => f.dateEvent === todayStr)
-      .sort((a, b) => a.strTimestamp.localeCompare(b.strTimestamp)),
+      .sort((a,b) => a.strTimestamp.localeCompare(b.strTimestamp)),
     [fixtures, todayStr]
   );
 
   const pastFixtures = useMemo(() =>
     fixtures
       .filter(f => ['FT','AET','PEN'].includes(f.strStatus))
-      .sort((a, b) => b.strTimestamp.localeCompare(a.strTimestamp)),
+      .sort((a,b) => b.strTimestamp.localeCompare(a.strTimestamp)),
     [fixtures]
   );
 
-  // ── Sidebar: next 12 upcoming (all groups) ────────────────
-  const sidebarFixtures = useMemo(() => upcomingFixtures.slice(0, 12), [upcomingFixtures]);
+  const liveAndToday = useMemo(() => {
+    const live = liveFixtures;
+    const today = fixtures.filter(f => f.dateEvent === todayStr && !['FT','AET','PEN'].includes(f.strStatus) && !liveFixtures.find(l => l.idEvent === f.idEvent));
+    return [...live, ...today].sort((a,b) => a.strTimestamp.localeCompare(b.strTimestamp));
+  }, [fixtures, liveFixtures, todayStr]);
 
-  // ── Search filter ─────────────────────────────────────────
-  const q = searchQuery.trim().toLowerCase();
-  function applySearch(list: TsdbEvent[]): TsdbEvent[] {
-    if (!q) return list;
-    return list.filter(f =>
-      f.strHomeTeam.toLowerCase().includes(q) ||
-      f.strAwayTeam.toLowerCase().includes(q) ||
-      (f.strGroup?.toLowerCase().includes(q))
-    );
-  }
+  // Next Brazil game
+  const nextBrazilGame = useMemo(() =>
+    upcomingFixtures.find(f => isBrazilGame(f)) ?? liveAndToday.find(f => isBrazilGame(f)) ?? null,
+    [upcomingFixtures, liveAndToday]
+  );
+
+  // Brazil's group from fixtures
+  const brazilGroup = useMemo(() => {
+    const bf = fixtures.find(f => isBrazilGame(f) && f.strGroup);
+    return bf?.strGroup ?? null;
+  }, [fixtures]);
 
   // ── Create analysis with lineup ───────────────────────────
-  const handleCreateAnalysis = async (fixture: TsdbEvent) => {
+  const handleCreateAnalysis = useCallback(async (fixture: TsdbEvent) => {
     if (!user) { navigate('/login'); return; }
     setCreatingId(fixture.idEvent);
     try {
       const lineupData = await theSportsDbService.getLineup(fixture.idEvent);
-
-      let extraPlayers: Partial<{ homePlayersDef: Player[]; homePlayersOff: Player[]; awayPlayersDef: Player[]; awayPlayersOff: Player[] }> = {};
+      let extraPlayers: Partial<{ homePlayersDef:Player[]; homePlayersOff:Player[]; awayPlayersDef:Player[]; awayPlayersOff:Player[] }> = {};
       if (lineupData.length > 0) {
         const home = tsdbLineupToPlayers(lineupData, true);
         const away = tsdbLineupToPlayers(lineupData, false);
         if (home.length > 0 && away.length > 0) {
-          extraPlayers = {
-            homePlayersDef: home,
-            homePlayersOff: home.map(p => ({ ...p })),
-            awayPlayersDef: away,
-            awayPlayersOff: away.map(p => ({ ...p })),
-          };
+          extraPlayers = { homePlayersDef:home, homePlayersOff:home.map(p=>({...p})), awayPlayersDef:away, awayPlayersOff:away.map(p=>({...p})) };
         }
       }
-
       const id = await analysisService.createBlankAnalysis('analise_completa', {
         titulo: `${fixture.strHomeTeam} × ${fixture.strAwayTeam}`,
         homeTeam: fixture.strHomeTeam,
@@ -352,314 +519,227 @@ export default function Copa() {
       });
       navigate(`/analysis-complete/saved/${id}`);
     } catch {
-      toast.error('Erro ao criar análise. Tente novamente.');
+      toast.error('Erro ao criar análise.');
     } finally {
       setCreatingId(null);
     }
-  };
+  }, [user, navigate]);
 
-  // ── Tab definitions ───────────────────────────────────────
-  const tabs: { key: Tab; label: string; count?: number; live?: boolean }[] = [
-    ...(liveFixtures.length > 0 ? [{ key: 'ao_vivo' as Tab, label: 'Ao Vivo', count: liveFixtures.length, live: true }] : []),
-    ...(todayFixtures.length > 0 ? [{ key: 'hoje' as Tab, label: `Hoje (${todayFixtures.length})` }] : []),
-    { key: 'proximos',   label: 'Calendário' },
-    { key: 'resultados', label: 'Resultados' },
-    { key: 'tabela',     label: 'Tabela' },
-  ];
+  // ── Tab: Calendário ───────────────────────────────────────
+  function CalendarioTab() {
+    const [q, setQ] = useState('');
+    const [grp, setGrp] = useState('TODOS');
 
-  // ── Content for current tab ───────────────────────────────
-  function TabContent() {
-    if (tab === 'tabela') {
-      return <CopaStandings standings={standings} />;
-    }
+    const allCalFixtures = [...liveAndToday, ...upcomingFixtures].filter((f, i, arr) => arr.findIndex(x => x.idEvent === f.idEvent) === i);
 
-    let list: TsdbEvent[];
-    if (tab === 'ao_vivo')       list = liveFixtures;
-    else if (tab === 'hoje')     list = applySearch(todayFixtures);
-    else if (tab === 'proximos') list = applySearch(upcomingFixtures);
-    else                         list = applySearch(pastFixtures);
+    const filtered = useMemo(() => {
+      let ms = allCalFixtures;
+      if (grp === 'BRASIL') ms = ms.filter(f => isBrazilGame(f));
+      else if (grp !== 'TODOS') ms = ms.filter(f => f.strGroup === grp);
+      if (q) {
+        const ql = q.toLowerCase();
+        ms = ms.filter(f => f.strHomeTeam.toLowerCase().includes(ql) || f.strAwayTeam.toLowerCase().includes(ql) || (f.strGroup?.toLowerCase().includes(ql)));
+      }
+      return ms;
+    }, [q, grp, allCalFixtures]);
 
-    if (list.length === 0) {
-      return (
-        <div className="text-center py-16 text-gray-500">
-          <Trophy size={36} className="mx-auto mb-3 text-gray-700" />
-          <p className="text-sm">
-            {tab === 'ao_vivo'    && 'Nenhum jogo ao vivo agora.'}
-            {tab === 'hoje'       && 'Nenhum jogo hoje.'}
-            {tab === 'proximos'   && (q ? 'Nenhum jogo encontrado.' : 'Nenhum jogo agendado.')}
-            {tab === 'resultados' && (q ? 'Nenhum resultado encontrado.' : 'Nenhum resultado disponível ainda.')}
-          </p>
-          {!countdown.done && tab === 'proximos' && !q && (
-            <p className="text-xs mt-1 text-gray-600">A Copa começa em 11 de junho de 2026.</p>
+    const byDate = groupByDate(filtered);
+
+    return (
+      <div style={{ display:'grid', gridTemplateColumns: lg ? '1fr 300px' : '1fr', gap:24, alignItems:'start' }}>
+        {/* Main column */}
+        <div>
+          <SearchFilter q={q} setQ={setQ} grp={grp} setGrp={setGrp} />
+          {loading ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:16 }}>
+              {[1,2,3].map(i => <div key={i} style={{ height:130, background:S, borderRadius:6, opacity:.5 }} />)}
+            </div>
+          ) : byDate.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'60px 0', color:T2 }}>
+              <p>Nenhum jogo encontrado</p>
+            </div>
+          ) : (
+            byDate.map(([date, ms]) => (
+              <div key={date}>
+                <DateHeader dateStr={date} />
+                <div style={{ display:'flex', flexDirection:'column', gap:7, paddingBottom:8 }}>
+                  {ms.map(f => (
+                    <CopaFixtureCard
+                      key={f.idEvent}
+                      fixture={f}
+                      onCreateAnalysis={handleCreateAnalysis}
+                      isCreating={creatingId === f.idEvent}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
           )}
         </div>
-      );
-    }
 
-    if (tab === 'ao_vivo') {
-      return (
-        <div className="flex flex-col gap-3">
-          {list.map(f => (
-            <CopaFixtureCard
-              key={f.idEvent}
-              fixture={f}
-              onCreateAnalysis={handleCreateAnalysis}
-              isCreating={creatingId === f.idEvent}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    const grouped = groupByDate(list);
-    return (
-      <>
-        {[...grouped.keys()].map(dateStr => (
-          <FixtureGroup
-            key={dateStr}
-            dateStr={dateStr}
-            fixtures={grouped.get(dateStr)!}
-            onCreateAnalysis={handleCreateAnalysis}
-            creatingId={creatingId}
-          />
-        ))}
-      </>
+        {/* Right sidebar (desktop only) */}
+        {lg && (
+          <div style={{ position:'sticky', top:112, paddingTop:16 }}>
+            {nextBrazilGame && (
+              <NextBrazilCard
+                fixture={nextBrazilGame}
+                onCreateAnalysis={handleCreateAnalysis}
+                isCreating={creatingId === nextBrazilGame.idEvent}
+              />
+            )}
+            <MiniGroupTable standings={standings} brazilGroup={brazilGroup} />
+          </div>
+        )}
+      </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#0b1111] text-white">
-      {/* ── Sticky nav ── */}
-      <nav className="sticky top-0 z-50 bg-[#0b1111]/90 backdrop-blur-sm border-b border-gray-800/50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
-          >
-            <img src="/zona14-logo-branco.svg" alt="Zona 14" className="h-5 w-auto object-contain" />
-          </button>
-
-          <div className="flex items-center gap-2">
-            {lastRefresh && (
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="text-gray-600 hover:text-gray-400 transition-colors p-1"
-                title={`Atualizado às ${lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
-              >
-                <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-              </button>
-            )}
-            {user ? (
-              <button
-                onClick={() => navigate('/')}
-                className="text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-3 py-1.5 transition-colors"
-              >
-                Minhas análises
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate('/login')}
-                className="flex items-center gap-1.5 text-xs font-bold text-black bg-[#27D888] hover:bg-green-400 rounded-lg px-3 py-1.5 transition-colors"
-              >
-                <LogIn size={13} />
-                Entrar
-              </button>
-            )}
+  // ── Tab: Resultados ───────────────────────────────────────
+  function ResultadosTab() {
+    if (pastFixtures.length === 0) {
+      return (
+        <div style={{ textAlign:'center', padding:'80px 0' }}>
+          <div style={{ width:56, height:56, margin:'0 auto 16px', background:S, borderRadius:10, border:`1px solid ${BDR}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
           </div>
+          <p style={{ fontSize:16, fontWeight:600, marginBottom:8, color:T }}>Sem resultados ainda</p>
+          <p style={{ fontSize:13, color:T2, maxWidth:300, margin:'0 auto', lineHeight:1.7 }}>
+            O torneio começa em 11 de junho. Os placares aparecem aqui automaticamente.
+          </p>
         </div>
-      </nav>
-
-      {/* ── Hero ── */}
-      <div className="max-w-7xl mx-auto px-4 pt-10 pb-8 text-center">
-        <div className="flex justify-center mb-5">
-          <img
-            src="/World-Cup-2026-Logo-PNG.webp"
-            alt="FIFA World Cup 2026"
-            className="h-28 sm:h-36 w-auto object-contain rounded-2xl bg-white p-3"
-          />
-        </div>
-
-        <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight mb-2">
-          Copa do Mundo<br />
-          <span className="text-[#27D888]">no Zona 14</span>
-        </h1>
-
-        <p className="text-sm text-gray-400 mb-8 max-w-sm mx-auto">
-          Visualize escalações reais, analise formações e crie suas análises táticas dos jogos da Copa.
-        </p>
-
-        {!countdown.done && (
-          <div className="mb-8">
-            <p className="text-[11px] text-gray-600 uppercase tracking-widest mb-3">Começa em</p>
-            <div className="flex gap-2 sm:gap-3 justify-center">
-              <CountdownUnit value={countdown.days}    label="Dias" />
-              <CountdownUnit value={countdown.hours}   label="Horas" />
-              <CountdownUnit value={countdown.minutes} label="Min" />
-              <CountdownUnit value={countdown.seconds} label="Seg" />
-            </div>
-          </div>
-        )}
-
-        {liveFixtures.length > 0 && (
-          <div className="inline-flex items-center gap-2 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-4 py-1.5 mb-4">
-            <Wifi size={12} className="text-[#22c55e] animate-pulse" />
-            <span className="text-xs text-[#22c55e] font-bold">
-              {liveFixtures.length} jogo{liveFixtures.length > 1 ? 's' : ''} ao vivo agora
-            </span>
-          </div>
-        )}
-
-        {!user && (
-          <button
-            onClick={() => navigate('/login')}
-            className="inline-flex items-center gap-2 bg-[#27D888] hover:bg-green-400 text-black font-bold text-sm px-6 py-3 rounded-xl transition-colors"
-          >
-            <Zap size={15} />
-            Criar conta grátis e analisar jogos
-          </button>
-        )}
-      </div>
-
-      {/* ── Two-column layout ── */}
-      <div className="max-w-7xl mx-auto px-4 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
-
-          {/* ── Left sidebar: próximos jogos ── */}
-          <div className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto scrollbar-hide">
-            <div className="bg-[#141a1a] border border-gray-800/60 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-800/40">
-                <h2 className="text-sm font-bold text-white">Próximos Jogos</h2>
-                <p className="text-[10px] text-gray-600 mt-0.5">Todos os grupos</p>
-              </div>
-
-              {loading ? (
-                <div className="flex flex-col gap-1 p-3">
-                  {[1,2,3,4,5].map(i => (
-                    <div key={i} className="h-10 bg-gray-900/60 rounded-xl animate-pulse" />
-                  ))}
-                </div>
-              ) : sidebarFixtures.length === 0 ? (
-                <div className="px-4 py-6 text-center text-gray-500 text-sm">
-                  Nenhum jogo agendado.
-                </div>
-              ) : (
-                <div className="p-2 flex flex-col gap-0.5">
-                  {sidebarFixtures.map(f => (
-                    <SidebarFixture
-                      key={f.idEvent}
-                      f={f}
-                      onSelect={() => {
-                        setTab('proximos');
-                        setSearchQuery('');
-                        setTimeout(() => mainRef?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                      }}
-                    />
-                  ))}
-                  {upcomingFixtures.length > 12 && (
-                    <button
-                      onClick={() => { setTab('proximos'); mainRef?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                      className="text-[11px] text-[#27D888] hover:text-green-400 text-center py-2 transition-colors"
-                    >
-                      Ver todos ({upcomingFixtures.length}) →
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Right main: tabs + content ── */}
-          <div ref={setMainRef}>
-            {/* Tabs */}
-            <div className="flex gap-1 bg-gray-900/70 rounded-xl p-1 mb-4 border border-gray-800/40 overflow-x-auto scrollbar-hide">
-              {tabs.map(({ key, label, live }) => (
-                <button
-                  key={key}
-                  onClick={() => setTab(key)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
-                    tab === key
-                      ? 'bg-[#141a1a] text-white shadow-sm'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  {live && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                  {label}
-                </button>
+      );
+    }
+    const byDate = groupByDate(pastFixtures);
+    return (
+      <div style={{ paddingTop:16 }}>
+        {byDate.map(([date, ms]) => (
+          <div key={date}>
+            <DateHeader dateStr={date} />
+            <div style={{ display:'flex', flexDirection:'column', gap:7, paddingBottom:8 }}>
+              {ms.map(f => (
+                <CopaFixtureCard
+                  key={f.idEvent}
+                  fixture={f}
+                  onCreateAnalysis={handleCreateAnalysis}
+                  isCreating={creatingId === f.idEvent}
+                />
               ))}
             </div>
-
-            {/* Search bar */}
-            {(tab === 'proximos' || tab === 'resultados' || tab === 'hoje') && (
-              <div className="relative mb-4">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Buscar seleção ou grupo..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-900/60 border border-gray-800/60 rounded-xl text-sm text-white placeholder-gray-600 pl-8 pr-8 py-2 focus:outline-none focus:border-[#27D888]/40"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Content */}
-            {loading ? (
-              <div className="flex flex-col gap-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-36 bg-gray-900/60 rounded-2xl animate-pulse" />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="flex flex-col items-center gap-3 py-16 text-gray-500">
-                <AlertCircle size={32} className="text-gray-600" />
-                <p className="text-sm">Não foi possível carregar os jogos.</p>
-                <button onClick={() => window.location.reload()} className="text-xs text-[#27D888] hover:underline">
-                  Tentar novamente
-                </button>
-              </div>
-            ) : (
-              <TabContent />
-            )}
-
-            {lastRefresh && !loading && (
-              <p className="text-center text-[10px] text-gray-700 mt-6">
-                Atualizado às {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                {' '}· Placar ao vivo atualiza automaticamente a cada 2 min
-              </p>
-            )}
           </div>
-        </div>
+        ))}
       </div>
+    );
+  }
 
-      {/* ── Footer CTA ── */}
-      {!user && !loading && (
-        <div className="border-t border-gray-800/40 bg-[#0d1414]">
-          <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <p className="font-bold text-white text-sm">Analise como um profissional</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Crie sua conta grátis e comece a analisar os jogos da Copa.
-              </p>
-            </div>
+  // ── Tab: Tabela ───────────────────────────────────────────
+  function TabelaTab() {
+    return (
+      <div style={{ paddingTop:16 }}>
+        <CopaStandings standings={standings} />
+      </div>
+    );
+  }
+
+  // ── Live indicator ────────────────────────────────────────
+  const hasLive = liveFixtures.length > 0;
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id:'calendario', label: hasLive ? `Calendário · ${liveFixtures.length} ao vivo` : 'Calendário' },
+    { id:'resultados', label:'Resultados' },
+    { id:'tabela',     label:'Tabela' },
+  ];
+
+  return (
+    <div style={{ background:BG, color:T, minHeight:'100vh', fontFamily:"'Inter', system-ui, sans-serif", fontSize:14, WebkitFontSmoothing:'antialiased' } as React.CSSProperties}>
+      {/* ── Header ── */}
+      <header style={{
+        position:'sticky', top:0, zIndex:20, height:52,
+        background:'rgba(7,9,12,0.95)', backdropFilter:'blur(14px)',
+        borderBottom:`1px solid ${BDR}`,
+        display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 24px',
+      }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{ display:'flex', alignItems:'center', border:'none', background:'none', cursor:'pointer' }}
+        >
+          <span style={{ fontFamily:BC, fontSize:21, fontWeight:900, color:'#fff', letterSpacing:'-.02em' }}>ZON</span>
+          <span style={{ fontFamily:BC, fontSize:21, fontWeight:900, color:AC, letterSpacing:'-.02em' }}>14</span>
+        </button>
+
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {lastRefresh && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title={`Atualizado ${lastRefresh.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', width:28, height:28, borderRadius:6, background:'transparent', border:'none', color:T3, cursor:'pointer' }}
+            >
+              <RefreshCw size={13} style={refreshing ? {animation:'spin 1s linear infinite'} : {}} />
+            </button>
+          )}
+          {user ? (
+            <button
+              onClick={() => navigate('/')}
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 13px', borderRadius:6, background:S, fontSize:12.5, fontWeight:500, border:`1px solid ${BDR}`, color:T, cursor:'pointer' }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Minhas análises
+            </button>
+          ) : (
             <button
               onClick={() => navigate('/login')}
-              className="shrink-0 flex items-center gap-2 bg-[#27D888] hover:bg-green-400 text-black font-bold text-sm px-5 py-2.5 rounded-xl transition-colors"
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 13px', borderRadius:6, background:AC, fontSize:12.5, fontWeight:700, border:'none', color:'#000', cursor:'pointer' }}
             >
-              <Zap size={14} />
-              Criar conta grátis
+              Entrar
             </button>
-          </div>
+          )}
+        </div>
+      </header>
+
+      {/* ── Hero ── */}
+      {!loading && <Hero cd={cd} />}
+
+      {/* ── Tab bar ── */}
+      <div style={{
+        position:'sticky', top:52, zIndex:15,
+        background:'rgba(7,9,12,0.97)', backdropFilter:'blur(12px)',
+        borderBottom:`1px solid ${BDR}`,
+        display:'flex', padding:'0 24px',
+      }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding:'13px 16px', fontSize:14, fontWeight:600, letterSpacing:'.01em',
+            color: tab === t.id ? AC : T2,
+            borderBottom: `2px solid ${tab===t.id ? AC : 'transparent'}`,
+            marginBottom:-1, transition:'color .12s,border-color .12s',
+            border:'none', background:'none', cursor:'pointer',
+          }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Content ── */}
+      {error ? (
+        <div style={{ textAlign:'center', padding:'80px 24px', color:T2 }}>
+          <p style={{ fontSize:14, marginBottom:8 }}>Não foi possível carregar os jogos.</p>
+          <button onClick={() => window.location.reload()} style={{ color:AC, background:'none', border:'none', cursor:'pointer', fontSize:13 }}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : (
+        <div style={{ padding:'0 24px', paddingBottom:64 }}>
+          {tab === 'calendario' && <CalendarioTab />}
+          {tab === 'resultados' && <ResultadosTab />}
+          {tab === 'tabela'     && <TabelaTab />}
         </div>
       )}
+
+      {/* ── Footer ── */}
+      <div style={{ padding:'14px 24px', borderTop:`1px solid ${BDR}`, fontSize:11, color:T3, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+        <span>Atualizado automaticamente a cada 2 min.</span>
+        {lastRefresh && <span>Última sync: {lastRefresh.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>}
+      </div>
     </div>
   );
 }
