@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Users, BarChart2, List, Youtube, ArrowRight, Loader2, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronUp, Users, BarChart2, List, ArrowRight, Loader2, MapPin, PlayCircle } from 'lucide-react';
 import { theSportsDbService } from '../../services/theSportsDbService';
 import type { TsdbEvent, TsdbLineupPlayer, TsdbTimeline, TsdbEventStats } from '../../types/thesportsdb';
-import CopaLineupField from './CopaLineupField';
+import CopaLineupList from './CopaLineupList';
 import CopaTimeline from './CopaTimeline';
 import CopaMatchStats from './CopaMatchStats';
 
@@ -12,16 +12,16 @@ interface Props {
   isCreating: boolean;
 }
 
-type Panel = 'lineup' | 'timeline' | 'stats';
+type Panel = 'lineup' | 'timeline' | 'stats' | 'highlight';
 
 const STATUS_CFG: Record<string, { label: string; color: string; pulse?: boolean }> = {
   NS:   { label: 'Agendado',      color: '#6b7280' },
   TBD:  { label: 'A definir',     color: '#6b7280' },
   '1H': { label: '1º Tempo',      color: '#22c55e', pulse: true },
-  HT:   { label: 'Intervalo',     color: '#f59e0b', pulse: true },
+  HT:   { label: 'Intervalo',     color: '#6b7280', pulse: true },
   '2H': { label: '2º Tempo',      color: '#22c55e', pulse: true },
-  ET:   { label: 'Prorrogação',   color: '#f59e0b', pulse: true },
-  P:    { label: 'Pênaltis',      color: '#f59e0b', pulse: true },
+  ET:   { label: 'Prorrogação',   color: '#6b7280', pulse: true },
+  P:    { label: 'Pênaltis',      color: '#6b7280', pulse: true },
   FT:   { label: 'Encerrado',     color: '#4b5563' },
   AET:  { label: 'Após prorrog.', color: '#4b5563' },
   PEN:  { label: 'Nos pênaltis',  color: '#4b5563' },
@@ -31,6 +31,19 @@ const STATUS_CFG: Record<string, { label: string; color: string; pulse?: boolean
 
 const FINISHED = new Set(['FT', 'AET', 'PEN']);
 const LIVE     = new Set(['1H', 'HT', '2H', 'ET', 'P']);
+
+function extractYoutubeId(url: string): string | null {
+  const patterns = [
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /embed\/([^?&#]+)/,
+  ];
+  for (const re of patterns) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
 
 export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating }: Props) {
   const [activePanel, setActivePanel] = useState<Panel | null>(null);
@@ -45,7 +58,8 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
   const isLive     = LIVE.has(status);
   const hasScore   = isFinished || isLive;
 
-  // Time in BRT
+  const videoId = fixture.strVideo ? extractYoutubeId(fixture.strVideo) : null;
+
   const matchDate = new Date(`${fixture.dateEvent}T${fixture.strTime ?? '00:00:00'}Z`);
   const dateStr = matchDate.toLocaleDateString('pt-BR', {
     weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Sao_Paulo'
@@ -107,16 +121,27 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
             <Loader2 size={16} className="animate-spin" />
             Carregando...
           </div>
+        ) : activePanel === 'highlight' ? (
+          videoId ? (
+            <div className="rounded-xl overflow-hidden aspect-video">
+              <iframe
+                src={`https://www.youtube.com/embed/${videoId}`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <p className="text-center text-xs text-gray-500 py-4">Highlight não disponível.</p>
+          )
         ) : activePanel === 'lineup' ? (
           lineup && lineup.length > 0 ? (
-            <CopaLineupField
-              lineup={lineup}
-              homeTeamId={fixture.idHomeTeam}
-              awayTeamId={fixture.idAwayTeam}
-            />
+            <CopaLineupList lineup={lineup} />
           ) : (
             <p className="text-center text-xs text-gray-500 py-4">
-              {isFinished || isLive ? 'Escalação não disponível.' : 'Escalação disponível próximo ao início do jogo.'}
+              {isFinished || isLive
+                ? 'Escalação não disponível.'
+                : 'Escalação disponível próximo ao início do jogo.'}
             </p>
           )
         ) : activePanel === 'timeline' ? (
@@ -168,20 +193,13 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isLive && (
-            <span className="text-[10px] text-[#22c55e] tabular-nums font-mono">
-              {/* Live minute comes from livescore, not fixtures */}
-            </span>
-          )}
-          <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-            style={{ background: `${cfg.color}18`, color: cfg.color }}
-          >
-            {cfg.pulse && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-            {cfg.label}
-          </span>
-        </div>
+        <span
+          className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0"
+          style={{ background: `${cfg.color}18`, color: cfg.color }}
+        >
+          {cfg.pulse && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
+          {cfg.label}
+        </span>
       </div>
 
       {/* Teams + score */}
@@ -255,7 +273,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
         </div>
       </div>
 
-      {/* Venue on mobile (hidden on header row) */}
+      {/* Venue on mobile */}
       {(fixture.strVenue || fixture.strCity) && (
         <div className="sm:hidden px-4 pb-2 flex items-center gap-1 text-[10px] text-gray-600">
           <MapPin size={9} />
@@ -265,20 +283,12 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating 
 
       {/* Actions */}
       <div className="px-4 pb-3 flex items-center gap-1.5 flex-wrap">
-        <PanelToggle panel="lineup"   icon={<Users size={11} />}    label="Escalação" />
-        <PanelToggle panel="timeline" icon={<List size={11} />}     label="Eventos" />
+        <PanelToggle panel="lineup"   icon={<Users size={11} />}     label="Escalação" />
+        <PanelToggle panel="timeline" icon={<List size={11} />}      label="Eventos" />
         <PanelToggle panel="stats"    icon={<BarChart2 size={11} />} label="Stats" />
 
-        {fixture.strVideo && (
-          <a
-            href={fixture.strVideo}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-400/50 rounded-xl px-2.5 py-1.5 transition-colors"
-          >
-            <Youtube size={11} />
-            Highlights
-          </a>
+        {videoId && (
+          <PanelToggle panel="highlight" icon={<PlayCircle size={11} />} label="Highlights" />
         )}
 
         <button

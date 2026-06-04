@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, LogIn, Zap, AlertCircle, RefreshCw, Wifi, Search, X } from 'lucide-react';
+import { Trophy, LogIn, Zap, AlertCircle, RefreshCw, Wifi, Search, X, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
 import { useAuth } from '../contexts/AuthContext';
-import type { TsdbEvent } from '../types/thesportsdb';
+import type { TsdbEvent, TsdbLineupPlayer } from '../types/thesportsdb';
+import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaStandings from '../components/copa/CopaStandings';
 import type { TsdbStanding } from '../types/thesportsdb';
@@ -14,6 +15,57 @@ import type { TsdbStanding } from '../types/thesportsdb';
 const WC_START = new Date('2026-06-11T12:00:00-03:00');
 
 type Tab = 'ao_vivo' | 'hoje' | 'proximos' | 'resultados' | 'tabela';
+
+// ── Lineup → Player[] converter ──────────────────────────────
+function posToRow(pos: string): number {
+  const p = pos.toUpperCase().trim();
+  if (p === 'GK' || p.includes('GOALKEEPER')) return 0;
+  if (
+    ['CB', 'RB', 'LB', 'RWB', 'LWB'].includes(p) ||
+    ['DEFENDER', 'CENTRE-BACK', 'RIGHT BACK', 'LEFT BACK', 'WING BACK', 'FULLBACK', 'CENTRE BACK'].some(x => p.includes(x))
+  ) return 1;
+  if (
+    ['CF', 'ST', 'RW', 'LW'].includes(p) ||
+    ['STRIKER', 'FORWARD', 'WINGER', 'WING', 'CENTRE-FORWARD', 'SECOND STRIKER'].some(x => p.includes(x))
+  ) return 3;
+  return 2;
+}
+
+function tsdbLineupToPlayers(lineup: TsdbLineupPlayer[], isHome: boolean): Player[] {
+  const starters = lineup.filter(
+    p => p.strSubstitute === 'No' && (isHome ? p.strHome === 'Yes' : p.strHome === 'No')
+  );
+  if (starters.length === 0) return [];
+
+  const rowMap: Record<number, TsdbLineupPlayer[]> = { 0: [], 1: [], 2: [], 3: [] };
+  starters.forEach(p => rowMap[posToRow(p.strPosition)].push(p));
+
+  const usedRows = ([0, 1, 2, 3] as const).filter(r => rowMap[r].length > 0);
+  const totalRows = usedRows.length;
+  const result: Player[] = [];
+
+  usedRows.forEach((row, ri) => {
+    const xPct = totalRows > 1 ? ri / (totalRows - 1) : 0;
+    // Home: GK at x≈5, FWD at x≈45 — Away: GK at x≈95, FWD at x≈55
+    const x = isHome ? 5 + xPct * 40 : 95 - xPct * 40;
+    const rowPlayers = rowMap[row];
+    const count = rowPlayers.length;
+
+    rowPlayers.forEach((p, i) => {
+      const y = (100 / (count + 1)) * (i + 1);
+      const numId = parseInt(p.idPlayer.replace(/\D/g, '').slice(-7), 10);
+      result.push({
+        id: isNaN(numId) ? (isHome ? 1000 : 2000) + ri * 100 + i : numId,
+        name: p.strPlayer,
+        number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
+        position: { x, y },
+        isStarter: true,
+      });
+    });
+  });
+
+  return result;
+}
 
 // ── Countdown ─────────────────────────────────────────────────
 function useCountdown() {
@@ -49,9 +101,8 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
 function groupByDate(fixtures: TsdbEvent[]): Map<string, TsdbEvent[]> {
   const map = new Map<string, TsdbEvent[]>();
   fixtures.forEach(f => {
-    const key = f.dateEvent;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(f);
+    if (!map.has(f.dateEvent)) map.set(f.dateEvent, []);
+    map.get(f.dateEvent)!.push(f);
   });
   return map;
 }
@@ -63,7 +114,9 @@ function formatDateHeader(dateStr: string): string {
   });
 }
 
-function FixtureGroup({ dateStr, fixtures, onCreateAnalysis, creatingId }: {
+function FixtureGroup({
+  dateStr, fixtures, onCreateAnalysis, creatingId,
+}: {
   dateStr: string;
   fixtures: TsdbEvent[];
   onCreateAnalysis: (f: TsdbEvent) => void;
@@ -88,6 +141,71 @@ function FixtureGroup({ dateStr, fixtures, onCreateAnalysis, creatingId }: {
   );
 }
 
+// ── Compact sidebar fixture ───────────────────────────────────
+function SidebarFixture({ f, onSelect }: { f: TsdbEvent; onSelect: () => void }) {
+  const matchDate = new Date(`${f.dateEvent}T${f.strTime ?? '00:00:00'}Z`);
+  const timeStr = matchDate.toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'
+  });
+  const dateStr = matchDate.toLocaleDateString('pt-BR', {
+    day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo'
+  });
+
+  const isLive = ['1H', 'HT', '2H', 'ET', 'P'].includes(f.strStatus);
+
+  return (
+    <button
+      onClick={onSelect}
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.04] transition-colors text-left group"
+    >
+      {/* Home badge */}
+      {f.strHomeTeamBadge ? (
+        <img src={f.strHomeTeamBadge} alt={f.strHomeTeam} className="w-5 h-5 object-contain shrink-0" />
+      ) : (
+        <div className="w-5 h-5 rounded-full bg-gray-700 shrink-0 flex items-center justify-center text-[8px] font-bold text-gray-400">
+          {f.strHomeTeam.slice(0, 2)}
+        </div>
+      )}
+
+      {/* Teams */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-semibold text-white truncate leading-tight">
+          {f.strHomeTeam} × {f.strAwayTeam}
+        </p>
+        {f.strGroup && (
+          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Grupo {f.strGroup}</p>
+        )}
+      </div>
+
+      {/* Away badge */}
+      {f.strAwayTeamBadge ? (
+        <img src={f.strAwayTeamBadge} alt={f.strAwayTeam} className="w-5 h-5 object-contain shrink-0" />
+      ) : (
+        <div className="w-5 h-5 rounded-full bg-gray-700 shrink-0 flex items-center justify-center text-[8px] font-bold text-gray-400">
+          {f.strAwayTeam.slice(0, 2)}
+        </div>
+      )}
+
+      {/* Time */}
+      <div className="shrink-0 text-right ml-1">
+        {isLive ? (
+          <span className="text-[10px] font-bold text-[#22c55e] flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse inline-block" />
+            AO VIVO
+          </span>
+        ) : (
+          <>
+            <p className="text-[11px] font-bold text-[#27D888] tabular-nums">{timeStr}</p>
+            <p className="text-[9px] text-gray-600 tabular-nums">{dateStr}</p>
+          </>
+        )}
+      </div>
+
+      <ChevronRight size={10} className="text-gray-700 group-hover:text-gray-500 shrink-0" />
+    </button>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────
 export default function Copa() {
   const navigate = useNavigate();
@@ -104,13 +222,14 @@ export default function Copa() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mainRef, setMainRef] = useState<HTMLDivElement | null>(null);
 
   const todayStr = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }, []);
 
-  // ── Fetch all fixtures once ───────────────────────────────
+  // ── Fetch all fixtures ────────────────────────────────────
   useEffect(() => {
     Promise.all([
       theSportsDbService.getAllFixtures(),
@@ -121,8 +240,8 @@ export default function Copa() {
         setStandings(table);
         setLastRefresh(new Date());
 
-        const hasLive    = data.some(f => ['1H','HT','2H','ET','P'].includes(f.strStatus));
-        const hasToday   = data.some(f => f.dateEvent === todayStr);
+        const hasLive  = data.some(f => ['1H','HT','2H','ET','P'].includes(f.strStatus));
+        const hasToday = data.some(f => f.dateEvent === todayStr);
         if (hasLive)    setTab('ao_vivo');
         else if (hasToday) setTab('hoje');
         else if (countdown.done) setTab('resultados');
@@ -132,7 +251,7 @@ export default function Copa() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Live-score refresh every 2 min ───────────────────────
+  // ── Live-score refresh every 2 min ────────────────────────
   const fetchLive = useCallback(async () => {
     const live = await theSportsDbService.getLiveFixtures();
     setLiveFixtures(live);
@@ -165,16 +284,16 @@ export default function Copa() {
   };
 
   // ── Derived views ─────────────────────────────────────────
-  const todayFixtures = useMemo(() =>
-    fixtures.filter(f => f.dateEvent === todayStr)
-            .sort((a, b) => a.strTimestamp.localeCompare(b.strTimestamp)),
+  const upcomingFixtures = useMemo(() =>
+    fixtures
+      .filter(f => (f.dateEvent > todayStr || (f.dateEvent === todayStr && f.strStatus === 'NS')) && ['NS','TBD'].includes(f.strStatus))
+      .sort((a, b) => a.strTimestamp.localeCompare(b.strTimestamp)),
     [fixtures, todayStr]
   );
 
-  const upcomingFixtures = useMemo(() =>
+  const todayFixtures = useMemo(() =>
     fixtures
-      .filter(f => f.dateEvent > todayStr || (f.dateEvent === todayStr && f.strStatus === 'NS'))
-      .filter(f => ['NS','TBD'].includes(f.strStatus))
+      .filter(f => f.dateEvent === todayStr)
       .sort((a, b) => a.strTimestamp.localeCompare(b.strTimestamp)),
     [fixtures, todayStr]
   );
@@ -185,6 +304,9 @@ export default function Copa() {
       .sort((a, b) => b.strTimestamp.localeCompare(a.strTimestamp)),
     [fixtures]
   );
+
+  // ── Sidebar: next 12 upcoming (all groups) ────────────────
+  const sidebarFixtures = useMemo(() => upcomingFixtures.slice(0, 12), [upcomingFixtures]);
 
   // ── Search filter ─────────────────────────────────────────
   const q = searchQuery.trim().toLowerCase();
@@ -197,11 +319,27 @@ export default function Copa() {
     );
   }
 
-  // ── Create analysis ───────────────────────────────────────
+  // ── Create analysis with lineup ───────────────────────────
   const handleCreateAnalysis = async (fixture: TsdbEvent) => {
     if (!user) { navigate('/login'); return; }
     setCreatingId(fixture.idEvent);
     try {
+      const lineupData = await theSportsDbService.getLineup(fixture.idEvent);
+
+      let extraPlayers: Partial<{ homePlayersDef: Player[]; homePlayersOff: Player[]; awayPlayersDef: Player[]; awayPlayersOff: Player[] }> = {};
+      if (lineupData.length > 0) {
+        const home = tsdbLineupToPlayers(lineupData, true);
+        const away = tsdbLineupToPlayers(lineupData, false);
+        if (home.length > 0 && away.length > 0) {
+          extraPlayers = {
+            homePlayersDef: home,
+            homePlayersOff: home.map(p => ({ ...p })),
+            awayPlayersDef: away,
+            awayPlayersOff: away.map(p => ({ ...p })),
+          };
+        }
+      }
+
       const id = await analysisService.createBlankAnalysis('analise_completa', {
         titulo: `${fixture.strHomeTeam} × ${fixture.strAwayTeam}`,
         homeTeam: fixture.strHomeTeam,
@@ -210,6 +348,7 @@ export default function Copa() {
         awayTeamLogo: fixture.strAwayTeamBadge ?? '',
         matchDate: fixture.dateEvent,
         tags: ['Copa 2026'],
+        ...extraPlayers,
       });
       navigate(`/analysis-complete/saved/${id}`);
     } catch {
@@ -235,10 +374,10 @@ export default function Copa() {
     }
 
     let list: TsdbEvent[];
-    if (tab === 'ao_vivo')    list = liveFixtures;
-    else if (tab === 'hoje')  list = applySearch(todayFixtures);
+    if (tab === 'ao_vivo')       list = liveFixtures;
+    else if (tab === 'hoje')     list = applySearch(todayFixtures);
     else if (tab === 'proximos') list = applySearch(upcomingFixtures);
-    else                      list = applySearch(pastFixtures);
+    else                         list = applySearch(pastFixtures);
 
     if (list.length === 0) {
       return (
@@ -251,9 +390,7 @@ export default function Copa() {
             {tab === 'resultados' && (q ? 'Nenhum resultado encontrado.' : 'Nenhum resultado disponível ainda.')}
           </p>
           {!countdown.done && tab === 'proximos' && !q && (
-            <p className="text-xs mt-1 text-gray-600">
-              A Copa começa em 11 de junho de 2026.
-            </p>
+            <p className="text-xs mt-1 text-gray-600">A Copa começa em 11 de junho de 2026.</p>
           )}
         </div>
       );
@@ -275,11 +412,9 @@ export default function Copa() {
     }
 
     const grouped = groupByDate(list);
-    const dateKeys = [...grouped.keys()];
-
     return (
       <>
-        {dateKeys.map(dateStr => (
+        {[...grouped.keys()].map(dateStr => (
           <FixtureGroup
             key={dateStr}
             dateStr={dateStr}
@@ -296,7 +431,7 @@ export default function Copa() {
     <div className="min-h-screen bg-[#0b1111] text-white">
       {/* ── Sticky nav ── */}
       <nav className="sticky top-0 z-50 bg-[#0b1111]/90 backdrop-blur-sm border-b border-gray-800/50">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <button
             onClick={() => navigate('/')}
             className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
@@ -336,7 +471,7 @@ export default function Copa() {
       </nav>
 
       {/* ── Hero ── */}
-      <div className="max-w-2xl mx-auto px-4 pt-10 pb-8 text-center">
+      <div className="max-w-7xl mx-auto px-4 pt-10 pb-8 text-center">
         <div className="flex justify-center mb-5">
           <img
             src="/World-Cup-2026-Logo-PNG.webp"
@@ -386,83 +521,129 @@ export default function Copa() {
         )}
       </div>
 
-      {/* ── Fixture section ── */}
-      <div className="max-w-2xl mx-auto px-4 pb-12">
-        {/* Tabs */}
-        <div className="flex gap-1 bg-gray-900/70 rounded-xl p-1 mb-4 border border-gray-800/40 overflow-x-auto scrollbar-hide">
-          {tabs.map(({ key, label, live }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
-                tab === key
-                  ? 'bg-[#141a1a] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              {live && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* ── Two-column layout ── */}
+      <div className="max-w-7xl mx-auto px-4 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
 
-        {/* Search bar (not on tabela or ao_vivo) */}
-        {(tab === 'proximos' || tab === 'resultados' || tab === 'hoje') && (
-          <div className="relative mb-4">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Buscar seleção ou grupo..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-900/60 border border-gray-800/60 rounded-xl text-sm text-white placeholder-gray-600 pl-8 pr-8 py-2 focus:outline-none focus:border-[#27D888]/40"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-              >
-                <X size={13} />
-              </button>
+          {/* ── Left sidebar: próximos jogos ── */}
+          <div className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto scrollbar-hide">
+            <div className="bg-[#141a1a] border border-gray-800/60 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-800/40">
+                <h2 className="text-sm font-bold text-white">Próximos Jogos</h2>
+                <p className="text-[10px] text-gray-600 mt-0.5">Todos os grupos</p>
+              </div>
+
+              {loading ? (
+                <div className="flex flex-col gap-1 p-3">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="h-10 bg-gray-900/60 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : sidebarFixtures.length === 0 ? (
+                <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                  Nenhum jogo agendado.
+                </div>
+              ) : (
+                <div className="p-2 flex flex-col gap-0.5">
+                  {sidebarFixtures.map(f => (
+                    <SidebarFixture
+                      key={f.idEvent}
+                      f={f}
+                      onSelect={() => {
+                        setTab('proximos');
+                        setSearchQuery('');
+                        setTimeout(() => mainRef?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                      }}
+                    />
+                  ))}
+                  {upcomingFixtures.length > 12 && (
+                    <button
+                      onClick={() => { setTab('proximos'); mainRef?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                      className="text-[11px] text-[#27D888] hover:text-green-400 text-center py-2 transition-colors"
+                    >
+                      Ver todos ({upcomingFixtures.length}) →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Right main: tabs + content ── */}
+          <div ref={setMainRef}>
+            {/* Tabs */}
+            <div className="flex gap-1 bg-gray-900/70 rounded-xl p-1 mb-4 border border-gray-800/40 overflow-x-auto scrollbar-hide">
+              {tabs.map(({ key, label, live }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
+                    tab === key
+                      ? 'bg-[#141a1a] text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {live && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search bar */}
+            {(tab === 'proximos' || tab === 'resultados' || tab === 'hoje') && (
+              <div className="relative mb-4">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Buscar seleção ou grupo..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full bg-gray-900/60 border border-gray-800/60 rounded-xl text-sm text-white placeholder-gray-600 pl-8 pr-8 py-2 focus:outline-none focus:border-[#27D888]/40"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Content */}
+            {loading ? (
+              <div className="flex flex-col gap-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-36 bg-gray-900/60 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-gray-500">
+                <AlertCircle size={32} className="text-gray-600" />
+                <p className="text-sm">Não foi possível carregar os jogos.</p>
+                <button onClick={() => window.location.reload()} className="text-xs text-[#27D888] hover:underline">
+                  Tentar novamente
+                </button>
+              </div>
+            ) : (
+              <TabContent />
+            )}
+
+            {lastRefresh && !loading && (
+              <p className="text-center text-[10px] text-gray-700 mt-6">
+                Atualizado às {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                {' '}· Placar ao vivo atualiza automaticamente a cada 2 min
+              </p>
             )}
           </div>
-        )}
-
-        {/* Content */}
-        {loading ? (
-          <div className="flex flex-col gap-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-36 bg-gray-900/60 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-gray-500">
-            <AlertCircle size={32} className="text-gray-600" />
-            <p className="text-sm">Não foi possível carregar os jogos.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="text-xs text-[#27D888] hover:underline"
-            >
-              Tentar novamente
-            </button>
-          </div>
-        ) : (
-          <TabContent />
-        )}
-
-        {/* Last refresh timestamp */}
-        {lastRefresh && !loading && (
-          <p className="text-center text-[10px] text-gray-700 mt-6">
-            Atualizado às {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            {' '}· Placar ao vivo atualiza automaticamente a cada 2 min
-          </p>
-        )}
+        </div>
       </div>
 
       {/* ── Footer CTA ── */}
       {!user && !loading && (
         <div className="border-t border-gray-800/40 bg-[#0d1414]">
-          <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <p className="font-bold text-white text-sm">Analise como um profissional</p>
               <p className="text-xs text-gray-500 mt-0.5">
