@@ -34,31 +34,53 @@ export interface TsdbEvent {
   strFilename: string | null;
 }
 
+// Real API response: one entry per player
 export interface TsdbLineupPlayer {
+  idLineup?: string;
   idEvent: string;
   strTeam: string;
   idTeam: string;
-  strFormation: string;
+  strHome: string;       // "Yes" = home team, "No" = away team
+  strFormation?: string; // "4-3-3" — may be present on some endpoints
   strPlayer: string;
   idPlayer: string;
-  strPosition: string;
-  intShirtNumber: string | null;
-  strEvent: string; // "Starting XI" | "Substitution In" | "Substitution Out"
-  strSubstitution: string | null;
+  strPosition: string;   // "GK", "CB", "RB", "DM", "CM", "RW", "CF", etc.
+  intSquadNumber: string | null; // jersey number
+  strSubstitute: string; // "Yes" = sub, "No" = starting XI
+  strCutout?: string | null;
+  strThumb?: string | null;
+  strRender?: string | null;
 }
 
+// Real API response: one entry per event (goal/card/sub)
 export interface TsdbTimeline {
-  idEvent: string;
   idTimeline: string;
-  strTimeline: string;       // "Goal" | "Yellow Card" | "Red Card" | "Substitution" | "Own Goal"
-  strTimelineDetail: string | null;
+  idEvent: string;
+  strTimeline: string;       // "Goal" | "Card" | "subst"
+  strTimelineDetail: string | null; // "Normal Goal" | "Yellow Card" | "Red Card" | "Substitution 1" | etc.
   strPlayer: string | null;
   idPlayer: string | null;
-  strTeam: string | null;
+  strAssist: string | null;  // assist player name
+  idAssist: string | null;
+  strHome: string;           // "Yes" = home team event, "No" = away team
+  intTime: string | null;    // "67" (match minute as string)
+  strPeriod: string | null;
   idTeam: string | null;
-  intTimelineScore: string | null; // e.g. "1-0"
+  strTeam: string | null;
   strComment: string | null;
+  strCutout?: string | null;
+  dateEvent: string;
+  strSeason: string;
 }
+
+// Real API response: array of stat items (NOT individual fields)
+export interface TsdbStatItem {
+  strStat: string;    // "Ball Possession", "Shots on Goal", "Fouls", etc.
+  intHome: string | null; // "42%" or "9"
+  intAway: string | null; // "58%" or "3"
+}
+// The API returns: { eventstats: TsdbStatItem[] }
+export type TsdbEventStats = TsdbStatItem[];
 
 export interface TsdbStanding {
   intRank: string;
@@ -68,7 +90,7 @@ export interface TsdbStanding {
   idLeague: string;
   strSeason: string;
   strForm: string | null;
-  strDescription: string | null; // "Group A", "Playoffs", etc.
+  strDescription: string | null;
   intPlayed: string;
   intWin: string;
   intLoss: string;
@@ -86,7 +108,7 @@ export interface TsdbTeam {
   strCountry: string | null;
   strBadge: string | null;
   strLogo: string | null;
-  strColour1: string | null; // e.g. "#ADD8E6"
+  strColour1: string | null;
   strColour2: string | null;
   strColour3: string | null;
   strDescriptionEN: string | null;
@@ -105,28 +127,6 @@ export interface TsdbPlayer {
   idTeam: string | null;
 }
 
-export interface TsdbEventStats {
-  idEvent: string;
-  intHomePossession: string | null;
-  intAwayPossession: string | null;
-  intHomeShotsTotal: string | null;
-  intAwayShotsTotal: string | null;
-  intHomeShotsOnGoal: string | null;
-  intAwayShotsOnGoal: string | null;
-  intHomeCorners: string | null;
-  intAwayCorners: string | null;
-  intHomeFouls: string | null;
-  intAwayFouls: string | null;
-  intHomeYellowCards: string | null;
-  intAwayYellowCards: string | null;
-  intHomeRedCards: string | null;
-  intAwayRedCards: string | null;
-  intHomeOffsides: string | null;
-  intAwayOffsides: string | null;
-  intHomeSaves: string | null;
-  intAwaySaves: string | null;
-}
-
 export interface TsdbLivescore {
   idEvent: string;
   idAPIfootball: string | null;
@@ -139,7 +139,7 @@ export interface TsdbLivescore {
   intHomeScore: string | null;
   intAwayScore: string | null;
   strStatus: string;
-  strProgress: string | null; // match minute e.g. "45'"
+  strProgress: string | null;
   strHomeTeamBadge: string | null;
   strAwayTeamBadge: string | null;
   dateEvent: string;

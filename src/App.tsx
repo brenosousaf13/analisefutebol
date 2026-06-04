@@ -9,6 +9,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 import SharedAnalysis from './pages/SharedAnalysis';
 import Copa from './pages/Copa';
+import CopaDemo from './pages/CopaDemo';
 import FullAnalysisPage from './pages/FullAnalysisPage';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/s/:token" element={<SharedAnalysis />} />
             <Route path="/copa" element={<Copa />} />
+            <Route path="/copa/demo" element={<CopaDemo />} />
 
             <Route path="/" element={
               <ProtectedRoute>

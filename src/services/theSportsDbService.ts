@@ -32,7 +32,7 @@ function getCache<T>(key: string): T | null {
 function setCache<T>(key: string, data: T, ttlMs: number): void {
   try {
     localStorage.setItem(key, JSON.stringify({ data, ts: Date.now(), ttl: ttlMs }));
-  } catch { /* storage full or disabled */ }
+  } catch { /* storage full */ }
 }
 
 async function get<T>(path: string): Promise<T> {
@@ -46,6 +46,7 @@ const HOUR = 60 * MIN;
 
 // ── Service ───────────────────────────────────────────────────
 export const theSportsDbService = {
+
   /** All Copa 2026 fixtures — cached 1 h */
   async getAllFixtures(): Promise<TsdbEvent[]> {
     const ck = `tsdb_wc_fixtures_2026`;
@@ -70,10 +71,10 @@ export const theSportsDbService = {
     const cached = getCache<TsdbEvent[]>(ck);
     if (cached) return cached;
     try {
-      const json = await get<{ events: TsdbEvent[] | null }>(
+      const json = await get<{ livescore: TsdbEvent[] | null }>(
         `livescore.php?s=Soccer`
       );
-      const all = json.events ?? [];
+      const all = json.livescore ?? [];
       const wc = all.filter(e => e.idLeague === WC_LEAGUE);
       setCache(ck, wc, 2 * MIN);
       return wc;
@@ -101,7 +102,7 @@ export const theSportsDbService = {
     }
   },
 
-  /** Match timeline (goals, cards, subs) — cached 5 min during live, 1 h after */
+  /** Match timeline — cached 5 min during live, 1 h after */
   async getTimeline(eventId: string, isLive = false): Promise<TsdbTimeline[]> {
     const ck = `tsdb_timeline_${eventId}`;
     const cached = getCache<TsdbTimeline[]>(ck);
@@ -119,21 +120,21 @@ export const theSportsDbService = {
     }
   },
 
-  /** Match statistics — cached 5 min during live, 1 h after */
-  async getEventStats(eventId: string, isLive = false): Promise<TsdbEventStats | null> {
+  /** Match statistics as array — cached 5 min live, 1 h after */
+  async getEventStats(eventId: string, isLive = false): Promise<TsdbEventStats> {
     const ck = `tsdb_stats_${eventId}`;
     const cached = getCache<TsdbEventStats>(ck);
     if (cached) return cached;
     try {
-      const json = await get<{ eventstats: TsdbEventStats[] | null }>(
+      const json = await get<{ eventstats: TsdbEventStats | null }>(
         `lookupeventstats.php?id=${eventId}`
       );
-      const data = json.eventstats?.[0] ?? null;
-      if (data) setCache(ck, data, isLive ? 5 * MIN : HOUR);
+      const data = json.eventstats ?? [];
+      if (data.length > 0) setCache(ck, data, isLive ? 5 * MIN : HOUR);
       return data;
     } catch (e) {
       console.error('[TSDB] getEventStats', e);
-      return null;
+      return [];
     }
   },
 
@@ -155,6 +156,37 @@ export const theSportsDbService = {
     }
   },
 
+  /** Past fixtures for any league — for demo or history (no cache) */
+  async getLeaguePastFixtures(leagueId: string): Promise<TsdbEvent[]> {
+    const ck = `tsdb_past_${leagueId}`;
+    const cached = getCache<TsdbEvent[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ events: TsdbEvent[] | null }>(
+        `eventspastleague.php?id=${leagueId}`
+      );
+      const data = json.events ?? [];
+      setCache(ck, data, 30 * MIN);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getLeaguePastFixtures', e);
+      return [];
+    }
+  },
+
+  /** Event by ID — for demo lookups */
+  async getEventById(eventId: string): Promise<TsdbEvent | null> {
+    try {
+      const json = await get<{ events: TsdbEvent[] | null }>(
+        `lookupevent.php?id=${eventId}`
+      );
+      return json.events?.[0] ?? null;
+    } catch (e) {
+      console.error('[TSDB] getEventById', e);
+      return null;
+    }
+  },
+
   /** Team details — cached 24 h */
   async getTeam(teamId: string): Promise<TsdbTeam | null> {
     const ck = `tsdb_team_${teamId}`;
@@ -173,7 +205,7 @@ export const theSportsDbService = {
     }
   },
 
-  /** Search players by name — no cache (user typed query) */
+  /** Search players by name */
   async searchPlayers(name: string): Promise<TsdbPlayer[]> {
     if (name.length < 3) return [];
     try {
@@ -187,7 +219,7 @@ export const theSportsDbService = {
     }
   },
 
-  /** Livescores from V2 — cached 2 min (requires CORS support from TSDB) */
+  /** V2 livescores — cached 2 min */
   async getLivescoresV2(): Promise<TsdbLivescore[]> {
     const ck = `tsdb_v2_live`;
     const cached = getCache<TsdbLivescore[]>(ck);
@@ -208,16 +240,11 @@ export const theSportsDbService = {
     }
   },
 
-  /** Invalidate a cached key (e.g. after creating analysis) */
-  invalidate(key: string): void {
-    try { localStorage.removeItem(key); } catch { /* ignore */ }
-  },
-
-  /** Clear all Copa-related cache entries */
   clearCopaCache(): void {
     try {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('tsdb_'));
-      keys.forEach(k => localStorage.removeItem(k));
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('tsdb_'))
+        .forEach(k => localStorage.removeItem(k));
     } catch { /* ignore */ }
   },
 };
