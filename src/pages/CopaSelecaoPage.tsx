@@ -97,11 +97,11 @@ function TeamBadge({ src, name, size = 80 }: { src: string | null; name: string;
   );
 }
 
-function PlayerPhoto({ src, name, size = 80 }: { src: string | null; name: string; size?: number }) {
+function PlayerPhoto({ src, name, size = 120 }: { src: string | null; name: string; size?: number }) {
   const [err, setErr] = useState(false);
   return (
     <div style={{
-      width: size, height: size, borderRadius: 6, overflow: 'hidden', flexShrink: 0,
+      width: size, height: size, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
       background: S2, border: `1px solid ${BDR}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
@@ -338,15 +338,15 @@ export default function CopaSelecaoPage() {
                   </div>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                    gap: 8,
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
+                    gap: 10,
                   }}>
                     {players.map(p => (
                       <button
                         key={p.idPlayer}
                         onClick={() => navigate(`/copa/jogador/${p.idPlayer}`)}
                         style={{
-                          background: S, borderRadius: 8, padding: '14px 12px',
+                          background: S, borderRadius: 10, padding: '16px 12px',
                           border: `1px solid ${BDR}`,
                           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                           borderTop: `3px solid ${POS_COLOR[group] ?? T3}`,
@@ -356,7 +356,7 @@ export default function CopaSelecaoPage() {
                         onMouseEnter={e => { e.currentTarget.style.background = S2; }}
                         onMouseLeave={e => { e.currentTarget.style.background = S; }}
                       >
-                        <PlayerPhoto src={p.strCutout ?? p.strThumb} name={p.strPlayer} size={80} />
+                        <PlayerPhoto src={p.strCutout ?? p.strThumb} name={p.strPlayer} size={120} />
                         <div style={{ width: '100%' }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: T, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }}>
                             {p.strPlayer}

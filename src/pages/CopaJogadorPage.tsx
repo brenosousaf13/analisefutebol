@@ -76,11 +76,13 @@ export default function CopaJogadorPage() {
 
   const groupedHonours: [string, string[]][] = honours.length > 0
     ? Object.entries(
-        honours.reduce<Record<string, string[]>>((acc, h) => {
-          if (!acc[h.strHonour]) acc[h.strHonour] = [];
-          acc[h.strHonour].push(h.strSeason);
-          return acc;
-        }, {})
+        honours
+          .filter(h => h.strHonour && h.strSeason)
+          .reduce<Record<string, string[]>>((acc, h) => {
+            if (!acc[h.strHonour]) acc[h.strHonour] = [];
+            acc[h.strHonour].push(h.strSeason);
+            return acc;
+          }, {})
       ).sort(([a], [b]) => a.localeCompare(b))
     : [];
 
@@ -232,7 +234,7 @@ export default function CopaJogadorPage() {
             )}
 
             {/* Former teams */}
-            {formerTeams.length > 0 && (
+            {formerTeams.filter(ft => ft.strFormer).length > 0 && (
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <span style={{ fontFamily: BC, fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.08em', color: T2 }}>
@@ -241,19 +243,19 @@ export default function CopaJogadorPage() {
                   <div style={{ flex: 1, height: 1, background: BDR }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {formerTeams.map((ft, i) => (
+                  {formerTeams.filter(ft => ft.strFormer).map((ft, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '8px 12px', background: S, borderRadius: 6, border: `1px solid ${BDR}`,
                     }}>
                       {ft.strLogo ? (
-                        <img src={ft.strLogo} alt={ft.strFormer} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
+                        <img src={ft.strLogo} alt={ft.strFormer ?? ''} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
                       ) : (
                         <div style={{ width: 26, height: 26, borderRadius: '50%', background: T3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 8, color: S, fontWeight: 700 }}>{ft.strFormer.slice(0,2)}</span>
+                          <span style={{ fontSize: 8, color: S, fontWeight: 700 }}>{(ft.strFormer ?? '').slice(0,2)}</span>
                         </div>
                       )}
-                      <span style={{ flex: 1, fontSize: 13, color: T, fontWeight: 500 }}>{ft.strFormer}</span>
+                      <span style={{ flex: 1, fontSize: 13, color: T, fontWeight: 500 }}>{ft.strFormer ?? ''}</span>
                       {(ft.intJoined || ft.intDeparted) && (
                         <span style={{ fontSize: 11, color: T3, flexShrink: 0 }}>
                           {ft.intJoined ?? '?'} – {ft.intDeparted ?? 'atual'}
