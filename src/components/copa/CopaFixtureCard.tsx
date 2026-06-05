@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { theSportsDbService } from '../../services/theSportsDbService';
-import type { TsdbEvent, TsdbLineupPlayer, TsdbTimeline, TsdbEventStats } from '../../types/thesportsdb';
+import type { TsdbEvent, TsdbLineupPlayer, TsdbTimeline, TsdbEventStats, TsdbTv } from '../../types/thesportsdb';
 import { teamPt } from '../../utils/teamNames';
 import CopaLineupList from './CopaLineupList';
 import CopaTimeline from './CopaTimeline';
@@ -30,7 +30,7 @@ interface Props {
   onToggleSave?: (id: string) => void;
 }
 
-type Panel = 'lineup' | 'timeline' | 'stats' | 'highlight';
+type Panel = 'lineup' | 'timeline' | 'stats' | 'highlight' | 'tv';
 
 const STATUS_LABEL: Record<string, string> = {
   NS:   'Agendado',  TBD: 'A definir',
@@ -123,6 +123,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
   const [lineup, setLineup] = useState<TsdbLineupPlayer[] | null>(null);
   const [timeline, setTimeline] = useState<TsdbTimeline[] | null>(null);
   const [matchStats, setMatchStats] = useState<TsdbEventStats | null | undefined>(undefined);
+  const [tvListings, setTvListings] = useState<TsdbTv[] | null>(null);
   const [loadingPanel, setLoadingPanel] = useState<Panel | null>(null);
   const [notif, setNotif] = useState(false);
   const [localSaved, setLocalSaved] = useState(false);
@@ -168,6 +169,11 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
     if (panel === 'stats' && matchStats === undefined) {
       setLoadingPanel('stats');
       setMatchStats(await theSportsDbService.getEventStats(fixture.idEvent, isLive));
+      setLoadingPanel(null);
+    }
+    if (panel === 'tv' && tvListings === null) {
+      setLoadingPanel('tv');
+      setTvListings(await theSportsDbService.getTvListings(fixture.idEvent));
       setLoadingPanel(null);
     }
   }
@@ -301,6 +307,10 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
               Highlights
             </SmallBtn>
           )}
+          <SmallBtn active={activePanel === 'tv'} bra={bra} onClick={() => openPanel('tv')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+            Onde Assistir
+          </SmallBtn>
         </div>
 
         {/* Right: criar análise */}
@@ -364,6 +374,39 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
               : <p style={{ textAlign: 'center', fontSize: 12, color: T2, padding: '12px 0' }}>
                   {isFinished || isLive ? 'Estatísticas não disponíveis.' : 'Disponível durante o jogo.'}
                 </p>
+          ) : activePanel === 'tv' ? (
+            tvListings && tvListings.length > 0 ? (
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, color: T3, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  📺 Transmissão · Brasil
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {tvListings.map((ch, i) => (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+                      background: S2, borderRadius: 5, border: `1px solid ${BDR}`,
+                    }}>
+                      {ch.strLogo ? (
+                        <img src={ch.strLogo} alt={ch.strChannel} style={{ width: 28, height: 20, objectFit: 'contain', borderRadius: 3 }} />
+                      ) : (
+                        <div style={{ width: 28, height: 20, background: T3, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth="2.5"><rect x="2" y="7" width="20" height="15" rx="2"/></svg>
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: T }}>{ch.strChannel}</span>
+                        {ch.strLanguage && <span style={{ fontSize: 10, color: T3, marginLeft: 6 }}>{ch.strLanguage}</span>}
+                      </div>
+                      {ch.strTime && <span style={{ fontSize: 11, color: T2 }}>{ch.strTime}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p style={{ textAlign: 'center', fontSize: 12, color: T2, padding: '12px 0' }}>
+                {tvListings === null ? 'Carregando...' : 'Transmissão não encontrada para este jogo.'}
+              </p>
+            )
           ) : null}
         </div>
       )}

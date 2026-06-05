@@ -8,6 +8,9 @@ import type {
   TsdbPlayer,
   TsdbEventStats,
   TsdbLivescore,
+  TsdbTv,
+  TsdbHighlight,
+  TsdbEquipment,
 } from '../types/thesportsdb';
 
 const KEY = import.meta.env.VITE_THESPORTSDB_KEY ?? '6452773356';
@@ -236,6 +239,109 @@ export const theSportsDbService = {
       return wc;
     } catch (e) {
       console.error('[TSDB] getLivescoresV2', e);
+      return [];
+    }
+  },
+
+  /** TV listings for a match — filtered for Brazil, cached 2 h */
+  async getTvListings(eventId: string): Promise<TsdbTv[]> {
+    const ck = `tsdb_tv_${eventId}`;
+    const cached = getCache<TsdbTv[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ tvstation: TsdbTv[] | null }>(`lookuptv.php?id=${eventId}`);
+      const all = json.tvstation ?? [];
+      const brazil = all.filter(t =>
+        t.strCountry?.toLowerCase().includes('brazil') ||
+        t.strCountry?.toLowerCase().includes('brasil')
+      );
+      const data = brazil.length > 0 ? brazil : all;
+      setCache(ck, data, 2 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTvListings', e);
+      return [];
+    }
+  },
+
+  /** Copa highlights for a date — cached 1 h */
+  async getCopaHighlights(date: string): Promise<TsdbHighlight[]> {
+    const ck = `tsdb_highlights_${date}`;
+    const cached = getCache<TsdbHighlight[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ highlights: TsdbHighlight[] | null }>(
+        `eventshighlights.php?d=${date}&l=${WC_LEAGUE}`
+      );
+      const data = json.highlights ?? [];
+      setCache(ck, data, HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getCopaHighlights', e);
+      return [];
+    }
+  },
+
+  /** Full squad for a team — cached 24 h */
+  async getTeamSquad(teamId: string): Promise<TsdbPlayer[]> {
+    const ck = `tsdb_squad_${teamId}`;
+    const cached = getCache<TsdbPlayer[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ player: TsdbPlayer[] | null }>(`lookup_all_players.php?id=${teamId}`);
+      const data = json.player ?? [];
+      setCache(ck, data, 24 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTeamSquad', e);
+      return [];
+    }
+  },
+
+  /** Kit/equipment for a team — cached 24 h */
+  async getTeamEquipment(teamId: string): Promise<TsdbEquipment[]> {
+    const ck = `tsdb_equipment_${teamId}`;
+    const cached = getCache<TsdbEquipment[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ equipment: TsdbEquipment[] | null }>(`lookupequipment.php?id=${teamId}`);
+      const data = json.equipment ?? [];
+      setCache(ck, data, 24 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTeamEquipment', e);
+      return [];
+    }
+  },
+
+  /** Next events for a team — cached 30 min */
+  async getTeamNextEvents(teamId: string): Promise<TsdbEvent[]> {
+    const ck = `tsdb_team_next_${teamId}`;
+    const cached = getCache<TsdbEvent[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ events: TsdbEvent[] | null }>(`eventsnext.php?id=${teamId}`);
+      const data = json.events ?? [];
+      setCache(ck, data, 30 * MIN);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTeamNextEvents', e);
+      return [];
+    }
+  },
+
+  /** Last results for a team — cached 30 min */
+  async getTeamLastEvents(teamId: string): Promise<TsdbEvent[]> {
+    const ck = `tsdb_team_last_${teamId}`;
+    const cached = getCache<TsdbEvent[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ results: TsdbEvent[] | null }>(`eventslast.php?id=${teamId}`);
+      const data = json.results ?? [];
+      setCache(ck, data, 30 * MIN);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getTeamLastEvents', e);
       return [];
     }
   },

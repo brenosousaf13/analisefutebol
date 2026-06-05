@@ -127,6 +127,39 @@ export interface TsdbPlayer {
   idTeam: string | null;
 }
 
+export interface TsdbTv {
+  idTVstation: string;
+  strChannel: string;
+  strCountry: string | null;
+  strSport: string | null;
+  strLanguage: string | null;
+  strLogo: string | null;
+  strDate: string | null;
+  strTime: string | null;
+}
+
+export interface TsdbHighlight {
+  idHighlight?: string;
+  idEvent?: string | null;
+  strFilename: string | null;
+  strVideo: string | null;
+  strLeague: string | null;
+  strSeason: string | null;
+  strHomeTeam: string | null;
+  strAwayTeam: string | null;
+  dateEvent: string | null;
+}
+
+export interface TsdbEquipment {
+  idEquipment: string;
+  idTeam: string;
+  strTeam: string | null;
+  strSeason: string | null;
+  strType: string | null;
+  strEquipment: string | null;
+  strThumb: string | null;
+}
+
 export interface TsdbLivescore {
   idEvent: string;
   idAPIfootball: string | null;
