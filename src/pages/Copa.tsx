@@ -558,14 +558,33 @@ export default function Copa() {
   const [tab, setTab] = useState<Tab>('calendario');
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  // Favorites: set of team names (e.g. "Brazil", "Germany")
-  const [savedTeams, setSavedTeams] = useState<Set<string>>(new Set());
+
+  // ── Persistent state (localStorage) ──────────────────────
+  const [savedTeams, setSavedTeams] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('copa_saved_teams') ?? '[]')); }
+    catch { return new Set(); }
+  });
+  const [savedFixtures, setSavedFixtures] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('copa_saved_fixtures') ?? '[]')); }
+    catch { return new Set(); }
+  });
+  const [notifFixtures, setNotifFixtures] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('copa_notif_fixtures') ?? '[]')); }
+    catch { return new Set(); }
+  });
+
+  useEffect(() => { localStorage.setItem('copa_saved_teams',    JSON.stringify([...savedTeams])); }, [savedTeams]);
+  useEffect(() => { localStorage.setItem('copa_saved_fixtures', JSON.stringify([...savedFixtures])); }, [savedFixtures]);
+  useEffect(() => { localStorage.setItem('copa_notif_fixtures', JSON.stringify([...notifFixtures])); }, [notifFixtures]);
+
   const onToggleTeam = useCallback((name: string) => {
-    setSavedTeams(prev => {
-      const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
-      return next;
-    });
+    setSavedTeams(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; });
+  }, []);
+  const onToggleFixtureSave = useCallback((id: string) => {
+    setSavedFixtures(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }, []);
+  const onToggleFixtureNotif = useCallback((id: string) => {
+    setNotifFixtures(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }, []);
 
   const todayStr = useMemo(() => {
@@ -724,6 +743,10 @@ export default function Copa() {
                       fixture={f}
                       onCreateAnalysis={handleCreateAnalysis}
                       isCreating={creatingId === f.idEvent}
+                      isSaved={savedFixtures.has(f.idEvent)}
+                      onToggleSave={onToggleFixtureSave}
+                      isNotif={notifFixtures.has(f.idEvent)}
+                      onToggleNotif={onToggleFixtureNotif}
                     />
                   ))}
                 </div>
@@ -830,6 +853,10 @@ export default function Copa() {
                   fixture={f}
                   onCreateAnalysis={handleCreateAnalysis}
                   isCreating={creatingId === f.idEvent}
+                  isSaved={savedFixtures.has(f.idEvent)}
+                  onToggleSave={onToggleFixtureSave}
+                  isNotif={notifFixtures.has(f.idEvent)}
+                  onToggleNotif={onToggleFixtureNotif}
                 />
               ))}
             </div>

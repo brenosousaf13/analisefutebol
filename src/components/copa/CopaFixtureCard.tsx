@@ -28,6 +28,8 @@ interface Props {
   isCreating: boolean;
   isSaved?: boolean;
   onToggleSave?: (id: string) => void;
+  isNotif?: boolean;
+  onToggleNotif?: (id: string) => void;
 }
 
 type Panel = 'lineup' | 'timeline' | 'stats' | 'highlight' | 'tv';
@@ -118,21 +120,29 @@ function TeamBadge({ src, name, size = 42 }: { src: string | null; name: string;
   );
 }
 
-export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating, isSaved, onToggleSave }: Props) {
+export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating, isSaved, onToggleSave, isNotif, onToggleNotif }: Props) {
   const [activePanel, setActivePanel] = useState<Panel | null>(null);
   const [lineup, setLineup] = useState<TsdbLineupPlayer[] | null>(null);
   const [timeline, setTimeline] = useState<TsdbTimeline[] | null>(null);
   const [matchStats, setMatchStats] = useState<TsdbEventStats | null | undefined>(undefined);
   const [tvListings, setTvListings] = useState<TsdbTv[] | null>(null);
   const [loadingPanel, setLoadingPanel] = useState<Panel | null>(null);
-  const [notif, setNotif] = useState(false);
   const [localSaved, setLocalSaved] = useState(false);
+  const [localNotif, setLocalNotif] = useState(false);
   const [hov, setHov] = useState(false);
+
   const saved = isSaved !== undefined ? isSaved : localSaved;
+  const notif = isNotif !== undefined ? isNotif : localNotif;
+
   const handleToggleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onToggleSave) onToggleSave(fixture.idEvent);
     else setLocalSaved(p => !p);
+  };
+  const handleToggleNotif = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleNotif) onToggleNotif(fixture.idEvent);
+    else setLocalNotif(p => !p);
   };
 
   const bra     = isBrazil(fixture);
@@ -276,7 +286,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
       }}>
         {/* Left: icons + panel toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <IconBtn28 active={notif} col={AC} title="Notificar" onClick={e => { e.stopPropagation(); setNotif(p => !p); }}>
+          <IconBtn28 active={notif} col={AC} title="Notificar" onClick={handleToggleNotif}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill={notif ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
