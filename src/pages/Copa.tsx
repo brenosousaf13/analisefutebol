@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
@@ -11,6 +10,7 @@ import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
 import CopaSelecoes from '../components/copa/CopaSelecoes';
 import { teamPt } from '../utils/teamNames';
+import Header from '../components/Header';
 
 // ── Design tokens (v2) ────────────────────────────────────────
 const BG  = '#07090c';
@@ -161,7 +161,7 @@ function DateHeader({ dateStr }: { dateStr: string }) {
     <div style={{
       display:'flex', alignItems:'center', gap:12,
       padding:'20px 0 10px',
-      position:'sticky', top:104, zIndex:3, background:BG,
+      position:'sticky', top:116, zIndex:3, background:BG,
     }}>
       <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:800, letterSpacing:'.09em', textTransform:'uppercase', color:T2, whiteSpace:'nowrap' }}>
         {fmtFull(dateStr)}
@@ -558,7 +558,6 @@ export default function Copa() {
   const [tab, setTab] = useState<Tab>('calendario');
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   // Favorites: set of team names (e.g. "Brazil", "Germany")
   const [savedTeams, setSavedTeams] = useState<Set<string>>(new Set());
   const onToggleTeam = useCallback((name: string) => {
@@ -600,19 +599,6 @@ export default function Copa() {
     return () => clearInterval(id);
   }, [fetchLive]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    theSportsDbService.clearCopaCache();
-    try {
-      const [data, live, table] = await Promise.all([
-        theSportsDbService.getAllFixtures(),
-        theSportsDbService.getLiveFixtures(),
-        theSportsDbService.getStandings(),
-      ]);
-      setFixtures(data); setLiveFixtures(live); setStandings(table);
-      setLastRefresh(new Date());
-    } finally { setRefreshing(false); }
-  };
 
   // ── Derived ───────────────────────────────────────────────
   const upcomingFixtures = useMemo(() =>
@@ -748,7 +734,7 @@ export default function Copa() {
 
         {/* Right sidebar (desktop only) */}
         {lg && (
-          <div style={{ position:'sticky', top:112, paddingTop:16 }}>
+          <div style={{ position:'sticky', top:116, paddingTop:16 }}>
             <RightSidebar
               savedTeams={savedTeams}
               allFixtures={fixtures}
@@ -898,58 +884,15 @@ export default function Copa() {
   ];
 
   return (
-    <div style={{ background:BG, color:T, minHeight:'100vh', fontFamily:"'Inter', system-ui, sans-serif", fontSize:14, WebkitFontSmoothing:'antialiased' } as React.CSSProperties}>
-      {/* ── Header ── */}
-      <header style={{
-        position:'sticky', top:0, zIndex:20, height:52,
-        background:'rgba(7,9,12,0.95)', backdropFilter:'blur(14px)',
-        borderBottom:`1px solid ${BDR}`,
-        display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 24px',
-      }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{ display:'flex', alignItems:'center', border:'none', background:'none', cursor:'pointer' }}
-        >
-          <span style={{ fontFamily:BC, fontSize:21, fontWeight:900, color:'#fff', letterSpacing:'-.02em' }}>ZON</span>
-          <span style={{ fontFamily:BC, fontSize:21, fontWeight:900, color:AC, letterSpacing:'-.02em' }}>14</span>
-        </button>
-
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {lastRefresh && (
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              title={`Atualizado ${lastRefresh.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', width:28, height:28, borderRadius:6, background:'transparent', border:'none', color:T3, cursor:'pointer' }}
-            >
-              <RefreshCw size={13} style={refreshing ? {animation:'spin 1s linear infinite'} : {}} />
-            </button>
-          )}
-          {user ? (
-            <button
-              onClick={() => navigate('/')}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 13px', borderRadius:6, background:S, fontSize:12.5, fontWeight:500, border:`1px solid ${BDR}`, color:T, cursor:'pointer' }}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Minhas análises
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate('/login')}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 13px', borderRadius:6, background:AC, fontSize:12.5, fontWeight:700, border:'none', color:'#000', cursor:'pointer' }}
-            >
-              Entrar
-            </button>
-          )}
-        </div>
-      </header>
+    <div style={{ background:BG, color:T, minHeight:'100vh', fontFamily:"'Inter', system-ui, sans-serif", fontSize:14, WebkitFontSmoothing:'antialiased', paddingTop:64 } as React.CSSProperties}>
+      <Header />
 
       {/* ── Hero ── */}
       {!loading && <Hero />}
 
       {/* ── Tab bar ── */}
       <div style={{
-        position:'sticky', top:52, zIndex:15,
+        position:'sticky', top:64, zIndex:15,
         background:'rgba(7,9,12,0.97)', backdropFilter:'blur(12px)',
         borderBottom:`1px solid ${BDR}`,
         display:'flex', padding:'0 24px',

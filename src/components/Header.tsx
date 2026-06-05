@@ -185,47 +185,17 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                                 );
                             })}
 
-                            {/* Copa do Mundo 2026 */}
-                            <div className="pt-3 mt-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 px-1 mb-2">Eventos</p>
-                                <Link
-                                    to="/copa"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="group block rounded-xl overflow-hidden border transition-all duration-200"
-                                    style={{
-                                        borderColor: activePath.startsWith('/copa') ? 'rgba(0,230,118,0.5)' : 'rgba(0,230,118,0.15)',
-                                        background: activePath.startsWith('/copa')
-                                            ? 'linear-gradient(135deg, rgba(0,230,118,0.18) 0%, rgba(0,180,90,0.1) 100%)'
-                                            : 'linear-gradient(135deg, rgba(0,230,118,0.07) 0%, rgba(0,0,0,0) 100%)',
-                                    }}
-                                >
-                                    <div className="px-4 py-3 flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                                            style={{ background: 'rgba(0,230,118,0.15)' }}>
-                                            <Trophy size={17} style={{ color: '#00e676' }} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="text-sm font-bold leading-tight" style={{ color: '#00e676' }}>
-                                                Copa do Mundo
-                                            </div>
-                                            <div className="text-[11px] font-semibold" style={{ color: 'rgba(0,230,118,0.55)' }}>
-                                                2026 · USA · CAN · MEX
-                                            </div>
-                                        </div>
-                                        <svg className="ml-auto shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,230,118,0.4)" strokeWidth="2.5">
-                                            <path d="m9 18 6-6-6-6"/>
-                                        </svg>
-                                    </div>
-                                    <div className="px-4 pb-2.5 flex gap-1.5">
-                                        {['Calendário','Seleções','Jogadores'].map(label => (
-                                            <span key={label} className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                                                style={{ background: 'rgba(0,230,118,0.1)', color: 'rgba(0,230,118,0.6)', border: '1px solid rgba(0,230,118,0.15)' }}>
-                                                {label}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </Link>
-                            </div>
+                            <Link
+                                to="/copa"
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium ${activePath.startsWith('/copa')
+                                    ? 'bg-accent-green text-white shadow-lg shadow-green-900/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                    }`}
+                            >
+                                <Trophy size={20} />
+                                <span>Copa do Mundo 2026</span>
+                            </Link>
                         </nav>
 
                         <div className="p-4 border-t border-gray-700 bg-gray-800/50 shrink-0">

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { theSportsDbService } from '../services/theSportsDbService';
 import type { TsdbPlayer, TsdbHonour, TsdbFormerTeam } from '../types/thesportsdb';
 import { teamPt } from '../utils/teamNames';
+import Header from '../components/Header';
 
 const BG  = '#07090c';
 const S   = '#0c1016';
@@ -89,11 +90,12 @@ export default function CopaJogadorPage() {
   const photo = player?.strCutout ?? player?.strThumb;
 
   return (
-    <div style={{ background: BG, color: T, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, WebkitFontSmoothing: 'antialiased' } as React.CSSProperties}>
+    <div style={{ background: BG, color: T, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, WebkitFontSmoothing: 'antialiased', paddingTop: 64 } as React.CSSProperties}>
+      <Header />
 
-      {/* Header */}
+      {/* Sub-header */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 20, height: 52,
+        position: 'sticky', top: 64, zIndex: 20, height: 52,
         background: 'rgba(7,9,12,0.95)', backdropFilter: 'blur(14px)',
         borderBottom: `1px solid ${BDR}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
@@ -107,10 +109,9 @@ export default function CopaJogadorPage() {
           </svg>
           Voltar
         </button>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontFamily: BC, fontSize: 21, fontWeight: 900, color: '#fff', letterSpacing: '-.02em' }}>ZON</span>
-          <span style={{ fontFamily: BC, fontSize: 21, fontWeight: 900, color: AC, letterSpacing: '-.02em' }}>14</span>
-        </div>
+        <span style={{ fontSize: 11, fontWeight: 600, color: T3, letterSpacing: '.05em', textTransform: 'uppercase' }}>
+          Perfil do Jogador
+        </span>
       </header>
 
       {loading ? (
