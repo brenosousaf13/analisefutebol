@@ -11,6 +11,7 @@ import SharedAnalysis from './pages/SharedAnalysis';
 import Copa from './pages/Copa';
 import CopaDemo from './pages/CopaDemo';
 import CopaSelecaoPage from './pages/CopaSelecaoPage';
+import CopaJogadorPage from './pages/CopaJogadorPage';
 import FullAnalysisPage from './pages/FullAnalysisPage';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
             <Route path="/copa" element={<Copa />} />
             <Route path="/copa/demo" element={<CopaDemo />} />
             <Route path="/copa/selecao/:teamId" element={<CopaSelecaoPage />} />
+            <Route path="/copa/jogador/:playerId" element={<CopaJogadorPage />} />
 
             <Route path="/" element={
               <ProtectedRoute>

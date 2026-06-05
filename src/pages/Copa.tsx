@@ -5,12 +5,11 @@ import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
 import { useAuth } from '../contexts/AuthContext';
-import type { TsdbEvent, TsdbLineupPlayer, TsdbStanding } from '../types/thesportsdb';
+import type { TsdbEvent, TsdbLineupPlayer, TsdbStanding, TsdbPlayer } from '../types/thesportsdb';
 import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
 import CopaSelecoes from '../components/copa/CopaSelecoes';
-import CopaPlayerModal from '../components/copa/CopaPlayerModal';
 import { teamPt } from '../utils/teamNames';
 
 // ── Design tokens (v2) ────────────────────────────────────────
@@ -34,7 +33,30 @@ const MONTHS_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julh
 const DAYS_SHORT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const MONTHS_SHORT= ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-type Tab = 'calendario' | 'resultados' | 'tabela' | 'selecoes';
+type Tab = 'calendario' | 'resultados' | 'tabela' | 'selecoes' | 'jogadores';
+
+// ── Position translation ──────────────────────────────────────
+function positionPt(pos: string | null): string {
+  if (!pos) return '';
+  const p = pos.toLowerCase().trim();
+  if (p === 'goalkeeper' || p === 'gk') return 'Goleiro';
+  if (p === 'centre-back' || p === 'center back' || p === 'cb' || p === 'central defender') return 'Zagueiro';
+  if (p === 'right back' || p === 'rb' || p === 'right-back') return 'Lateral Direito';
+  if (p === 'left back' || p === 'lb' || p === 'left-back') return 'Lateral Esquerdo';
+  if (p === 'right wing back' || p === 'rwb') return 'Ala Direito';
+  if (p === 'left wing back' || p === 'lwb') return 'Ala Esquerdo';
+  if (p.includes('defensive midfield') || p === 'dm') return 'Volante';
+  if (p === 'central midfield' || p === 'cm' || p.includes('centre midfield')) return 'Meia Central';
+  if (p.includes('attacking midfield') || p === 'am') return 'Meia Atacante';
+  if (p.includes('midfielder') || p.includes('midfield')) return 'Meia';
+  if (p === 'right winger' || p === 'rw' || p === 'right wing') return 'Ponta Direita';
+  if (p === 'left winger' || p === 'lw' || p === 'left wing') return 'Ponta Esquerda';
+  if (p === 'centre-forward' || p === 'center-forward' || p === 'cf') return 'Centroavante';
+  if (p === 'striker' || p === 'st') return 'Centroavante';
+  if (p.includes('forward') || p.includes('winger')) return 'Atacante';
+  if (p.includes('defender') || p.includes('back')) return 'Defensor';
+  return pos;
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 function isBrazilGame(f: TsdbEvent) {
@@ -406,7 +428,6 @@ export default function Copa() {
   const [refreshing, setRefreshing] = useState(false);
   // Favorites: set of team names (e.g. "Brazil", "Germany")
   const [savedTeams, setSavedTeams] = useState<Set<string>>(new Set());
-  const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
   const onToggleTeam = useCallback((name: string) => {
     setSavedTeams(prev => {
       const next = new Set(prev);
@@ -688,6 +709,136 @@ export default function Copa() {
     );
   }
 
+  // ── Tab: Jogadores ───────────────────────────────────────
+  function JogadoresTab() {
+    const [q, setQ] = useState('');
+    const [results, setResults] = useState<TsdbPlayer[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [foc, setFoc] = useState(false);
+    const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+      if (q.length < 3) { setResults([]); setSearching(false); return; }
+      setSearching(true);
+      const timer = setTimeout(() => {
+        theSportsDbService.searchPlayers(q)
+          .then(res => { setResults(res.slice(0, 20)); setSearching(false); })
+          .catch(() => setSearching(false));
+      }, 400);
+      return () => clearTimeout(timer);
+    }, [q]);
+
+    return (
+      <div style={{ paddingTop: 20 }}>
+        <div style={{ maxWidth: 720 }}>
+          {/* Search bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: S, borderRadius: 8, padding: '11px 14px',
+            border: `1px solid ${foc ? 'rgba(0,230,118,0.5)' : BDR}`,
+            transition: 'border-color .15s', marginBottom: 20,
+          }}>
+            {searching ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+            )}
+            <input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              onFocus={() => setFoc(true)}
+              onBlur={() => setFoc(false)}
+              placeholder="Buscar jogador... (ex: Vinícius, Mbappe, Messi)"
+              autoFocus
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: T }}
+            />
+            {q && (
+              <button onClick={() => { setQ(''); setResults([]); }} style={{ color: T3, border: 'none', background: 'none', cursor: 'pointer', lineHeight: 0, padding: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            )}
+          </div>
+
+          {/* Empty state */}
+          {q.length < 3 && (
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ fontFamily: BC, fontSize: 40, fontWeight: 900, color: T3, marginBottom: 10, letterSpacing: '.02em' }}>
+                JOGADORES
+              </div>
+              <p style={{ fontSize: 14, color: T2, lineHeight: 1.8, maxWidth: 320, margin: '0 auto' }}>
+                Pesquise qualquer jogador do mundo para ver perfil completo com títulos e histórico de clubes.
+              </p>
+              <p style={{ fontSize: 11, color: T3, opacity: 0.6, marginTop: 10 }}>Mínimo 3 caracteres</p>
+            </div>
+          )}
+
+          {/* No results */}
+          {q.length >= 3 && results.length === 0 && !searching && (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ fontSize: 13, color: T3 }}>Nenhum jogador encontrado para "{q}"</p>
+            </div>
+          )}
+
+          {/* Results grid */}
+          {results.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 6 }}>
+              {results.map(player => (
+                <button
+                  key={player.idPlayer}
+                  onClick={() => navigate(`/copa/jogador/${player.idPlayer}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+                    background: S, border: `1px solid ${BDR}`, borderRadius: 7,
+                    cursor: 'pointer', textAlign: 'left', width: '100%',
+                    transition: 'background .1s, border-color .1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = S2; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = S; e.currentTarget.style.borderColor = BDR; }}
+                >
+                  <div style={{
+                    width: 52, height: 52, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+                    background: S2, border: `1px solid ${BDR}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {(player.strCutout ?? player.strThumb) && !imgErrors[player.idPlayer] ? (
+                      <img
+                        src={player.strCutout ?? player.strThumb!}
+                        alt={player.strPlayer}
+                        onError={() => setImgErrors(prev => ({ ...prev, [player.idPlayer]: true }))}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="1.5">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {player.strPlayer}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {player.strNationality && <span style={{ fontSize: 10.5, color: T3 }}>{teamPt(player.strNationality)}</span>}
+                      {player.strPosition && <span style={{ fontSize: 10.5, color: AC }}>· {positionPt(player.strPosition)}</span>}
+                      {player.strTeam && <span style={{ fontSize: 10.5, color: T3 }}>· {player.strTeam}</span>}
+                    </div>
+                  </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T3} strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ── Tab: Tabela ───────────────────────────────────────────
   function TabelaTab() {
     return (
@@ -710,6 +861,7 @@ export default function Copa() {
     { id:'resultados', label:'Resultados' },
     { id:'tabela',     label:'Tabela' },
     { id:'selecoes',   label:'Seleções' },
+    { id:'jogadores',  label:'Jogadores' },
   ];
 
   return (
@@ -730,14 +882,6 @@ export default function Copa() {
         </button>
 
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <button
-            onClick={() => setPlayerSearchOpen(true)}
-            title="Buscar jogador"
-            style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 11px', borderRadius:6, background:S, fontSize:12, fontWeight:600, border:`1px solid ${BDR}`, color:T2, cursor:'pointer' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Jogadores
-          </button>
           {lastRefresh && (
             <button
               onClick={handleRefresh}
@@ -804,11 +948,9 @@ export default function Copa() {
           {tab === 'resultados' && <ResultadosTab />}
           {tab === 'tabela'     && <TabelaTab />}
           {tab === 'selecoes'   && <SelecoesTab />}
+          {tab === 'jogadores'  && <JogadoresTab />}
         </div>
       )}
-
-      {/* ── Player search modal ── */}
-      {playerSearchOpen && <CopaPlayerModal onClose={() => setPlayerSearchOpen(false)} />}
 
       {/* ── Footer ── */}
       <div style={{ padding:'14px 24px', borderTop:`1px solid ${BDR}`, fontSize:11, color:T3, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>

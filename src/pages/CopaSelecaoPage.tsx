@@ -26,6 +26,28 @@ const POS_COLOR: Record<string, string> = {
   GK: '#f59e0b', DEF: '#3b82f6', MID: '#8b5cf6', FWD: '#ef4444', OTHER: T3
 };
 
+function positionPt(pos: string | null): string {
+  if (!pos) return '';
+  const p = pos.toLowerCase().trim();
+  if (p === 'goalkeeper' || p === 'gk') return 'Goleiro';
+  if (p === 'centre-back' || p === 'center back' || p === 'cb' || p === 'central defender') return 'Zagueiro';
+  if (p === 'right back' || p === 'rb' || p === 'right-back') return 'Lateral Direito';
+  if (p === 'left back' || p === 'lb' || p === 'left-back') return 'Lateral Esquerdo';
+  if (p === 'right wing back' || p === 'rwb') return 'Ala Direito';
+  if (p === 'left wing back' || p === 'lwb') return 'Ala Esquerdo';
+  if (p.includes('defensive midfield') || p === 'dm' || p === 'defensive midfielder') return 'Volante';
+  if (p === 'central midfield' || p === 'cm' || p.includes('centre midfield') || p === 'central midfielder') return 'Meia Central';
+  if (p.includes('attacking midfield') || p === 'am' || p === 'attacking midfielder') return 'Meia Atacante';
+  if (p.includes('midfielder') || p.includes('midfield')) return 'Meia';
+  if (p === 'right winger' || p === 'rw' || p === 'right wing') return 'Ponta Direita';
+  if (p === 'left winger' || p === 'lw' || p === 'left wing') return 'Ponta Esquerda';
+  if (p === 'centre-forward' || p === 'center-forward' || p === 'cf' || p === 'center forward') return 'Centroavante';
+  if (p === 'striker' || p === 'st') return 'Centroavante';
+  if (p.includes('forward') || p.includes('winger')) return 'Atacante';
+  if (p.includes('defender') || p.includes('back')) return 'Defensor';
+  return pos;
+}
+
 function posGroup(pos: string | null): string {
   if (!pos) return 'OTHER';
   const p = pos.toUpperCase();
@@ -75,7 +97,7 @@ function TeamBadge({ src, name, size = 80 }: { src: string | null; name: string;
   );
 }
 
-function PlayerPhoto({ src, name, size = 44 }: { src: string | null; name: string; size?: number }) {
+function PlayerPhoto({ src, name, size = 80 }: { src: string | null; name: string; size?: number }) {
   const [err, setErr] = useState(false);
   return (
     <div style={{
@@ -316,38 +338,39 @@ export default function CopaSelecaoPage() {
                   </div>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: 6,
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                    gap: 8,
                   }}>
                     {players.map(p => (
-                      <div key={p.idPlayer} style={{
-                        background: S, borderRadius: 6, padding: '10px 12px',
-                        border: `1px solid ${BDR}`,
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        borderLeft: `2px solid ${POS_COLOR[group] ?? T3}`,
-                      }}>
-                        <PlayerPhoto src={p.strCutout ?? p.strThumb} name={p.strPlayer} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: T, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <button
+                        key={p.idPlayer}
+                        onClick={() => navigate(`/copa/jogador/${p.idPlayer}`)}
+                        style={{
+                          background: S, borderRadius: 8, padding: '14px 12px',
+                          border: `1px solid ${BDR}`,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                          borderTop: `3px solid ${POS_COLOR[group] ?? T3}`,
+                          cursor: 'pointer', textAlign: 'center', width: '100%',
+                          transition: 'background .1s, border-color .1s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = S2; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = S; }}
+                      >
+                        <PlayerPhoto src={p.strCutout ?? p.strThumb} name={p.strPlayer} size={80} />
+                        <div style={{ width: '100%' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: T, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }}>
                             {p.strPlayer}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            {p.strPosition && (
-                              <span style={{ fontSize: 10, color: POS_COLOR[group] ?? T3, fontWeight: 600 }}>
-                                {p.strPosition}
-                              </span>
-                            )}
-                            {p.strTeam && (
-                              <span style={{ fontSize: 10, color: T3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {p.strTeam}
-                              </span>
-                            )}
-                          </div>
-                          {p.dateBorn && calcAge(p.dateBorn) && (
-                            <div style={{ fontSize: 10, color: T3, marginTop: 1 }}>{calcAge(p.dateBorn)}</div>
+                          {p.strPosition && (
+                            <div style={{ fontSize: 11, color: POS_COLOR[group] ?? T3, fontWeight: 600, marginBottom: 3 }}>
+                              {positionPt(p.strPosition)}
+                            </div>
                           )}
+                          <div style={{ fontSize: 10.5, color: T3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {[p.strTeam, calcAge(p.dateBorn)].filter(Boolean).join(' · ')}
+                          </div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>

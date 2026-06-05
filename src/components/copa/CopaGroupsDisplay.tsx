@@ -16,6 +16,19 @@ const BC  = "'Barlow Condensed', sans-serif";
 
 const GROUP_ORDER = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
 
+function normalizeGroup(raw: string | null): string | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (/^[A-Pa-p]$/.test(s)) return s.toUpperCase();
+  // "Group A", "Grupo A", "Groupe A", "Phase A" etc.
+  const m = s.match(/\b([A-Pa-p])\b/i);
+  if (m) return m[1].toUpperCase();
+  // Numeric: "1" → "A", "2" → "B", etc.
+  const n = parseInt(s, 10);
+  if (!isNaN(n) && n >= 1 && n <= 16) return String.fromCharCode(64 + n);
+  return null;
+}
+
 interface TeamEntry {
   name: string;
   badge: string | null;
@@ -166,13 +179,14 @@ export default function CopaGroupsDisplay({ fixtures, standings, savedTeams, onT
     if (f.strAwayTeamBadge) badgeMap.set(f.strAwayTeam, f.strAwayTeamBadge);
   });
 
-  // Build group→teams map from fixtures
+  // Build group→teams map from fixtures (normalize group format)
   const groupMap = new Map<string, Set<string>>();
   fixtures.forEach(f => {
-    if (!f.strGroup) return;
-    if (!groupMap.has(f.strGroup)) groupMap.set(f.strGroup, new Set());
-    groupMap.get(f.strGroup)!.add(f.strHomeTeam);
-    groupMap.get(f.strGroup)!.add(f.strAwayTeam);
+    const g = normalizeGroup(f.strGroup);
+    if (!g) return;
+    if (!groupMap.has(g)) groupMap.set(g, new Set());
+    groupMap.get(g)!.add(f.strHomeTeam);
+    groupMap.get(g)!.add(f.strAwayTeam);
   });
 
   // Build standing stats map
@@ -202,9 +216,45 @@ export default function CopaGroupsDisplay({ fixtures, standings, savedTeams, onT
   });
 
   if (groups.length === 0) {
+    // Fallback: show all teams from fixtures in a flat grid
+    const allTeams = new Map<string, string | null>();
+    fixtures.forEach(f => {
+      if (f.strHomeTeam) allTeams.set(f.strHomeTeam, f.strHomeTeamBadge ?? null);
+      if (f.strAwayTeam) allTeams.set(f.strAwayTeam, f.strAwayTeamBadge ?? null);
+    });
+    if (allTeams.size === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: T2 }}>
+          <p style={{ fontSize: 14 }}>Grupos disponíveis após o início da Copa.</p>
+        </div>
+      );
+    }
+    const sorted = [...allTeams.entries()].sort(([a], [b]) => teamPt(a).localeCompare(teamPt(b), 'pt-BR'));
     return (
-      <div style={{ textAlign: 'center', padding: '60px 0', color: T2 }}>
-        <p style={{ fontSize: 14 }}>Grupos disponíveis após o início da Copa.</p>
+      <div>
+        <p style={{ fontSize: 11, color: T3, marginBottom: 16, lineHeight: 1.5 }}>
+          A divisão por grupos será exibida após o início da Copa · {allTeams.size} seleções classificadas
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 7 }}>
+          {sorted.map(([name, badge]) => {
+            const starred = savedTeams.has(name);
+            const isBra = name === 'Brazil';
+            return (
+              <div key={name} style={{
+                background: S, borderRadius: 6, padding: '9px 12px',
+                border: `1px solid ${isBra ? 'rgba(245,158,11,0.25)' : BDR}`,
+                display: 'flex', alignItems: 'center', gap: 9,
+                borderLeft: starred ? `2px solid ${GD}` : '2px solid transparent',
+              }}>
+                <TeamBadge src={badge} name={name} size={26} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: isBra ? 600 : 400, color: isBra ? GD : T }}>
+                  {teamPt(name)}
+                </span>
+                <StarBtn on={starred} onClick={e => { e.stopPropagation(); onToggleTeam(name); }} />
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
