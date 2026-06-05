@@ -16,6 +16,24 @@ const T2  = '#566b82';
 const T3  = '#243040';
 const BC  = "'Barlow Condensed', sans-serif";
 
+function hexToRgba(hex: string | null, alpha: number): string {
+  if (!hex) return `rgba(0,0,0,${alpha})`;
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return `rgba(0,0,0,${alpha})`;
+  return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${alpha})`;
+}
+
+function colorForDarkBg(hex: string | null, fallback: string): string {
+  if (!hex) return fallback;
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return fallback;
+  const r = parseInt(h.slice(0,2), 16);
+  const g = parseInt(h.slice(2,4), 16);
+  const b = parseInt(h.slice(4,6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum < 0.15 ? fallback : hex;
+}
+
 type SubTab = 'elenco' | 'uniformes' | 'jogos';
 
 const POS_ORDER: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3, OTHER: 4 };
@@ -81,12 +99,12 @@ function calcAge(dateBorn: string | null): string {
   }
 }
 
-function TeamBadge({ src, name, size = 80 }: { src: string | null; name: string; size?: number }) {
+function TeamBadge({ src, name, size = 80, borderColor }: { src: string | null; name: string; size?: number; borderColor?: string }) {
   const [err, setErr] = useState(false);
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', overflow: 'hidden',
-      background: S2, border: `2px solid ${BDR2}`, flexShrink: 0,
+      background: S2, border: `2px solid ${borderColor ?? BDR2}`, flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       {src && !err
@@ -115,14 +133,14 @@ function PlayerPhoto({ src, name, size = 120 }: { src: string | null; name: stri
   );
 }
 
-function GameRow({ event, isBra }: { event: TsdbEvent; isBra: boolean }) {
+function GameRow({ event, isBra, accentColor }: { event: TsdbEvent; isBra: boolean; accentColor: string }) {
   const [errH, setErrH] = useState(false);
   const [errA, setErrA] = useState(false);
   const hasScore = ['FT','AET','PEN','1H','HT','2H','ET','P'].includes(event.strStatus);
   const matchDate = new Date(`${event.dateEvent}T${event.strTime ?? '00:00:00'}Z`);
   const timeStr = matchDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
   const dateStr = matchDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Sao_Paulo' });
-  const col = isBra ? GD : AC;
+  const col = accentColor;
 
   return (
     <div style={{
@@ -182,6 +200,9 @@ export default function CopaSelecaoPage() {
 
   const displayName = team ? teamPt(team.strTeam) : teamPt(initName);
   const isBra = initName === 'Brazil' || team?.strTeam === 'Brazil';
+
+  // Team colors from API (strColour1/strColour2 from lookupteam)
+  const teamColor = colorForDarkBg(team?.strColour1 ?? null, AC);
 
   useEffect(() => {
     if (!teamId) return;
@@ -252,14 +273,16 @@ export default function CopaSelecaoPage() {
       <div style={{
         padding: '32px 24px 24px',
         borderBottom: `1px solid ${BDR}`,
-        background: isBra ? 'linear-gradient(180deg, rgba(245,158,11,0.07) 0%, transparent 100%)' : undefined,
+        background: `linear-gradient(180deg, ${hexToRgba(team?.strColour1 ?? null, 0.09)} 0%, transparent 100%)`,
+        borderLeft: `4px solid ${hexToRgba(team?.strColour1 ?? null, 0.4)}`,
         display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
       }}>
-        <TeamBadge src={team?.strBadge ?? null} name={initName} size={80} />
+        <TeamBadge src={team?.strBadge ?? null} name={initName} size={80}
+          borderColor={team ? hexToRgba(team.strColour1, 0.6) : BDR2} />
         <div style={{ flex: 1 }}>
           <h1 style={{
             fontFamily: BC, fontSize: 'clamp(28px,5vw,52px)', fontWeight: 900,
-            color: isBra ? GD : '#fff', lineHeight: 0.92, letterSpacing: '-.01em', marginBottom: 8,
+            color: teamColor, lineHeight: 0.92, letterSpacing: '-.01em', marginBottom: 8,
             textTransform: 'uppercase',
           }}>
             {loading && !initName ? '...' : displayName}
@@ -269,14 +292,21 @@ export default function CopaSelecaoPage() {
               <span style={{
                 fontFamily: BC, fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
                 letterSpacing: '.06em', padding: '3px 10px', borderRadius: 5,
-                background: isBra ? 'rgba(245,158,11,0.15)' : 'rgba(0,230,118,0.1)',
-                color: isBra ? GD : AC, border: `1px solid ${isBra ? 'rgba(245,158,11,0.25)' : 'rgba(0,230,118,0.2)'}`,
+                background: hexToRgba(team?.strColour1 ?? null, 0.15),
+                color: teamColor,
+                border: `1px solid ${hexToRgba(team?.strColour1 ?? null, 0.3)}`,
               }}>
                 Grupo {initGroup}
               </span>
             )}
             {team?.strCountry && (
               <span style={{ fontSize: 12, color: T2 }}>{team.strCountry}</span>
+            )}
+            {team?.strColour2 && colorForDarkBg(team.strColour2, '') && (
+              <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <span style={{ width: 12, height: 12, borderRadius: 2, background: colorForDarkBg(team.strColour1, teamColor), border: `1px solid ${BDR}` }} />
+                <span style={{ width: 12, height: 12, borderRadius: 2, background: colorForDarkBg(team.strColour2, T3), border: `1px solid ${BDR}` }} />
+              </span>
             )}
           </div>
           {team?.strDescriptionEN && (
@@ -297,8 +327,8 @@ export default function CopaSelecaoPage() {
         {SUB_TABS.map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{
             padding: '13px 16px', fontSize: 14, fontWeight: 600,
-            color: subTab === t.id ? AC : T2,
-            borderBottom: `2px solid ${subTab === t.id ? AC : 'transparent'}`,
+            color: subTab === t.id ? teamColor : T2,
+            borderBottom: `2px solid ${subTab === t.id ? teamColor : 'transparent'}`,
             marginBottom: -1, transition: 'color .12s, border-color .12s',
             border: 'none', background: 'none', cursor: 'pointer',
           }}>
@@ -431,7 +461,7 @@ export default function CopaSelecaoPage() {
             {/* Próximos jogos */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <span style={{ fontFamily: BC, fontSize: 11.5, fontWeight: 800, letterSpacing: '.07em', textTransform: 'uppercase', color: AC }}>
+                <span style={{ fontFamily: BC, fontSize: 11.5, fontWeight: 800, letterSpacing: '.07em', textTransform: 'uppercase', color: teamColor }}>
                   📅 Próximos Jogos
                 </span>
                 <div style={{ flex: 1, height: 1, background: BDR }} />
@@ -443,7 +473,7 @@ export default function CopaSelecaoPage() {
                   <p style={{ padding: '16px 14px', fontSize: 12, color: T3 }}>Nenhum jogo agendado.</p>
                 ) : (
                   nextEvents.map(ev => (
-                    <GameRow key={ev.idEvent} event={ev} isBra={ev.strHomeTeam === 'Brazil' || ev.strAwayTeam === 'Brazil'} />
+                    <GameRow key={ev.idEvent} event={ev} isBra={ev.strHomeTeam === 'Brazil' || ev.strAwayTeam === 'Brazil'} accentColor={teamColor} />
                   ))
                 )}
               </div>
@@ -464,7 +494,7 @@ export default function CopaSelecaoPage() {
                   <p style={{ padding: '16px 14px', fontSize: 12, color: T3 }}>Nenhum resultado encontrado.</p>
                 ) : (
                   lastEvents.map(ev => (
-                    <GameRow key={ev.idEvent} event={ev} isBra={ev.strHomeTeam === 'Brazil' || ev.strAwayTeam === 'Brazil'} />
+                    <GameRow key={ev.idEvent} event={ev} isBra={ev.strHomeTeam === 'Brazil' || ev.strAwayTeam === 'Brazil'} accentColor={teamColor} />
                   ))
                 )}
               </div>

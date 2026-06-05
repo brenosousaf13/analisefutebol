@@ -23,6 +23,19 @@ const BC  = "'Barlow Condensed', sans-serif";
 const DEMO_LEAGUE = '4328';
 
 // ── Lineup → Player[] ─────────────────────────────────────────
+function tsdbBenchToPlayers(lineup: TsdbLineupPlayer[], isHome: boolean): Player[] {
+  const subs = lineup.filter(p => p.strSubstitute === 'Yes' && (isHome ? p.strHome === 'Yes' : p.strHome === 'No'));
+  return subs.map((p, i) => {
+    const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
+    return {
+      id: isNaN(numId) ? (isHome ? 1100 : 2100) + i : numId,
+      name: p.strPlayer,
+      number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
+      position: { x: 0, y: 0 },
+    };
+  });
+}
+
 function posToRow(pos: string): number {
   const p = pos.toUpperCase().trim();
   if (p === 'GK' || p.includes('GOALKEEPER')) return 0;
@@ -84,12 +97,19 @@ export default function CopaDemo() {
     setCreatingId(fixture.idEvent);
     try {
       const lineupData = await theSportsDbService.getLineup(fixture.idEvent);
-      let extraPlayers: Partial<{ homePlayersDef:Player[]; homePlayersOff:Player[]; awayPlayersDef:Player[]; awayPlayersOff:Player[] }> = {};
+      let extraPlayers: Partial<{ homePlayersDef:Player[]; homePlayersOff:Player[]; awayPlayersDef:Player[]; awayPlayersOff:Player[]; homeSubstitutes:Player[]; awaySubstitutes:Player[] }> = {};
       if (lineupData.length > 0) {
         const home = tsdbLineupToPlayers(lineupData, true);
         const away = tsdbLineupToPlayers(lineupData, false);
         if (home.length > 0 && away.length > 0) {
-          extraPlayers = { homePlayersDef:home, homePlayersOff:home.map(p=>({...p})), awayPlayersDef:away, awayPlayersOff:away.map(p=>({...p})) };
+          const homeSubs = tsdbBenchToPlayers(lineupData, true);
+          const awaySubs = tsdbBenchToPlayers(lineupData, false);
+          extraPlayers = {
+            homePlayersDef: home, homePlayersOff: home.map(p=>({...p})),
+            awayPlayersDef: away, awayPlayersOff: away.map(p=>({...p})),
+            ...(homeSubs.length > 0 && { homeSubstitutes: homeSubs }),
+            ...(awaySubs.length > 0 && { awaySubstitutes: awaySubs }),
+          };
         }
       }
       const id = await analysisService.createBlankAnalysis('analise_completa', {

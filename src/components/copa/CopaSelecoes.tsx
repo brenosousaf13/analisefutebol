@@ -149,7 +149,7 @@ export default function CopaSelecoes({ fixtures, savedTeams, onToggleTeam }: Pro
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
         gap: 8,
       }}>
         {filtered.map(team => {
@@ -177,7 +177,7 @@ export default function CopaSelecoes({ fixtures, savedTeams, onToggleTeam }: Pro
                   fontFamily: BC, fontSize: 15, fontWeight: 800,
                   color: isBra ? GD : T,
                   textTransform: 'uppercase', letterSpacing: '.02em',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  lineHeight: 1.2,
                 }}>
                   {teamPt(team.name)}
                 </div>
