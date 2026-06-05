@@ -160,6 +160,28 @@ export interface TsdbEquipment {
   strThumb: string | null;
 }
 
+export interface TsdbHonour {
+  id?: string;
+  idPlayer?: string | null;
+  strPlayer?: string | null;
+  idTeam?: string | null;
+  strTeam?: string | null;
+  strHonour: string;
+  strSeason: string;
+}
+
+export interface TsdbFormerTeam {
+  idFormerTeam?: string;
+  idPlayer: string;
+  strPlayer: string | null;
+  idFormer: string;
+  strFormer: string;
+  strMoveType: string | null;
+  intJoined: string | null;
+  intDeparted: string | null;
+  strLogo: string | null;
+}
+
 export interface TsdbLivescore {
   idEvent: string;
   idAPIfootball: string | null;

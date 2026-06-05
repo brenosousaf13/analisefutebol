@@ -11,6 +11,8 @@ import type {
   TsdbTv,
   TsdbHighlight,
   TsdbEquipment,
+  TsdbHonour,
+  TsdbFormerTeam,
 } from '../types/thesportsdb';
 
 const KEY = import.meta.env.VITE_THESPORTSDB_KEY ?? '6452773356';
@@ -326,6 +328,54 @@ export const theSportsDbService = {
       return data;
     } catch (e) {
       console.error('[TSDB] getTeamNextEvents', e);
+      return [];
+    }
+  },
+
+  /** Full player details by ID — cached 24 h */
+  async getPlayerDetails(playerId: string): Promise<TsdbPlayer | null> {
+    const ck = `tsdb_player_${playerId}`;
+    const cached = getCache<TsdbPlayer>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ players: TsdbPlayer[] | null }>(`lookupplayer.php?id=${playerId}`);
+      const data = json.players?.[0] ?? null;
+      if (data) setCache(ck, data, 24 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getPlayerDetails', e);
+      return null;
+    }
+  },
+
+  /** Player honours / titles — cached 24 h */
+  async getPlayerHonours(playerId: string): Promise<TsdbHonour[]> {
+    const ck = `tsdb_honours_${playerId}`;
+    const cached = getCache<TsdbHonour[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ honours: TsdbHonour[] | null }>(`lookuphonours.php?id=${playerId}`);
+      const data = json.honours ?? [];
+      setCache(ck, data, 24 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getPlayerHonours', e);
+      return [];
+    }
+  },
+
+  /** Player former teams — cached 24 h */
+  async getPlayerFormerTeams(playerId: string): Promise<TsdbFormerTeam[]> {
+    const ck = `tsdb_former_${playerId}`;
+    const cached = getCache<TsdbFormerTeam[]>(ck);
+    if (cached) return cached;
+    try {
+      const json = await get<{ formerteams: TsdbFormerTeam[] | null }>(`lookupformerteams.php?id=${playerId}`);
+      const data = json.formerteams ?? [];
+      setCache(ck, data, 24 * HOUR);
+      return data;
+    } catch (e) {
+      console.error('[TSDB] getPlayerFormerTeams', e);
       return [];
     }
   },

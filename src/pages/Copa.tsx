@@ -10,6 +10,7 @@ import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
 import CopaSelecoes from '../components/copa/CopaSelecoes';
+import CopaPlayerModal from '../components/copa/CopaPlayerModal';
 import { teamPt } from '../utils/teamNames';
 
 // ── Design tokens (v2) ────────────────────────────────────────
@@ -405,6 +406,7 @@ export default function Copa() {
   const [refreshing, setRefreshing] = useState(false);
   // Favorites: set of team names (e.g. "Brazil", "Germany")
   const [savedTeams, setSavedTeams] = useState<Set<string>>(new Set());
+  const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
   const onToggleTeam = useCallback((name: string) => {
     setSavedTeams(prev => {
       const next = new Set(prev);
@@ -728,6 +730,14 @@ export default function Copa() {
         </button>
 
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <button
+            onClick={() => setPlayerSearchOpen(true)}
+            title="Buscar jogador"
+            style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 11px', borderRadius:6, background:S, fontSize:12, fontWeight:600, border:`1px solid ${BDR}`, color:T2, cursor:'pointer' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Jogadores
+          </button>
           {lastRefresh && (
             <button
               onClick={handleRefresh}
@@ -796,6 +806,9 @@ export default function Copa() {
           {tab === 'selecoes'   && <SelecoesTab />}
         </div>
       )}
+
+      {/* ── Player search modal ── */}
+      {playerSearchOpen && <CopaPlayerModal onClose={() => setPlayerSearchOpen(false)} />}
 
       {/* ── Footer ── */}
       <div style={{ padding:'14px 24px', borderTop:`1px solid ${BDR}`, fontSize:11, color:T3, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>

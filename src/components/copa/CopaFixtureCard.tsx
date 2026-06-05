@@ -359,21 +359,36 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
           ) : activePanel === 'lineup' ? (
             lineup && lineup.length > 0
               ? <CopaLineupList lineup={lineup} />
-              : <p style={{ textAlign: 'center', fontSize: 12, color: T2, padding: '12px 0' }}>
-                  {isFinished || isLive ? 'Escalação não disponível.' : 'Escalação disponível próximo ao início.'}
-                </p>
+              : <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>{isFinished || isLive ? '📋' : '⏳'}</div>
+                  <p style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
+                    {isFinished || isLive
+                      ? 'Escalação não disponível neste jogo.'
+                      : 'A escalação é publicada algumas horas antes do jogo.'}
+                  </p>
+                </div>
           ) : activePanel === 'timeline' ? (
             (timeline ?? []).length > 0
               ? <CopaTimeline events={timeline!} homeTeamId={fixture.idHomeTeam} />
-              : <p style={{ textAlign: 'center', fontSize: 12, color: T2, padding: '12px 0' }}>
-                  {isFinished || isLive ? 'Nenhum evento registrado.' : 'Disponível durante o jogo.'}
-                </p>
+              : <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>{isFinished || isLive ? '📋' : '⏱️'}</div>
+                  <p style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
+                    {isFinished || isLive
+                      ? 'Nenhum evento registrado.'
+                      : 'Lance a lance disponível durante o jogo.'}
+                  </p>
+                </div>
           ) : activePanel === 'stats' ? (
-            matchStats
+            matchStats && (matchStats as unknown[]).length > 0
               ? <CopaMatchStats stats={matchStats} homeTeam={fixture.strHomeTeam} awayTeam={fixture.strAwayTeam} />
-              : <p style={{ textAlign: 'center', fontSize: 12, color: T2, padding: '12px 0' }}>
-                  {isFinished || isLive ? 'Estatísticas não disponíveis.' : 'Disponível durante o jogo.'}
-                </p>
+              : <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>{isFinished || isLive ? '📊' : '⏳'}</div>
+                  <p style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
+                    {isFinished || isLive
+                      ? 'Estatísticas não disponíveis para este jogo.'
+                      : 'Estatísticas disponíveis durante e após o jogo.'}
+                  </p>
+                </div>
           ) : activePanel === 'tv' ? (
             tvListings && tvListings.length > 0 ? (
               <div>
