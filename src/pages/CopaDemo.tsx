@@ -140,6 +140,7 @@ export default function CopaDemo() {
         awayTeamLogo: fixture.strAwayTeamBadge ?? '',
         matchDate: fixture.dateEvent,
         tags: ['Demo', 'Premier League'],
+        ...(fixture.strVideo && { events: [{ type: '_meta', videoUrl: fixture.strVideo }] }),
         ...extraPlayers,
       });
       navigate(`/analysis-complete/saved/${id}`);

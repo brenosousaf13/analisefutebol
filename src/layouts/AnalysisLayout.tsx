@@ -18,6 +18,8 @@ interface AnalysisLayoutProps {
     activeTeam?: 'home' | 'away';
     onTeamChange?: (team: 'home' | 'away') => void;
     onHeaderTeamClick?: (team: 'home' | 'away') => void;
+    videoUrl?: string | null;
+    onHighlightClick?: () => void;
 }
 
 const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
@@ -26,7 +28,9 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     matchInfo,
     activeTeam,
     onTeamChange,
-    onHeaderTeamClick
+    onHeaderTeamClick,
+    videoUrl,
+    onHighlightClick,
 }) => {
 
     return (
@@ -46,6 +50,8 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
                     activeTeam={activeTeam}
                     onTeamChange={onTeamChange}
                     onHeaderTeamClick={onHeaderTeamClick}
+                    videoUrl={videoUrl}
+                    onHighlightClick={onHighlightClick}
                 />
 
                 {/* Page Content */}

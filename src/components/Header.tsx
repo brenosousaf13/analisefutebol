@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Trophy } from 'lucide-react';
+import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Trophy, Play } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import TeamLogoImage from './TeamLogoImage';
@@ -21,9 +21,11 @@ interface HeaderProps {
     activeTeam?: 'home' | 'away';
     onTeamChange?: (team: 'home' | 'away') => void;
     onHeaderTeamClick?: (team: 'home' | 'away') => void;
+    videoUrl?: string | null;
+    onHighlightClick?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick }) => {
+const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
@@ -130,6 +132,17 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                             VISIT
                         </button>
                     </div>
+                )}
+
+                {/* Highlights button — desktop only, only when video available */}
+                {videoUrl && onHighlightClick && (
+                    <button
+                        onClick={onHighlightClick}
+                        className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border border-gray-700 bg-gray-800/80 text-gray-300 hover:text-white hover:border-gray-600 hover:bg-gray-700"
+                    >
+                        <Play className="w-3 h-3 fill-current" />
+                        Highlights
+                    </button>
                 )}
 
                 {/* Theme Toggle — desktop only on analysis pages */}

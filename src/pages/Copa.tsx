@@ -689,6 +689,7 @@ export default function Copa() {
         awayTeamLogo: fixture.strAwayTeamBadge ?? '',
         matchDate: fixture.dateEvent,
         tags: ['Copa 2026'],
+        ...(fixture.strVideo && { events: [{ type: '_meta', videoUrl: fixture.strVideo }] }),
         ...extraPlayers,
       });
       navigate(`/analysis-complete/saved/${id}`);

@@ -23,6 +23,7 @@ import AnalysisSidebar from '../components/AnalysisSidebar';
 import EventsSidebar from '../components/EventsSidebar';
 import ColorPickerModal from '../components/ColorPickerModal';
 import { AnalysisTabs } from '../components/AnalysisTabs';
+import HighlightsModal from '../components/HighlightsModal';
 
 function FullAnalysisPage() {
     const navigate = useNavigate();
@@ -92,6 +93,8 @@ function FullAnalysisPage() {
     const [awayCoach, setAwayCoach] = useState('');
 
     const [events, setEvents] = useState<MatchEvent[]>([]);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [showHighlights, setShowHighlights] = useState(false);
 
     // Arrows & Rectangles (Independent Logic)
     const [homeArrows, setHomeArrows] = useState<Record<string, Arrow[]>>({ 'full_home': [] });
@@ -217,7 +220,12 @@ function FullAnalysisPage() {
 
                     if (data.shareToken) setShareToken(data.shareToken);
 
-                    setEvents(data.events || []);
+                    const rawEvents = data.events || [];
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const meta = rawEvents.find((e: any) => e.type === '_meta');
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    if (meta?.videoUrl) setVideoUrl(meta.videoUrl as string);
+                    setEvents(rawEvents.filter((e: any) => e.type !== '_meta') as MatchEvent[]);
 
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
                     setAwayTeamColor(data.awayTeamColor || '#3B82F6');
@@ -820,6 +828,8 @@ function FullAnalysisPage() {
         <AnalysisLayout
             matchInfo={matchInfo}
             onHeaderTeamClick={handleTeamClick}
+            videoUrl={videoUrl}
+            onHighlightClick={() => setShowHighlights(true)}
         >
 
 
@@ -1121,6 +1131,15 @@ function FullAnalysisPage() {
             )}
             <Toaster position="bottom-right" />
         </AnalysisLayout>
+
+        {showHighlights && videoUrl && (
+            <HighlightsModal
+                videoUrl={videoUrl}
+                homeTeam={matchInfo.homeTeam}
+                awayTeam={matchInfo.awayTeam}
+                onClose={() => setShowHighlights(false)}
+            />
+        )}
     );
 }
 
