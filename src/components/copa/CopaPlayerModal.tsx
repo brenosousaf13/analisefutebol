@@ -11,7 +11,7 @@ const AC  = '#00e676';
 const GD  = '#f59e0b';
 const T   = '#dde5ef';
 const T2  = '#566b82';
-const T3  = '#243040';
+const T3  = '#4a6077';
 const BC  = "'Barlow Condensed', sans-serif";
 
 interface Props {

@@ -13,7 +13,7 @@ const AC  = '#00e676';
 const GD  = '#f59e0b';
 const T   = '#dde5ef';
 const T2  = '#566b82';
-const T3  = '#243040';
+const T3  = '#4a6077';
 const BC  = "'Barlow Condensed', sans-serif";
 
 function hexToRgba(hex: string | null, alpha: number): string {
@@ -199,7 +199,6 @@ export default function CopaSelecaoPage() {
   const [subTab, setSubTab] = useState<SubTab>('elenco');
 
   const displayName = team ? teamPt(team.strTeam) : teamPt(initName);
-  const isBra = initName === 'Brazil' || team?.strTeam === 'Brazil';
 
   // Team colors from API (strColour1/strColour2 from lookupteam)
   const teamColor = colorForDarkBg(team?.strColour1 ?? null, AC);

@@ -16,7 +16,7 @@ const BDR = 'rgba(255,255,255,0.06)';
 const AC  = '#00e676';
 const T   = '#dde5ef';
 const T2  = '#566b82';
-const T3  = '#243040';
+const T3  = '#4a6077';
 const BC  = "'Barlow Condensed', sans-serif";
 
 // Premier League 2025/26 — real finished matches to demo Copa UI
