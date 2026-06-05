@@ -646,8 +646,28 @@ export default function Copa() {
         const home = tsdbLineupToPlayers(lineupData, true);
         const away = tsdbLineupToPlayers(lineupData, false);
         if (home.length > 0 && away.length > 0) {
-          const homeSubs = tsdbBenchToPlayers(lineupData, true);
-          const awaySubs = tsdbBenchToPlayers(lineupData, false);
+          let homeSubs = tsdbBenchToPlayers(lineupData, true);
+          let awaySubs = tsdbBenchToPlayers(lineupData, false);
+
+          // Fallback: lineup API rarely includes subs — fetch from team squad
+          if (homeSubs.length === 0 || awaySubs.length === 0) {
+            try {
+              const [homeSquad, awaySquad] = await Promise.all([
+                theSportsDbService.getTeamSquad(fixture.idHomeTeam),
+                theSportsDbService.getTeamSquad(fixture.idAwayTeam),
+              ]);
+              const homeStarterIds = new Set(lineupData.filter(p => p.strHome === 'Yes' && p.strSubstitute === 'No').map(p => p.idPlayer));
+              const awayStarterIds  = new Set(lineupData.filter(p => p.strHome === 'No'  && p.strSubstitute === 'No').map(p => p.idPlayer));
+              const buildBench = (squad: TsdbPlayer[], starterIds: Set<string>, baseId: number): Player[] =>
+                squad.filter(p => !starterIds.has(p.idPlayer)).slice(0, 12).map((p, i) => {
+                  const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
+                  return { id: isNaN(numId) ? baseId + i : numId, name: p.strPlayer, number: 0, position: { x: 0, y: 0 } };
+                });
+              if (homeSubs.length === 0) homeSubs = buildBench(homeSquad, homeStarterIds, 1100);
+              if (awaySubs.length === 0) awaySubs = buildBench(awaySquad, awayStarterIds, 2100);
+            } catch { /* keep empty */ }
+          }
+
           extraPlayers = {
             homePlayersDef: home, homePlayersOff: home.map(p=>({...p})),
             awayPlayersDef: away, awayPlayersOff: away.map(p=>({...p})),
