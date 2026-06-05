@@ -825,6 +825,7 @@ function FullAnalysisPage() {
 
 
     return (
+        <>
         <AnalysisLayout
             matchInfo={matchInfo}
             onHeaderTeamClick={handleTeamClick}
@@ -1140,6 +1141,7 @@ function FullAnalysisPage() {
                 onClose={() => setShowHighlights(false)}
             />
         )}
+        </>
     );
 }
 
