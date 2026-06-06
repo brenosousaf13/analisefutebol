@@ -114,7 +114,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                         <>
                             <span className="truncate max-w-[80px] lg:max-w-[120px]">{board.title}</span>
                             {!readOnly && (
-                                <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                                <div className={`absolute right-1 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-0.5 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();

@@ -292,66 +292,69 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 )}
 
                 {/* ── Campo: protagonista absoluto ───────────────────────── */}
-                <div className="flex-1 relative min-h-0 overflow-hidden">
-                    <TacticalField
-                        {...tacticalFieldProps}
-                        orientation="vertical"
-                        tabsSlot={undefined}
-                        playerScale={1.5}
-                    />
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col items-start">
+                    {/* Container with exact field aspect ratio so FABs anchor to field bottom */}
+                    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '68 / 105' }}>
+                        <TacticalField
+                            {...tacticalFieldProps}
+                            orientation="vertical"
+                            tabsSlot={undefined}
+                            playerScale={1.5}
+                        />
 
-                    {/* Possession pill — bottom, entre os FABs */}
-                    <div
-                        className="absolute bottom-3 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
-                        style={{ left: '4.5rem', right: '4.5rem', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
-                    >
-                        <button
-                            onClick={() => setPossession('home')}
-                            className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
-                            style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'home' ? { backgroundColor: homeTeamColor } : {}) }}
+                        {/* Possession pill — bottom, entre os FABs */}
+                        <div
+                            className="absolute bottom-3 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
+                            style={{ left: '4.5rem', right: '4.5rem', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
                         >
-                            {homeTeamName}
-                        </button>
-                        <button
-                            onClick={() => setPossession('away')}
-                            className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
-                            style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'away' ? { backgroundColor: awayTeamColor } : {}) }}
-                        >
-                            {awayTeamName}
-                        </button>
-                    </div>
+                            <button
+                                onClick={() => setPossession('home')}
+                                className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
+                                style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'home' ? { backgroundColor: homeTeamColor } : {}) }}
+                            >
+                                {homeTeamName}
+                            </button>
+                            <button
+                                onClick={() => setPossession('away')}
+                                className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
+                                style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'away' ? { backgroundColor: awayTeamColor } : {}) }}
+                            >
+                                {awayTeamName}
+                            </button>
+                        </div>
 
-                    {/* Bench FAB — canto inferior esquerdo */}
-                    <button
-                        onClick={() => setIsBenchSheetOpen(true)}
-                        className="absolute bottom-3 left-3 z-[60] flex items-center gap-1.5 rounded-2xl px-3 py-2.5 border border-white/10 active:scale-95 transition-transform"
-                        style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
-                        title="Banco de reservas"
-                    >
-                        <Users className="w-4 h-4 text-gray-300" />
-                        {totalBench > 0 && (
-                            <span className="text-xs font-bold text-gray-300">{totalBench}</span>
-                        )}
-                    </button>
-
-                    {/* Tools FAB — canto inferior direito (somente edit) */}
-                    {!readOnly && (
+                        {/* Bench FAB — canto inferior esquerdo */}
                         <button
-                            onClick={() => setIsToolsSheetOpen(true)}
-                            className={`absolute bottom-3 right-3 z-[60] w-12 h-12 rounded-2xl flex items-center justify-center border border-white/10 active:scale-95 transition-transform ${activeTool !== 'select' ? 'text-gray-900' : 'text-white'}`}
-                            style={{
-                                background: activeTool !== 'select' ? homeTeamColor : 'rgba(0,0,0,0.7)',
-                                backdropFilter: activeTool === 'select' ? 'blur(8px)' : undefined,
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                            }}
-                            title="Ferramentas"
+                            onClick={() => setIsBenchSheetOpen(true)}
+                            className="absolute bottom-3 left-3 z-[60] flex items-center gap-1.5 rounded-2xl px-3 py-2.5 border border-white/10 active:scale-95 transition-transform"
+                            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                            title="Banco de reservas"
                         >
-                            {fabToolIcon}
-                            {hasUnsavedChanges && !isSaving && (
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border border-[#0b1111]" />
+                            <Users className="w-4 h-4 text-gray-300" />
+                            {totalBench > 0 && (
+                                <span className="text-xs font-bold text-gray-300">{totalBench}</span>
                             )}
                         </button>
-                    )}
+
+                        {/* Tools FAB — canto inferior direito (somente edit) */}
+                        {!readOnly && (
+                            <button
+                                onClick={() => setIsToolsSheetOpen(true)}
+                                className={`absolute bottom-3 right-3 z-[60] w-12 h-12 rounded-2xl flex items-center justify-center border border-white/10 active:scale-95 transition-transform ${activeTool !== 'select' ? 'text-gray-900' : 'text-white'}`}
+                                style={{
+                                    background: activeTool !== 'select' ? homeTeamColor : 'rgba(0,0,0,0.7)',
+                                    backdropFilter: activeTool === 'select' ? 'blur(8px)' : undefined,
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                                }}
+                                title="Ferramentas"
+                            >
+                                {fabToolIcon}
+                                {hasUnsavedChanges && !isSaving && (
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border border-[#0b1111]" />
+                                )}
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── Bench bottom sheet ─────────────────────────────────── */}
