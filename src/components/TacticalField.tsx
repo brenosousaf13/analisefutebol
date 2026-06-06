@@ -172,7 +172,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
     // Both orientations use the same coordinate system: x = left%, y = top%.
     // The field just renders portrait (vertical) or landscape (horizontal) — no swap needed.
-    const isVertical = orientation === 'vertical';
     const orientPos = (pos: { x: number; y: number }) => pos;
 
     // Get field position as percentage - CORRECT: X uses width, Y uses height
