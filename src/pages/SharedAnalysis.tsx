@@ -265,6 +265,7 @@ export default function SharedAnalysis() {
                             isSaving={false}
                             hasUnsavedChanges={false}
                             readOnly={true}
+                            hideSidePanels={true}
                             tabsSlot={
                                 (data.boards?.length || 0) > 0 ? (
                                     <AnalysisTabs

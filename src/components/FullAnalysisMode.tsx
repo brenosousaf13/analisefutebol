@@ -74,6 +74,7 @@ interface FullAnalysisModeProps {
     onMoveRectangle: (id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => void;
 
     readOnly?: boolean;
+    hideSidePanels?: boolean;
     tabsSlot?: ReactNode;
     activeBoardId?: string | null;
     onDeleteBoard?: (boardId: string) => void;
@@ -196,7 +197,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     onSave, onExport, onAddPlayer, isSaving, hasUnsavedChanges, onShare, onHeaderTeamClick,
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
-    readOnly = false, tabsSlot, activeBoardId, onDeleteBoard,
+    readOnly = false, hideSidePanels = false, tabsSlot, activeBoardId, onDeleteBoard,
 }) => {
     const isMobile = useIsMobile();
     const [possession, setPossession] = useState<'home' | 'away'>('home');
@@ -310,6 +311,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     {/* Controls bar — bench | possession | tools, BELOW the field */}
                     <div className="shrink-0 flex items-center gap-2 px-3" style={{ height: 'calc(56px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
                         {/* Bench button */}
+                        {!hideSidePanels && (
                         <button
                             onClick={() => setIsBenchSheetOpen(true)}
                             className="flex items-center gap-1.5 rounded-2xl px-3 py-2.5 border border-white/10 active:scale-95 transition-transform shrink-0"
@@ -321,6 +323,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 <span className="text-xs font-bold text-gray-300">{totalBench}</span>
                             )}
                         </button>
+                        )}
 
                         {/* Possession pill — flex-1 center */}
                         <div
@@ -374,7 +377,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 </div>
 
                 {/* ── Bench bottom sheet ─────────────────────────────────── */}
-                {isBenchSheetOpen && (
+                {isBenchSheetOpen && !hideSidePanels && (
                     <MobileBottomSheet
                         homeTeamName={homeTeamName}
                         awayTeamName={awayTeamName}
@@ -500,6 +503,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         <div className="flex flex-col lg:flex-row flex-1 h-full overflow-y-auto lg:overflow-hidden relative bg-[#0b1111]">
 
             {/* LEFT COLUMN: HOME */}
+            {!hideSidePanels && (
             <TeamColumn
                 name={homeTeamName}
                 players={homePlayersDef}
@@ -517,9 +521,10 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 onBenchPlayerClick={onBenchPlayerClick}
                 onPlayerDoubleClick={onPlayerDoubleClick}
             />
+            )}
 
             {/* CENTER: FIELD */}
-            <div className="flex flex-col w-full lg:w-[64%] h-auto lg:h-full relative shrink-0 order-1 lg:order-none">
+            <div className={`flex flex-col w-full ${hideSidePanels ? '' : 'lg:w-[64%]'} h-auto lg:h-full relative shrink-0 order-1 lg:order-none`}>
 
                 <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-30 shrink-0 relative">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
@@ -580,6 +585,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             </div>
 
             {/* RIGHT COLUMN: AWAY */}
+            {!hideSidePanels && (
             <TeamColumn
                 name={awayTeamName}
                 players={awayPlayersDef}
@@ -599,6 +605,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 onBenchPlayerClick={onBenchPlayerClick}
                 onPlayerDoubleClick={onPlayerDoubleClick}
             />
+            )}
         </div>
     );
 };
