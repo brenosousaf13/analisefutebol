@@ -652,7 +652,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const { theme } = useTheme();
 
     return (
-        <div ref={wrapperRef} className={`w-full h-full flex items-center justify-center p-2 overflow-hidden relative ${tabsSlot ? 'pt-12' : 'pt-2'}`}>
+        <div ref={wrapperRef} className={`w-full h-full flex ${orientation === 'vertical' ? 'items-start' : 'items-center'} justify-center p-2 overflow-hidden relative ${tabsSlot ? 'pt-12' : 'pt-2'}`}>
             <div
                 className="relative flex flex-col items-start justify-center"
                 style={{

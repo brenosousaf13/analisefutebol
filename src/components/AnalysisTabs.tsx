@@ -86,7 +86,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                         startEditing(board);
                     }}
                     className={`
-                        group relative flex items-center gap-1 px-2.5 py-1 lg:px-4 lg:py-2 rounded-t-lg text-xs lg:text-sm font-medium transition-colors cursor-pointer min-w-[72px] lg:min-w-[120px] justify-between
+                        group relative flex items-center gap-1 px-2.5 py-1 lg:px-4 lg:py-2 rounded-t-lg text-xs lg:text-sm font-medium transition-colors cursor-pointer min-w-[72px] lg:min-w-[120px] justify-center
                         ${activeBoardId === board.id
                             ? 'bg-[#1a1a1a] text-white'
                             : 'bg-black/60 text-gray-500 hover:text-gray-300 hover:bg-black/80'}
@@ -112,9 +112,9 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
                         </div>
                     ) : (
                         <>
-                            <span className="truncate max-w-[120px]">{board.title}</span>
+                            <span className="truncate max-w-[80px] lg:max-w-[120px]">{board.title}</span>
                             {!readOnly && (
-                                <div className={`flex items-center gap-1 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity ml-2`}>
+                                <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 ${activeBoardId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
