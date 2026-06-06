@@ -124,6 +124,10 @@ function FullAnalysisPage() {
     const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
     const [analysisSidebarTab, setAnalysisSidebarTab] = useState<'home' | 'away'>('home');
 
+    const draftKey = `zona14_draft_${routeAnalysisId || 'new'}`;
+    const [draftRecovery, setDraftRecovery] = useState<{ savedAt: string } | null>(null);
+    const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     // Global Player Notes State (Synced across all boards)
     const [allPlayerNotes, setAllPlayerNotes] = useState<Record<number, string>>({});
 
@@ -249,6 +253,15 @@ function FullAnalysisPage() {
                     }
 
                     setHasUnsavedChanges(false);
+
+                    const draftRaw = localStorage.getItem(`zona14_draft_${routeAnalysisId}`);
+                    if (draftRaw) {
+                        try {
+                            setDraftRecovery({ savedAt: JSON.parse(draftRaw).savedAt });
+                        } catch {
+                            localStorage.removeItem(`zona14_draft_${routeAnalysisId}`);
+                        }
+                    }
                 }
             }).finally(() => setLoading(false));
         }
@@ -422,6 +435,68 @@ function FullAnalysisPage() {
         }
     }, [homePlayersDef]);
 
+    // Draft check for new analyses (no DB load happens)
+    useEffect(() => {
+        if (!routeAnalysisId || routeAnalysisId === 'new') {
+            const raw = localStorage.getItem(draftKey);
+            if (raw) {
+                try {
+                    setDraftRecovery({ savedAt: JSON.parse(raw).savedAt });
+                } catch {
+                    localStorage.removeItem(draftKey);
+                }
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Auto-save draft to localStorage on every change (1s debounce)
+    useEffect(() => {
+        if (!hasUnsavedChanges) return;
+        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+        draftTimerRef.current = setTimeout(() => {
+            try {
+                localStorage.setItem(draftKey, JSON.stringify({
+                    savedAt: new Date().toISOString(),
+                    activeBoardId,
+                    defaultBoardSnapshot: defaultBoardRef.current,
+                    homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+                    homeSubstitutes, awaySubstitutes,
+                    homeBallDef, homeBallOff, awayBallDef, awayBallOff,
+                    homeArrows, awayArrows,
+                    homeRectangles, awayRectangles,
+                    boards,
+                    homeScore, awayScore,
+                    homeCoach, awayCoach,
+                    homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
+                    notasCasa, notasVisitante,
+                    homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
+                    events,
+                    allPlayerNotes,
+                    tags,
+                }));
+            } catch {
+                // localStorage unavailable (private mode, quota exceeded)
+            }
+        }, 1000);
+        return () => {
+            if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasUnsavedChanges,
+        homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+        homeSubstitutes, awaySubstitutes,
+        homeBallDef, homeBallOff, awayBallDef, awayBallOff,
+        homeArrows, awayArrows,
+        homeRectangles, awayRectangles,
+        boards, activeBoardId,
+        homeScore, awayScore,
+        homeCoach, awayCoach,
+        homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
+        notasCasa, notasVisitante,
+        homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
+        events, allPlayerNotes, tags]);
+
 
     const handleAddBoard = () => {
         // Save current first
@@ -497,6 +572,60 @@ function FullAnalysisPage() {
         }
         setBoards(prev => prev.filter(b => b.id !== id));
         setHasUnsavedChanges(true);
+    };
+
+    const handleRestoreDraft = () => {
+        const raw = localStorage.getItem(draftKey);
+        if (!raw) return;
+        try {
+            const d = JSON.parse(raw);
+            setHomePlayersDef(d.homePlayersDef || []);
+            setHomePlayersOff(d.homePlayersOff || []);
+            setAwayPlayersDef(d.awayPlayersDef || []);
+            setAwayPlayersOff(d.awayPlayersOff || []);
+            setHomeSubstitutes(d.homeSubstitutes || []);
+            setAwaySubstitutes(d.awaySubstitutes || []);
+            setHomeBallDef(d.homeBallDef || { x: 50, y: 50 });
+            setHomeBallOff(d.homeBallOff || { x: 50, y: 50 });
+            setAwayBallDef(d.awayBallDef || { x: 50, y: 50 });
+            setAwayBallOff(d.awayBallOff || { x: 50, y: 50 });
+            setHomeArrows(d.homeArrows || { 'full_home': [] });
+            setAwayArrows(d.awayArrows || { 'full_away': [] });
+            setHomeRectangles(d.homeRectangles || { 'full_home': [] });
+            setAwayRectangles(d.awayRectangles || { 'full_away': [] });
+            setBoards(d.boards || []);
+            if (d.defaultBoardSnapshot) defaultBoardRef.current = d.defaultBoardSnapshot;
+            setActiveBoardId(d.activeBoardId ?? null);
+            setHomeScore(d.homeScore || 0);
+            setAwayScore(d.awayScore || 0);
+            setHomeCoach(d.homeCoach || '');
+            setAwayCoach(d.awayCoach || '');
+            setHomeTeamColor(d.homeTeamColor || '#EF4444');
+            setAwayTeamColor(d.awayTeamColor || '#3B82F6');
+            setHomeTeamBgColor(d.homeTeamBgColor || '#090909');
+            setAwayTeamBgColor(d.awayTeamBgColor || '#090909');
+            setNotasCasa(d.notasCasa || '');
+            setNotasVisitante(d.notasVisitante || '');
+            setHomeDefensiveNotes(d.homeDefensiveNotes || '');
+            setHomeOffensiveNotes(d.homeOffensiveNotes || '');
+            setAwayDefensiveNotes(d.awayDefensiveNotes || '');
+            setAwayOffensiveNotes(d.awayOffensiveNotes || '');
+            setEvents(d.events || []);
+            if (d.allPlayerNotes) setAllPlayerNotes(d.allPlayerNotes);
+            if (d.tags) setTags(d.tags);
+            setHasUnsavedChanges(true);
+            setDraftRecovery(null);
+            toast.success('Rascunho restaurado');
+        } catch {
+            toast.error('Erro ao restaurar rascunho');
+            localStorage.removeItem(draftKey);
+            setDraftRecovery(null);
+        }
+    };
+
+    const handleDiscardDraft = () => {
+        localStorage.removeItem(draftKey);
+        setDraftRecovery(null);
     };
 
 
@@ -719,6 +848,7 @@ function FullAnalysisPage() {
             setBoards(finalBoards); // Update state with synchronized boards
             setSaveStatus('success');
             setHasUnsavedChanges(false);
+            localStorage.removeItem(draftKey);
 
             if (!routeAnalysisId || routeAnalysisId === 'new') {
                 navigate(`/analysis-complete/saved/${savedId}`, { replace: true });
@@ -833,6 +963,28 @@ function FullAnalysisPage() {
             onHighlightClick={() => setShowHighlights(true)}
         >
 
+
+            {!loading && draftRecovery && (
+                <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 bg-amber-950/95 border-b border-amber-800/40 z-10">
+                    <span className="text-amber-200 text-xs">
+                        Rascunho não salvo ({new Date(draftRecovery.savedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={handleRestoreDraft}
+                            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black rounded text-xs font-bold transition-colors"
+                        >
+                            Restaurar
+                        </button>
+                        <button
+                            onClick={handleDiscardDraft}
+                            className="text-amber-400 hover:text-amber-300 text-xs transition-colors"
+                        >
+                            Descartar
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center bg-gray-900">
