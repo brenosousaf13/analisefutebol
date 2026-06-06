@@ -150,8 +150,12 @@ export default function SharedAnalysis() {
     const offensiveNotes = viewTeam === 'home' ? data.homeOffensiveNotes : data.awayOffensiveNotes;
 
 
+    // Compute score from goal events (stored homeScore/awayScore are not auto-updated)
+    const computedHomeScore = (data.events || []).filter(e => e.type === 'goal' && e.team === 'home').length;
+    const computedAwayScore = (data.events || []).filter(e => e.type === 'goal' && e.team === 'away').length;
+
     return (
-        <div className="min-h-screen bg-panel-dark text-white flex flex-col">
+        <div className="bg-panel-dark text-white flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
             {/* Header */}
             <header className="bg-nav-dark border-b border-gray-800 p-4 shrink-0 z-40 relative">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -189,8 +193,8 @@ export default function SharedAnalysis() {
                         )}
 
                         <div className="text-right hidden sm:block">
-                            <div className="text-2xl font-black tabular-nums tracking-widest bg-black/30 px-3 py-1 rounded">
-                                {data.homeScore} - {data.homeScore !== undefined ? data.awayScore : 0}
+                            <div className="text-2xl font-black tabular-nums tracking-widest bg-black/30 px-3 py-1 rounded border border-white/10">
+                                {computedHomeScore} – {computedAwayScore}
                             </div>
                         </div>
                     </div>
@@ -200,9 +204,9 @@ export default function SharedAnalysis() {
 
 
             {/* Main Content */}
-            <main className={`flex-1 overflow-y-auto ${isFullMode ? 'flex flex-col' : 'p-4 lg:p-6'}`}>
+            <main className="flex-1 overflow-hidden flex flex-col">
                 {isFullMode ? (
-                    <div className="flex-1 relative">
+                    <div className="flex-1 overflow-hidden flex flex-col relative">
                         <FullAnalysisMode
                             homeTeamName={data.homeTeam}
                             awayTeamName={data.awayTeam}
@@ -213,13 +217,13 @@ export default function SharedAnalysis() {
 
                             homePlayersDef={activeData.homePlayersDef}
                             homePlayersOff={activeData.homePlayersOff}
-                            homeSubstitutes={activeData.homeSubstitutes || []}
+                            homeSubstitutes={[]}
                             homeArrows={{ 'full_home': activeData.homeArrowsDef || [] }}
                             homeRectangles={{ 'full_home': activeData.homeRectanglesDef || [] }}
 
                             awayPlayersDef={activeData.awayPlayersDef}
                             awayPlayersOff={activeData.awayPlayersOff}
-                            awaySubstitutes={activeData.awaySubstitutes || []}
+                            awaySubstitutes={[]}
                             awayArrows={{ 'full_away': activeData.awayArrowsDef || [] }}
                             awayRectangles={{ 'full_away': activeData.awayRectanglesDef || [] }}
 
@@ -304,7 +308,7 @@ export default function SharedAnalysis() {
                                     type: e.type as any,
                                     minute: e.minute,
                                     playerName: e.player_name,
-                                    team: 'home' as const // Simplified team logic
+                                    team: (e.team || 'home') as 'home' | 'away'
                                 }))}
                             onAddEvent={() => { }}
                             onRemoveEvent={() => { }}
@@ -316,6 +320,7 @@ export default function SharedAnalysis() {
                         />
                     </div>
                 ) : (
+                    <div className="flex-1 overflow-y-auto p-4 lg:p-6">
                     <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-140px)]">
 
                         {/* Left Panel: Field */}
@@ -434,6 +439,7 @@ export default function SharedAnalysis() {
 
                             </div>
                         </div>
+                    </div>
                     </div>
                 )}
             </main>
