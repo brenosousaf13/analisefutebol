@@ -140,36 +140,13 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
         }
     };
 
-    // Helper to map API Squad to Players
+    // Helper to map API Squad to Players — all go to bench, field starts empty
     const mapSquadToApp = (squad: ApiSquadPlayer[], isHome: boolean) => {
         const baseId = isHome ? 1000 : 2000;
-        const defaultPositions = analysisService.generateFullModePlayers(isHome);
 
-        // Simple heuristic: Try to find Goalkeepers first for position 0
-        const goalkeepers = squad.filter(p => p.position === 'Goalkeeper');
-        const outfielders = squad.filter(p => p.position !== 'Goalkeeper');
+        const starters: any[] = [];
 
-        // Reassemble: 1 GK + 10 outfielders for starters
-        // Warning: This is arbitrary. Real lineups are better, but squad is what requested.
-        const likelyStarters = [
-            ...(goalkeepers[0] ? [goalkeepers[0]] : []),
-            ...outfielders.slice(0, 10 + (goalkeepers[0] ? 0 : 1))
-        ].slice(0, 11);
-
-        const remainingSquad = squad.filter(p => !likelyStarters.includes(p));
-
-        const starters = likelyStarters.map((item, index) => {
-            const pos = defaultPositions[index] || { position: { x: 50, y: 50 } };
-            return {
-                id: item.id || (baseId + index),
-                name: item.name,
-                number: item.number || 0,
-                position: pos.position,
-                photo: item.photo
-            };
-        });
-
-        const subs = remainingSquad.map((item, index) => ({
+        const subs = squad.map((item, index) => ({
             id: item.id || (baseId + 100 + index),
             name: item.name,
             number: item.number || 0,
