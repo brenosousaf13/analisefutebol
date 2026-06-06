@@ -170,11 +170,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // Element Dragging State (for arrows and rectangles in move mode)
     const [draggingElement, setDraggingElement] = useState<{ type: 'arrow' | 'rectangle'; id: string; startX: number; startY: number } | null>(null);
 
-    // Vertical orientation: positions stored as horizontal (x=goal-to-goal, y=touchline).
-    // On vertical display we swap x↔y. Function is self-inverse.
+    // Both orientations use the same coordinate system: x = left%, y = top%.
+    // The field just renders portrait (vertical) or landscape (horizontal) — no swap needed.
     const isVertical = orientation === 'vertical';
-    const orientPos = (pos: { x: number; y: number }) =>
-        isVertical ? { x: pos.y, y: pos.x } : pos;
+    const orientPos = (pos: { x: number; y: number }) => pos;
 
     // Get field position as percentage - CORRECT: X uses width, Y uses height
     const getFieldPosition = useCallback((clientX: number, clientY: number) => {
@@ -775,10 +774,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                         {arrows.map(arrow => (
                             <line
                                 key={arrow.id}
-                                x1={`${isVertical ? arrow.startY : arrow.startX}%`}
-                                y1={`${isVertical ? arrow.startX : arrow.startY}%`}
-                                x2={`${isVertical ? arrow.endY : arrow.endX}%`}
-                                y2={`${isVertical ? arrow.endX : arrow.endY}%`}
+                                x1={`${arrow.startX}%`}
+                                y1={`${arrow.startY}%`}
+                                x2={`${arrow.endX}%`}
+                                y2={`${arrow.endY}%`}
                                 stroke="white"
                                 strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
                                 strokeDasharray="8,5"
@@ -796,10 +795,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
                         {/* Saved rectangles */}
                         {rectangles.map(rect => {
-                            const rx = isVertical ? rect.startY : rect.startX;
-                            const ry = isVertical ? rect.startX : rect.startY;
-                            const rw = isVertical ? rect.endY - rect.startY : rect.endX - rect.startX;
-                            const rh = isVertical ? rect.endX - rect.startX : rect.endY - rect.startY;
+                            const rx = rect.startX;
+                            const ry = rect.startY;
+                            const rw = rect.endX - rect.startX;
+                            const rh = rect.endY - rect.startY;
                             return (
                             <rect
                                 key={rect.id}
