@@ -12,7 +12,7 @@ import {
     Eye, EyeOff, Menu, X, ChevronDown, ChevronUp,
     Hand, MoveRight, Square, Palette, Eraser,
     FileText, Zap, Share2, Save, Loader2, UserPlus,
-    Pencil, Users,
+    Pencil, Users, Trash2,
 } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
 
@@ -75,6 +75,8 @@ interface FullAnalysisModeProps {
 
     readOnly?: boolean;
     tabsSlot?: ReactNode;
+    activeBoardId?: string | null;
+    onDeleteBoard?: (boardId: string) => void;
 }
 
 
@@ -194,7 +196,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     onSave, onExport, onAddPlayer, isSaving, hasUnsavedChanges, onShare, onHeaderTeamClick,
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
-    readOnly = false, tabsSlot,
+    readOnly = false, tabsSlot, activeBoardId, onDeleteBoard,
 }) => {
     const isMobile = useIsMobile();
     const [possession, setPossession] = useState<'home' | 'away'>('home');
@@ -291,43 +293,25 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     </div>
                 )}
 
-                {/* ── Campo: protagonista absoluto ───────────────────────── */}
-                <div className="flex-1 min-h-0 overflow-hidden flex flex-col items-start">
-                    {/* Container with exact field aspect ratio so FABs anchor to field bottom */}
-                    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '68 / 105' }}>
+                {/* ── Campo + barra de controles ────────────────────────── */}
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                    {/* Field — aspect ratio 68/105, never taller than available space minus controls bar */}
+                    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '68 / 105', maxHeight: 'calc(100% - 56px)' }}>
                         <TacticalField
                             {...tacticalFieldProps}
                             orientation="vertical"
                             tabsSlot={undefined}
                             playerScale={1.5}
                         />
+                    </div>
 
-                        {/* Possession pill — bottom, entre os FABs */}
-                        <div
-                            className="absolute bottom-3 z-[60] flex items-center rounded-full p-0.5 border border-white/10"
-                            style={{ left: '4.5rem', right: '4.5rem', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
-                        >
-                            <button
-                                onClick={() => setPossession('home')}
-                                className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
-                                style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'home' ? { backgroundColor: homeTeamColor } : {}) }}
-                            >
-                                {homeTeamName}
-                            </button>
-                            <button
-                                onClick={() => setPossession('away')}
-                                className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
-                                style={{ paddingTop: '1px', paddingBottom: '1px', ...(possession === 'away' ? { backgroundColor: awayTeamColor } : {}) }}
-                            >
-                                {awayTeamName}
-                            </button>
-                        </div>
-
-                        {/* Bench FAB — canto inferior esquerdo */}
+                    {/* Controls bar — bench | possession | tools, BELOW the field */}
+                    <div className="shrink-0 flex items-center gap-2 px-3" style={{ height: 56 }}>
+                        {/* Bench button */}
                         <button
                             onClick={() => setIsBenchSheetOpen(true)}
-                            className="absolute bottom-3 left-3 z-[60] flex items-center gap-1.5 rounded-2xl px-3 py-2.5 border border-white/10 active:scale-95 transition-transform"
-                            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                            className="flex items-center gap-1.5 rounded-2xl px-3 py-2.5 border border-white/10 active:scale-95 transition-transform shrink-0"
+                            style={{ background: 'rgba(0,0,0,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
                             title="Banco de reservas"
                         >
                             <Users className="w-4 h-4 text-gray-300" />
@@ -336,14 +320,34 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                             )}
                         </button>
 
-                        {/* Tools FAB — canto inferior direito (somente edit) */}
+                        {/* Possession pill — flex-1 center */}
+                        <div
+                            className="flex-1 flex items-center rounded-full p-0.5 border border-white/10"
+                            style={{ background: 'rgba(0,0,0,0.65)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                        >
+                            <button
+                                onClick={() => setPossession('home')}
+                                className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'home' ? 'text-white' : 'text-gray-400'}`}
+                                style={{ paddingTop: '3px', paddingBottom: '3px', ...(possession === 'home' ? { backgroundColor: homeTeamColor } : {}) }}
+                            >
+                                {homeTeamName}
+                            </button>
+                            <button
+                                onClick={() => setPossession('away')}
+                                className={`flex-1 rounded-full text-[9px] font-bold transition-all truncate text-center ${possession === 'away' ? 'text-white' : 'text-gray-400'}`}
+                                style={{ paddingTop: '3px', paddingBottom: '3px', ...(possession === 'away' ? { backgroundColor: awayTeamColor } : {}) }}
+                            >
+                                {awayTeamName}
+                            </button>
+                        </div>
+
+                        {/* Tools button */}
                         {!readOnly && (
                             <button
                                 onClick={() => setIsToolsSheetOpen(true)}
-                                className={`absolute bottom-3 right-3 z-[60] w-12 h-12 rounded-2xl flex items-center justify-center border border-white/10 active:scale-95 transition-transform ${activeTool !== 'select' ? 'text-gray-900' : 'text-white'}`}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center border border-white/10 active:scale-95 transition-transform relative shrink-0 ${activeTool !== 'select' ? 'text-gray-900' : 'text-white'}`}
                                 style={{
                                     background: activeTool !== 'select' ? homeTeamColor : 'rgba(0,0,0,0.7)',
-                                    backdropFilter: activeTool === 'select' ? 'blur(8px)' : undefined,
                                     boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                                 }}
                                 title="Ferramentas"
@@ -435,7 +439,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 </div>
 
                                 {/* Save + Share row */}
-                                <div className="flex gap-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                                <div className="flex gap-2">
                                     <button
                                         onClick={() => { onShare(); setIsToolsSheetOpen(false); }}
                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-gray-800/80 border border-gray-700/40 text-gray-300 text-sm font-medium active:scale-95 transition-all"
@@ -456,6 +460,21 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                         {isSaving ? 'Salvando…' : 'Salvar'}
                                     </button>
                                 </div>
+
+                                {/* Delete scene — only when not on Principal tab */}
+                                {activeBoardId && onDeleteBoard && (
+                                    <button
+                                        onClick={() => {
+                                            setIsToolsSheetOpen(false);
+                                            if (confirm('Excluir esta cena?')) onDeleteBoard(activeBoardId);
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm font-medium active:scale-95 transition-all mt-2"
+                                        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Excluir Cena
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </>

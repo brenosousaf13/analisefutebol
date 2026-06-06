@@ -899,6 +899,8 @@ function FullAnalysisPage() {
                     hasUnsavedChanges={hasUnsavedChanges}
                     onShare={() => setIsShareModalOpen(true)}
                     onHeaderTeamClick={handleTeamClick}
+                    activeBoardId={activeBoardId}
+                    onDeleteBoard={handleDeleteBoard}
                     tabsSlot={
                         <AnalysisTabs
                             boards={boards}

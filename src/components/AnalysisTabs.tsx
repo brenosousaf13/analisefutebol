@@ -150,10 +150,11 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
             {!readOnly && (
                 <button
                     onClick={onAddBoard}
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-gray-400 hover:text-white transition-colors ml-2 mb-1"
+                    className="flex items-center justify-center w-5 h-5 lg:w-8 lg:h-8 rounded-full bg-black/40 hover:bg-black/60 text-gray-400 hover:text-white transition-colors ml-1 lg:ml-2 mb-0.5 lg:mb-1 shrink-0"
                     title="Nova Aba"
                 >
-                    <Plus size={16} />
+                    <Plus size={11} className="lg:hidden" />
+                    <Plus size={16} className="hidden lg:block" />
                 </button>
             )}
         </div>
