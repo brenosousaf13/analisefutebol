@@ -170,9 +170,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // Element Dragging State (for arrows and rectangles in move mode)
     const [draggingElement, setDraggingElement] = useState<{ type: 'arrow' | 'rectangle'; id: string; startX: number; startY: number } | null>(null);
 
-    // Both orientations use the same coordinate system: x = left%, y = top%.
-    // The field just renders portrait (vertical) or landscape (horizontal) — no swap needed.
-    const orientPos = (pos: { x: number; y: number }) => pos;
+    // On vertical orientation the field is portrait (goals top/bottom).
+    // Stored coords: x = depth along field length, y = width position.
+    // Vertical mapping: left = stored_y (width → horizontal), top = stored_x (depth → vertical).
+    const isVertical = orientation === 'vertical';
+    const orientPos = (pos: { x: number; y: number }) =>
+        isVertical ? { x: pos.y, y: pos.x } : pos;
 
     // Get field position as percentage - CORRECT: X uses width, Y uses height
     const getFieldPosition = useCallback((clientX: number, clientY: number) => {
@@ -773,10 +776,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                         {arrows.map(arrow => (
                             <line
                                 key={arrow.id}
-                                x1={`${arrow.startX}%`}
-                                y1={`${arrow.startY}%`}
-                                x2={`${arrow.endX}%`}
-                                y2={`${arrow.endY}%`}
+                                x1={`${isVertical ? arrow.startY : arrow.startX}%`}
+                                y1={`${isVertical ? arrow.startX : arrow.startY}%`}
+                                x2={`${isVertical ? arrow.endY : arrow.endX}%`}
+                                y2={`${isVertical ? arrow.endX : arrow.endY}%`}
                                 stroke="white"
                                 strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
                                 strokeDasharray="8,5"
@@ -794,10 +797,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
                         {/* Saved rectangles */}
                         {rectangles.map(rect => {
-                            const rx = rect.startX;
-                            const ry = rect.startY;
-                            const rw = rect.endX - rect.startX;
-                            const rh = rect.endY - rect.startY;
+                            const rx = isVertical ? rect.startY : rect.startX;
+                            const ry = isVertical ? rect.startX : rect.startY;
+                            const rw = isVertical ? rect.endY - rect.startY : rect.endX - rect.startX;
+                            const rh = isVertical ? rect.endX - rect.startX : rect.endY - rect.startY;
                             return (
                             <rect
                                 key={rect.id}
