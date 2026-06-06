@@ -172,10 +172,17 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
     // On vertical orientation the field is portrait (goals top/bottom).
     // Stored coords: x = depth along field length, y = width position.
-    // Vertical mapping: left = stored_y (width → horizontal), top = stored_x (depth → vertical).
+    // 90° CW rotation: left = 100-stored_y, top = stored_x.
+    // "URL to the left" (CCW phone tilt) maps portrait back to desktop exactly.
     const isVertical = orientation === 'vertical';
     const orientPos = (pos: { x: number; y: number }) =>
-        isVertical ? { x: pos.y, y: pos.x } : pos;
+        isVertical ? { x: 100 - pos.y, y: pos.x } : pos;
+    // Inverse of orientPos (visual → stored): stored_x = visual_y, stored_y = 100 - visual_x
+    const storePos = (pos: { x: number; y: number }) =>
+        isVertical ? { x: pos.y, y: 100 - pos.x } : pos;
+    // Delta version for element dragging (no offset)
+    const storeDelta = (d: { x: number; y: number }) =>
+        isVertical ? { x: d.y, y: -d.x } : d;
 
     // Get field position as percentage - CORRECT: X uses width, Y uses height
     const getFieldPosition = useCallback((clientX: number, clientY: number) => {
@@ -260,10 +267,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     const finalX = Math.max(3, Math.min(97, newX));
                     const finalY = Math.max(3, Math.min(97, newY));
 
-                    // Compare against visual position; save as stored coords (orientPos reverses)
+                    // Compare against visual position; convert back to stored coords
                     const origVis = orientPos(draggingPlayer.position);
                     if (Math.abs(finalX - origVis.x) > 0.01 || Math.abs(finalY - origVis.y) > 0.01) {
-                        onPlayerMove(draggingPlayer.id, orientPos({ x: finalX, y: finalY }));
+                        onPlayerMove(draggingPlayer.id, storePos({ x: finalX, y: finalY }));
                     }
                 }
             }
@@ -319,7 +326,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             if (coords && onBallMove) {
                 const pos = getFieldPosition(coords.clientX, coords.clientY);
                 if (pos) {
-                    onBallMove(orientPos({
+                    onBallMove(storePos({
                         x: Math.max(1, Math.min(99, pos.x)),
                         y: Math.max(1, Math.min(99, pos.y))
                     }));
@@ -375,8 +382,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         const dy = Math.abs((currentArrow.endY ?? 0) - (currentArrow.startY ?? 0));
 
         if ((dx > 2 || dy > 2) && onAddArrow) {
-            const s = orientPos({ x: currentArrow.startX!, y: currentArrow.startY! });
-            const e2 = orientPos({ x: currentArrow.endX!, y: currentArrow.endY! });
+            const s = storePos({ x: currentArrow.startX!, y: currentArrow.startY! });
+            const e2 = storePos({ x: currentArrow.endX!, y: currentArrow.endY! });
             onAddArrow({ startX: s.x, startY: s.y, endX: e2.x, endY: e2.y, color: 'white' });
         }
 
@@ -417,8 +424,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
         // Only create rectangle if it has sufficient size
         if ((width > 3 || height > 3) && onAddRectangle) {
             // currentRect coords are visual → convert to stored
-            const s = orientPos({ x: Math.min(currentRect.startX!, currentRect.endX!), y: Math.min(currentRect.startY!, currentRect.endY!) });
-            const e2 = orientPos({ x: Math.max(currentRect.startX!, currentRect.endX!), y: Math.max(currentRect.startY!, currentRect.endY!) });
+            const s = storePos({ x: Math.min(currentRect.startX!, currentRect.endX!), y: Math.min(currentRect.startY!, currentRect.endY!) });
+            const e2 = storePos({ x: Math.max(currentRect.startX!, currentRect.endX!), y: Math.max(currentRect.startY!, currentRect.endY!) });
             onAddRectangle({
                 startX: Math.min(s.x, e2.x),
                 startY: Math.min(s.y, e2.y),
@@ -476,8 +483,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
         const deltaX = pos.x - draggingElement.startX;
         const deltaY = pos.y - draggingElement.startY;
-        // Visual delta → stored delta (swap for vertical)
-        const storedDelta = orientPos({ x: deltaX, y: deltaY });
+        // Visual delta → stored delta
+        const storedDelta = storeDelta({ x: deltaX, y: deltaY });
 
         if (draggingElement.type === 'arrow' && onMoveArrow) {
             onMoveArrow(draggingElement.id, storedDelta.x, storedDelta.y);
@@ -776,9 +783,9 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                         {arrows.map(arrow => (
                             <line
                                 key={arrow.id}
-                                x1={`${isVertical ? arrow.startY : arrow.startX}%`}
+                                x1={`${isVertical ? (100 - arrow.startY) : arrow.startX}%`}
                                 y1={`${isVertical ? arrow.startX : arrow.startY}%`}
-                                x2={`${isVertical ? arrow.endY : arrow.endX}%`}
+                                x2={`${isVertical ? (100 - arrow.endY) : arrow.endX}%`}
                                 y2={`${isVertical ? arrow.endX : arrow.endY}%`}
                                 stroke="white"
                                 strokeWidth={compact ? "1.5" : (isEraserMode ? "4" : "2")}
@@ -797,10 +804,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
                         {/* Saved rectangles */}
                         {rectangles.map(rect => {
-                            const rx = isVertical ? rect.startY : rect.startX;
+                            const rx = isVertical ? (100 - rect.endY) : rect.startX;
                             const ry = isVertical ? rect.startX : rect.startY;
-                            const rw = isVertical ? rect.endY - rect.startY : rect.endX - rect.startX;
-                            const rh = isVertical ? rect.endX - rect.startX : rect.endY - rect.startY;
+                            const rw = isVertical ? (rect.endY - rect.startY) : (rect.endX - rect.startX);
+                            const rh = isVertical ? (rect.endX - rect.startX) : (rect.endY - rect.startY);
                             return (
                             <rect
                                 key={rect.id}
