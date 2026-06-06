@@ -299,7 +299,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     <div className="flex-1 min-h-0 relative w-full overflow-hidden">
                         <TacticalField
                             {...tacticalFieldProps}
-                            orientation="vertical"
+                            orientation="horizontal"
                             tabsSlot={undefined}
                             playerScale={1.5}
                         />
