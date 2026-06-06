@@ -31,6 +31,7 @@ interface TacticalFieldProps {
     // Export modes
     compact?: boolean;
 
+    showLabels?: boolean;
     readOnly?: boolean;
     orientation?: 'vertical' | 'horizontal';
     playerScale?: number;
@@ -144,6 +145,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     rectangleColor = 'rgba(255, 200, 50, 0.3)',
     playerColor = '#EAB308', // Default yellow
     compact = false,
+    showLabels = true,
     readOnly = false,
     orientation = 'vertical',
     playerScale = 1,
@@ -714,7 +716,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     </div>
 
                     {/* BALL */}
-                    {(ballPosition || tempBallPosition) && (() => {
+                    {showLabels && (ballPosition || tempBallPosition) && (() => {
                         // tempBallPosition is visual; ballPosition is stored → transform
                         const bp = (draggingBall && tempBallPosition)
                             ? tempBallPosition
@@ -925,17 +927,19 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         )}
                                     </div>
 
-                                    <div
-                                        className="text-white text-center mt-0.5 font-medium drop-shadow-md pointer-events-none overflow-hidden"
-                                        style={{
-                                            fontSize: Math.max(8, fontSizes.name),
-                                            maxWidth: '60px',
-                                            whiteSpace: 'nowrap',
-                                            textOverflow: 'ellipsis',
-                                        }}
-                                    >
-                                        {player.name}
-                                    </div>
+                                    {showLabels && (
+                                        <div
+                                            className="text-white text-center mt-0.5 font-medium drop-shadow-md pointer-events-none overflow-hidden"
+                                            style={{
+                                                fontSize: Math.max(8, fontSizes.name),
+                                                maxWidth: '60px',
+                                                whiteSpace: 'nowrap',
+                                                textOverflow: 'ellipsis',
+                                            }}
+                                        >
+                                            {player.name}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

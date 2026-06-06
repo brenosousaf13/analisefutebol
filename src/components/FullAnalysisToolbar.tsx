@@ -11,7 +11,9 @@ import {
     Save,
     Loader2,
     UserPlus,
-    Share2
+    Share2,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { type ToolType } from './Toolbar';
 
@@ -28,6 +30,8 @@ interface FullAnalysisToolbarProps {
     hasUnsavedChanges?: boolean;
     isExporting?: boolean;
     onShare?: () => void;
+    showLabels?: boolean;
+    onToggleLabels?: () => void;
 }
 
 const ToolButton: React.FC<{
@@ -79,7 +83,9 @@ export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
     isSaving = false,
     hasUnsavedChanges = false,
     isExporting = false,
-    onShare
+    onShare,
+    showLabels = true,
+    onToggleLabels
 }) => {
     return (
         <div className="
@@ -106,6 +112,16 @@ export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
                 label="Área"
                 isActive={activeTool === 'rectangle'}
                 onClick={() => onToolChange('rectangle')}
+            />
+
+            <Divider />
+
+            {/* Toggle labels & ball */}
+            <ToolButton
+                icon={showLabels ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                label={showLabels ? 'Ocultar nomes e bola' : 'Mostrar nomes e bola'}
+                isActive={!showLabels}
+                onClick={() => onToggleLabels?.()}
             />
 
             <Divider />

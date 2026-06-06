@@ -206,6 +206,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const [mobileExpandedTeam, setMobileExpandedTeam] = useState<'home' | 'away' | null>(null);
     const [isBenchSheetOpen, setIsBenchSheetOpen] = useState(false);
     const [isToolsSheetOpen, setIsToolsSheetOpen] = useState(false);
+    const [showLabels, setShowLabels] = useState(true);
 
     const toggleMobileExpansion = (team: 'home' | 'away') =>
         setMobileExpandedTeam(prev => prev === team ? null : team);
@@ -271,6 +272,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         ballPosition: possession === 'home' ? ballPositions?.homeOff : ballPositions?.awayOff,
         onBallMove: (pos: { x: number, y: number }) => onBallMove?.(pos, possession, 'offensive'),
         ballScale: 0.7,
+        showLabels,
     };
 
     // ── MOBILE LAYOUT ────────────────────────────────────────────────────────
@@ -340,6 +342,16 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 {awayTeamName}
                             </button>
                         </div>
+
+                        {/* Toggle labels & ball */}
+                        <button
+                            onClick={() => setShowLabels(v => !v)}
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center border active:scale-95 transition-transform shrink-0 ${!showLabels ? 'border-brand-primary/50 text-brand-primary' : 'border-white/10 text-gray-300'}`}
+                            style={{ background: !showLabels ? 'rgba(39,216,136,0.12)' : 'rgba(0,0,0,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                            title={showLabels ? 'Ocultar nomes e bola' : 'Mostrar nomes e bola'}
+                        >
+                            {showLabels ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
 
                         {/* Tools button */}
                         {!readOnly && (
@@ -555,6 +567,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 isSaving={isSaving}
                                 hasUnsavedChanges={hasUnsavedChanges}
                                 onShare={onShare}
+                                showLabels={showLabels}
+                                onToggleLabels={() => setShowLabels(v => !v)}
                             />
                         </div>
                     )}
