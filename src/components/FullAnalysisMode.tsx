@@ -295,8 +295,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 
                 {/* ── Campo + barra de controles ────────────────────────── */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                    {/* Field — aspect ratio 68/105, never taller than available space minus controls bar */}
-                    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '68 / 105', maxHeight: 'calc(100% - 56px)' }}>
+                    {/* Field — fills all available space between tabs and controls bar */}
+                    <div className="flex-1 min-h-0 relative w-full overflow-hidden">
                         <TacticalField
                             {...tacticalFieldProps}
                             orientation="vertical"

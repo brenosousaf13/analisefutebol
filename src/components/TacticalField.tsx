@@ -73,10 +73,13 @@ const FieldLines: React.FC<{ orientation: 'vertical' | 'horizontal' }> = ({ orie
                 : 'top-[3%] bottom-[3%] left-1/2 w-0.5 -translate-x-1/2'
                 }`} />
 
-            {/* Center Circle */}
+            {/* Center Circle — aspect-ratio:1 keeps it round regardless of field height */}
             <div
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-white/40 rounded-full"
-                style={isVertical ? { width: '22%', height: '14%' } : { width: '14%', height: '22%' }}
+                style={isVertical
+                    ? { width: '22%', aspectRatio: '1 / 1' }
+                    : { height: '22%', aspectRatio: '1 / 1' }
+                }
             />
 
             {/* Center Dot */}
@@ -652,15 +655,18 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const { theme } = useTheme();
 
     return (
-        <div ref={wrapperRef} className={`w-full h-full flex ${orientation === 'vertical' ? 'items-start' : 'items-center'} justify-center overflow-hidden relative ${orientation === 'vertical' ? '' : (tabsSlot ? 'pt-12 p-2' : 'p-2')}`}>
+        <div ref={wrapperRef} className={`w-full h-full flex ${orientation === 'vertical' ? 'items-stretch' : 'items-center'} justify-center overflow-hidden relative ${orientation === 'vertical' ? '' : (tabsSlot ? 'pt-12 p-2' : 'p-2')}`}>
             <div
                 className="relative flex flex-col items-start justify-center"
-                style={{
+                style={orientation === 'vertical' ? {
+                    width: '100%',
+                    height: '100%',
+                } : {
                     width: dimensions.width ? `${dimensions.width}px` : '100%',
                     height: dimensions.height ? `${dimensions.height}px` : 'auto',
-                    aspectRatio: !dimensions.width ? (orientation === 'vertical' ? '68 / 105' : '105 / 68') : undefined,
+                    aspectRatio: !dimensions.width ? '105 / 68' : undefined,
                     maxWidth: '100%',
-                    maxHeight: '100%'
+                    maxHeight: '100%',
                 }}
             >
                 {tabsSlot && (
