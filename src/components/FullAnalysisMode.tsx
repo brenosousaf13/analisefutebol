@@ -284,7 +284,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             : <Pencil className="w-5 h-5" />;
 
         return (
-            <div className="flex flex-col h-full bg-[#0b1111] overflow-hidden">
+            <div className="flex flex-col flex-1 min-h-0 bg-[#0b1111] overflow-hidden">
 
                 {/* Board tabs — ultra-compact, only when present */}
                 {tabsSlot && (
@@ -306,7 +306,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     </div>
 
                     {/* Controls bar — bench | possession | tools, BELOW the field */}
-                    <div className="shrink-0 flex items-center gap-2 px-3" style={{ height: 56 }}>
+                    <div className="shrink-0 flex items-center gap-2 px-3" style={{ height: 'calc(56px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
                         {/* Bench button */}
                         <button
                             onClick={() => setIsBenchSheetOpen(true)}

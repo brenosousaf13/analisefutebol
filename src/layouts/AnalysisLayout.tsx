@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useEffect } from 'react';
 import Header from '../components/Header';
 
 interface MatchInfo {
@@ -32,9 +32,24 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     videoUrl,
     onHighlightClick,
 }) => {
+    useEffect(() => {
+        // Lock html/body scroll so the field handles all touch without page scroll.
+        // 100dvh on the container ensures the layout always matches the visible viewport,
+        // but the browser still scrolls the body unless we lock it here.
+        const html = document.documentElement;
+        const body = document.body;
+        const prevHtml = html.style.overflow;
+        const prevBody = body.style.overflow;
+        html.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
+        return () => {
+            html.style.overflow = prevHtml;
+            body.style.overflow = prevBody;
+        };
+    }, []);
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-nav-dark text-gray-100 font-sans">
+        <div className="flex w-screen overflow-hidden bg-nav-dark text-gray-100 font-sans" style={{ height: '100dvh' }}>
             {/* Sidebar Area */}
             {sidebar && (
                 <aside className="h-full shrink-0 bg-nav-dark flex flex-col z-20 border-r border-gray-800">
