@@ -78,54 +78,26 @@ function groupByDate(fixtures: TsdbEvent[]): [string, TsdbEvent[]][] {
   return [...map.entries()].sort(([a],[b]) => a < b ? -1 : 1);
 }
 
-// ── Lineup → Player[] ─────────────────────────────────────────
-function tsdbBenchToPlayers(lineup: TsdbLineupPlayer[], isHome: boolean): Player[] {
-  const subs = lineup.filter(p => p.strSubstitute === 'Yes' && (isHome ? p.strHome === 'Yes' : p.strHome === 'No'));
-  return subs.map((p, i) => {
-    const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
-    return {
-      id: isNaN(numId) ? (isHome ? 1100 : 2100) + i : numId,
-      name: p.strPlayer,
-      number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
-      position: { x: 0, y: 0 },
-    };
-  });
-}
-
-function posToRow(pos: string): number {
-  const p = pos.toUpperCase().trim();
-  if (p === 'GK' || p.includes('GOALKEEPER')) return 0;
-  if (['CB','RB','LB','RWB','LWB'].includes(p) ||
-      ['DEFENDER','CENTRE-BACK','RIGHT BACK','LEFT BACK','WING BACK','FULLBACK','CENTRE BACK'].some(x => p.includes(x))) return 1;
-  if (['CF','ST','RW','LW'].includes(p) ||
-      ['STRIKER','FORWARD','WINGER','WING','CENTRE-FORWARD'].some(x => p.includes(x))) return 3;
-  return 2;
-}
-
-function tsdbLineupToPlayers(lineup: TsdbLineupPlayer[], isHome: boolean): Player[] {
-  const starters = lineup.filter(p => p.strSubstitute === 'No' && (isHome ? p.strHome === 'Yes' : p.strHome === 'No'));
-  if (starters.length === 0) return [];
-  const rowMap: Record<number, TsdbLineupPlayer[]> = { 0:[], 1:[], 2:[], 3:[] };
-  starters.forEach(p => rowMap[posToRow(p.strPosition)].push(p));
-  const usedRows = ([0,1,2,3] as const).filter(r => rowMap[r].length > 0);
-  const totalRows = usedRows.length;
-  const result: Player[] = [];
-  usedRows.forEach((row, ri) => {
-    const xPct = totalRows > 1 ? ri / (totalRows - 1) : 0;
-    const x = isHome ? 5 + xPct * 40 : 95 - xPct * 40;
-    const rowPlayers = rowMap[row];
-    rowPlayers.forEach((p, i) => {
+// ── Lineup/Squad → bench Player[] ────────────────────────────
+function lineupToBench(lineup: TsdbLineupPlayer[], isHome: boolean, baseId: number): Player[] {
+  return lineup
+    .filter(p => isHome ? p.strHome === 'Yes' : p.strHome === 'No')
+    .map((p, i) => {
       const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
-      result.push({
-        id: isNaN(numId) ? (isHome ? 1000 : 2000) + ri*100 + i : numId,
+      return {
+        id: isNaN(numId) ? baseId + i : numId,
         name: p.strPlayer,
         number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
-        position: { x, y: (100 / (rowPlayers.length + 1)) * (i + 1) },
-        isStarter: true,
-      });
+        position: { x: 0, y: 0 },
+      };
     });
+}
+
+function squadToBench(squad: TsdbPlayer[], baseId: number): Player[] {
+  return squad.slice(0, 23).map((p, i) => {
+    const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
+    return { id: isNaN(numId) ? baseId + i : numId, name: p.strPlayer, number: 0, position: { x: 0, y: 0 } };
   });
-  return result;
 }
 
 // ── Countdown hook ────────────────────────────────────────────
@@ -640,47 +612,35 @@ export default function Copa() {
     return [...live, ...today].sort((a,b) => a.strTimestamp.localeCompare(b.strTimestamp));
   }, [fixtures, liveFixtures, todayStr]);
 
-  // ── Create analysis with lineup ───────────────────────────
+  // ── Create analysis with Copa API players in bench ───────────
   const handleCreateAnalysis = useCallback(async (fixture: TsdbEvent) => {
     if (!user) { navigate('/login'); return; }
     setCreatingId(fixture.idEvent);
     try {
-      const lineupData = await theSportsDbService.getLineup(fixture.idEvent);
-      let extraPlayers: Partial<{ homePlayersDef:Player[]; homePlayersOff:Player[]; awayPlayersDef:Player[]; awayPlayersOff:Player[]; homeSubstitutes:Player[]; awaySubstitutes:Player[] }> = {};
-      if (lineupData.length > 0) {
-        const home = tsdbLineupToPlayers(lineupData, true);
-        const away = tsdbLineupToPlayers(lineupData, false);
-        if (home.length > 0 && away.length > 0) {
-          let homeSubs = tsdbBenchToPlayers(lineupData, true);
-          let awaySubs = tsdbBenchToPlayers(lineupData, false);
+      let homeSubs: Player[] = [];
+      let awaySubs: Player[] = [];
 
-          // Fallback: lineup API rarely includes subs — fetch from team squad
-          if (homeSubs.length === 0 || awaySubs.length === 0) {
-            try {
-              const [homeSquad, awaySquad] = await Promise.all([
-                theSportsDbService.getTeamSquad(fixture.idHomeTeam),
-                theSportsDbService.getTeamSquad(fixture.idAwayTeam),
-              ]);
-              const homeStarterIds = new Set(lineupData.filter(p => p.strHome === 'Yes' && p.strSubstitute === 'No').map(p => p.idPlayer));
-              const awayStarterIds  = new Set(lineupData.filter(p => p.strHome === 'No'  && p.strSubstitute === 'No').map(p => p.idPlayer));
-              const buildBench = (squad: TsdbPlayer[], starterIds: Set<string>, baseId: number): Player[] =>
-                squad.filter(p => !starterIds.has(p.idPlayer)).slice(0, 12).map((p, i) => {
-                  const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
-                  return { id: isNaN(numId) ? baseId + i : numId, name: p.strPlayer, number: 0, position: { x: 0, y: 0 } };
-                });
-              if (homeSubs.length === 0) homeSubs = buildBench(homeSquad, homeStarterIds, 1100);
-              if (awaySubs.length === 0) awaySubs = buildBench(awaySquad, awayStarterIds, 2100);
-            } catch { /* keep empty */ }
-          }
-
-          extraPlayers = {
-            homePlayersDef: home, homePlayersOff: home.map(p=>({...p})),
-            awayPlayersDef: away, awayPlayersOff: away.map(p=>({...p})),
-            ...(homeSubs.length > 0 && { homeSubstitutes: homeSubs }),
-            ...(awaySubs.length > 0 && { awaySubstitutes: awaySubs }),
-          };
+      // Try lineup first (has real names + squad numbers)
+      try {
+        const lineupData = await theSportsDbService.getLineup(fixture.idEvent);
+        if (lineupData.length > 0) {
+          homeSubs = lineupToBench(lineupData, true, 1100);
+          awaySubs = lineupToBench(lineupData, false, 2100);
         }
+      } catch { /* fall through to squad */ }
+
+      // Fall back to full squad when lineup is empty
+      if (homeSubs.length === 0 || awaySubs.length === 0) {
+        try {
+          const [homeSquad, awaySquad] = await Promise.all([
+            theSportsDbService.getTeamSquad(fixture.idHomeTeam),
+            theSportsDbService.getTeamSquad(fixture.idAwayTeam),
+          ]);
+          if (homeSubs.length === 0) homeSubs = squadToBench(homeSquad, 1100);
+          if (awaySubs.length === 0) awaySubs = squadToBench(awaySquad, 2100);
+        } catch { /* keep empty */ }
       }
+
       const id = await analysisService.createBlankAnalysis('analise_completa', {
         titulo: `${fixture.strHomeTeam} × ${fixture.strAwayTeam}`,
         homeTeam: fixture.strHomeTeam,
@@ -690,7 +650,8 @@ export default function Copa() {
         matchDate: fixture.dateEvent,
         tags: ['Copa 2026'],
         ...(fixture.strVideo && { events: [{ type: '_meta', videoUrl: fixture.strVideo }] }),
-        ...extraPlayers,
+        ...(homeSubs.length > 0 && { homeSubstitutes: homeSubs }),
+        ...(awaySubs.length > 0 && { awaySubstitutes: awaySubs }),
       });
       navigate(`/analysis-complete/saved/${id}`);
     } catch {
