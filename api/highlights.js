@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'YouTube API key not configured' });
   }
 
-  const query = `melhores momentos ${home} ${away} Copa do Mundo 2026`;
+  const query = `melhores momentos ${home} ${away} Copa do Mundo FIFA 2026`;
 
   try {
     const params = new URLSearchParams({

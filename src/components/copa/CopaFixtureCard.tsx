@@ -358,16 +358,35 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
               Carregando...
             </div>
           ) : activePanel === 'highlight' ? (
-            videoId ? (
-              <div style={{ borderRadius: 6, overflow: 'hidden', aspectRatio: '16/9' }}>
-                <iframe
-                  src={`https://www.youtube.com/embed/${videoId}`}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
+            videoId ? (() => {
+              const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+              const thumb = youtubeHighlight?.thumbnail ?? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+              return (
+                <a href={ytUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
+                  <div style={{ position: 'relative', borderRadius: 6, overflow: 'hidden', aspectRatio: '16/9', background: '#000', cursor: 'pointer' }}>
+                    <img src={thumb} alt="Melhores Momentos" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(0,0,0,0.3)' }}>
+                      <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      </div>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: '#fff', letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                        Assistir no YouTube
+                      </span>
+                    </div>
+                    {youtubeHighlight && (
+                      <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,230,118,0.9)', borderRadius: 4, padding: '3px 7px', fontSize: 9, fontWeight: 800, color: '#000', letterSpacing: '.05em' }}>
+                        CAZÉTV
+                      </div>
+                    )}
+                  </div>
+                  {youtubeHighlight?.title && (
+                    <p style={{ margin: '6px 0 0', fontSize: 11, color: T2, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
+                      {youtubeHighlight.title}
+                    </p>
+                  )}
+                </a>
+              );
+            })() : (
               <p style={{ textAlign: 'center', fontSize: 12, color: T2, padding: '12px 0' }}>Highlight não disponível.</p>
             )
           ) : activePanel === 'lineup' ? (
