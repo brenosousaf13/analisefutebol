@@ -645,6 +645,11 @@ export default function Copa() {
         awayTeamLogo: fixture.strAwayTeamBadge ?? '',
         matchDate: fixture.dateEvent,
         tags: ['Copa 2026'],
+        // Campo vazio — jogadores vão para o banco, não para o campo
+        homePlayersDef: [],
+        homePlayersOff: [],
+        awayPlayersDef: [],
+        awayPlayersOff: [],
         ...(fixture.strVideo && { events: [{ type: '_meta', videoUrl: fixture.strVideo }] }),
         ...(homeSubs.length > 0 && { homeSubstitutes: homeSubs }),
         ...(awaySubs.length > 0 && { awaySubstitutes: awaySubs }),
