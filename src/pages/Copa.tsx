@@ -755,8 +755,8 @@ export default function Copa() {
       );
     }
 
-    // Highlights gallery — games that have a YouTube video
-    const withVideo = pastFixtures.filter(f => f.strVideo);
+    // Highlights gallery — CazéTV cached highlights take priority over strVideo
+    const withVideo = pastFixtures.filter(f => highlights.has(f.idEvent) || f.strVideo);
 
     const byDate = groupByDate(pastFixtures);
     return (
@@ -772,16 +772,26 @@ export default function Copa() {
             </div>
             <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:4, scrollbarWidth:'none' }}>
               {withVideo.slice(0,10).map(f => {
-                const vid = f.strVideo ? f.strVideo.match(/[?&]v=([^&#]+)/) || f.strVideo.match(/youtu\.be\/([^?&#]+)/) : null;
-                const vidId = vid ? vid[1] : null;
+                const hl = highlights.get(f.idEvent);
+                let videoId: string | null = null;
+                let videoUrl: string = f.strVideo ?? '';
+                if (hl) {
+                  videoId = hl.videoId;
+                  videoUrl = `https://www.youtube.com/watch?v=${hl.videoId}`;
+                } else if (f.strVideo) {
+                  const vid = f.strVideo.match(/[?&]v=([^&#]+)/) || f.strVideo.match(/youtu\.be\/([^?&#]+)/);
+                  videoId = vid ? vid[1] : null;
+                  videoUrl = f.strVideo;
+                }
+                const thumbnail = hl?.thumbnail ?? (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
                 return (
-                  <a key={f.idEvent} href={f.strVideo!} target="_blank" rel="noopener noreferrer" style={{
+                  <a key={f.idEvent} href={videoUrl} target="_blank" rel="noopener noreferrer" style={{
                     flexShrink:0, width:180, borderRadius:6, overflow:'hidden',
-                    border:`1px solid ${BDR}`, textDecoration:'none',
+                    border:`1px solid ${hl ? 'rgba(0,230,118,0.25)' : BDR}`, textDecoration:'none',
                   }}>
                     <div style={{ height:100, background:S2, position:'relative', overflow:'hidden' }}>
-                      {vidId && (
-                        <img src={`https://img.youtube.com/vi/${vidId}/hqdefault.jpg`} alt={f.strEvent}
+                      {thumbnail && (
+                        <img src={thumbnail} alt={f.strEvent}
                           style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                       )}
                       <div style={{
@@ -792,6 +802,11 @@ export default function Copa() {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         </div>
                       </div>
+                      {hl && (
+                        <div style={{ position:'absolute', top:5, right:5, background:'rgba(0,230,118,0.85)', borderRadius:3, padding:'2px 5px', fontSize:8, fontWeight:700, color:'#000', letterSpacing:'.04em' }}>
+                          CAZÉTV
+                        </div>
+                      )}
                     </div>
                     <div style={{ padding:'7px 8px', background:S }}>
                       <div style={{ fontSize:11, fontWeight:600, color:T, lineHeight:1.3 }}>

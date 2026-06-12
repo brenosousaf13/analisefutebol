@@ -1,4 +1,4 @@
-const CAZE_CHANNEL = 'UCgUGFxce1GEMEggFMgEGRuw';
+const CAZE_CHANNEL = 'UCZiYbVptd3PVPf4f6eR6UaQ';
 const YT_ENDPOINT  = 'https://www.googleapis.com/youtube/v3/search';
 
 export default async function handler(req, res) {
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'YouTube API key not configured' });
   }
 
-  const query = `melhores momentos ${home} ${away} Copa do Mundo 2026`;
+  const query = `melhores momentos ${home} ${away} Copa do Mundo`;
 
   try {
     const params = new URLSearchParams({
@@ -22,8 +22,8 @@ export default async function handler(req, res) {
       channelId:  CAZE_CHANNEL,
       q:          query,
       type:       'video',
-      order:      'date',
-      maxResults: '3',
+      order:      'relevance',
+      maxResults: '5',
       key:        apiKey,
     });
 
