@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
 import { useAuth } from '../contexts/AuthContext';
-import type { TsdbEvent, TsdbLineupPlayer, TsdbPlayer } from '../types/thesportsdb';
+import type { TsdbEvent, TsdbPlayer } from '../types/thesportsdb';
 import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
@@ -82,23 +82,9 @@ function groupByDate(fixtures: TsdbEvent[]): [string, TsdbEvent[]][] {
   return [...map.entries()].sort(([a],[b]) => a < b ? -1 : 1);
 }
 
-// ── Lineup/Squad → bench Player[] ────────────────────────────
-function lineupToBench(lineup: TsdbLineupPlayer[], isHome: boolean, baseId: number): Player[] {
-  return lineup
-    .filter(p => isHome ? p.strHome === 'Yes' : p.strHome === 'No')
-    .map((p, i) => {
-      const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
-      return {
-        id: isNaN(numId) ? baseId + i : numId,
-        name: p.strPlayer,
-        number: parseInt(p.intSquadNumber ?? '0', 10) || 0,
-        position: { x: 0, y: 0 },
-      };
-    });
-}
-
+// ── Squad → bench Player[] ────────────────────────────────────
 function squadToBench(squad: TsdbPlayer[], baseId: number): Player[] {
-  return squad.slice(0, 23).map((p, i) => {
+  return squad.map((p, i) => {
     const numId = parseInt(p.idPlayer.replace(/\D/g,'').slice(-7), 10);
     return { id: isNaN(numId) ? baseId + i : numId, name: p.strPlayer, number: 0, position: { x: 0, y: 0 } };
   });
@@ -616,26 +602,15 @@ export default function Copa() {
       let homeSubs: Player[] = [];
       let awaySubs: Player[] = [];
 
-      // Try lineup first (has real names + squad numbers)
+      // Always fetch full squad so all players are available for substitutions
       try {
-        const lineupData = await theSportsDbService.getLineup(fixture.idEvent);
-        if (lineupData.length > 0) {
-          homeSubs = lineupToBench(lineupData, true, 1100);
-          awaySubs = lineupToBench(lineupData, false, 2100);
-        }
-      } catch { /* fall through to squad */ }
-
-      // Fall back to full squad when lineup is empty
-      if (homeSubs.length === 0 || awaySubs.length === 0) {
-        try {
-          const [homeSquad, awaySquad] = await Promise.all([
-            theSportsDbService.getTeamSquad(fixture.idHomeTeam),
-            theSportsDbService.getTeamSquad(fixture.idAwayTeam),
-          ]);
-          if (homeSubs.length === 0) homeSubs = squadToBench(homeSquad, 1100);
-          if (awaySubs.length === 0) awaySubs = squadToBench(awaySquad, 2100);
-        } catch { /* keep empty */ }
-      }
+        const [homeSquad, awaySquad] = await Promise.all([
+          theSportsDbService.getTeamSquad(fixture.idHomeTeam),
+          theSportsDbService.getTeamSquad(fixture.idAwayTeam),
+        ]);
+        homeSubs = squadToBench(homeSquad, 1100);
+        awaySubs = squadToBench(awaySquad, 2100);
+      } catch { /* keep empty */ }
 
       const id = await analysisService.createBlankAnalysis('analise_completa', {
         titulo: `${fixture.strHomeTeam} × ${fixture.strAwayTeam}`,
