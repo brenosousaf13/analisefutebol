@@ -49,11 +49,42 @@ function zeroed(name: string): TeamStat {
   return { name, badge: null, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
 }
 
-function buildStandings(fixtures: TsdbEvent[]): Map<string, Map<string, TeamStat>> {
-  const groups  = new Map<string, Map<string, TeamStat>>();
-  const badges  = new Map<string, string>();
+// Copa 2026 group stage = rounds 1-3 (each team plays 3 group matches)
+const GROUP_ROUNDS = new Set(['1', '2', '3']);
 
-  // Pass 1 — register all teams (even teams with 0 played)
+function applyResults(
+  groups: Map<string, Map<string, TeamStat>>,
+  fixtures: TsdbEvent[],
+): void {
+  fixtures.forEach(f => {
+    if (!FINISHED.has(f.strStatus)) return;
+    const hs  = parseInt(f.intHomeScore ?? '', 10);
+    const as_ = parseInt(f.intAwayScore ?? '', 10);
+    if (isNaN(hs) || isNaN(as_)) return;
+
+    // Find the group that contains both teams
+    for (const gm of groups.values()) {
+      if (!gm.has(f.strHomeTeam) || !gm.has(f.strAwayTeam)) continue;
+      const home = gm.get(f.strHomeTeam)!;
+      const away = gm.get(f.strAwayTeam)!;
+      home.played++; away.played++;
+      home.gf += hs; home.ga += as_;
+      away.gf += as_; away.ga += hs;
+      home.gd = home.gf - home.ga;
+      away.gd = away.gf - away.ga;
+      if (hs > as_) { home.wins++; home.pts += 3; away.losses++; }
+      else if (hs < as_) { away.wins++; away.pts += 3; home.losses++; }
+      else { home.draws++; home.pts++; away.draws++; away.pts++; }
+      break;
+    }
+  });
+}
+
+// ── Strategy 1: use strGroup field ────────────────────────────
+function buildFromStrGroup(fixtures: TsdbEvent[]): Map<string, Map<string, TeamStat>> {
+  const groups = new Map<string, Map<string, TeamStat>>();
+  const badges = new Map<string, string>();
+
   fixtures.forEach(f => {
     const g = normalizeGroup(f.strGroup);
     if (!g) return;
@@ -65,40 +96,78 @@ function buildStandings(fixtures: TsdbEvent[]): Map<string, Map<string, TeamStat
     if (!gm.has(f.strAwayTeam)) gm.set(f.strAwayTeam, zeroed(f.strAwayTeam));
   });
 
-  // Pass 2 — compute stats from finished matches
-  fixtures.forEach(f => {
-    const g = normalizeGroup(f.strGroup);
-    if (!g || !FINISHED.has(f.strStatus)) return;
-    const hs  = parseInt(f.intHomeScore ?? '', 10);
-    const as_ = parseInt(f.intAwayScore ?? '', 10);
-    if (isNaN(hs) || isNaN(as_)) return;
+  if (groups.size === 0) return groups;
 
-    const gm   = groups.get(g)!;
-    const home = gm.get(f.strHomeTeam)!;
-    const away = gm.get(f.strAwayTeam)!;
-
-    home.played++; away.played++;
-    home.gf += hs; home.ga += as_;
-    away.gf += as_; away.ga += hs;
-    home.gd = home.gf - home.ga;
-    away.gd = away.gf - away.ga;
-
-    if (hs > as_) {
-      home.wins++; home.pts += 3; away.losses++;
-    } else if (hs < as_) {
-      away.wins++; away.pts += 3; home.losses++;
-    } else {
-      home.draws++; home.pts += 1;
-      away.draws++; away.pts += 1;
-    }
-  });
-
-  // Attach badges
-  groups.forEach(gm => {
-    gm.forEach((stat, name) => { stat.badge = badges.get(name) ?? null; });
-  });
-
+  applyResults(groups, fixtures);
+  groups.forEach(gm => gm.forEach((stat, name) => { stat.badge = badges.get(name) ?? null; }));
   return groups;
+}
+
+// ── Strategy 2: infer groups from fixture graph (rounds 1-3) ─
+// Teams that all play each other form a connected component = one group.
+function buildFromGraph(fixtures: TsdbEvent[]): Map<string, Map<string, TeamStat>> {
+  const groups = new Map<string, Map<string, TeamStat>>();
+  const badges = new Map<string, string>();
+
+  // Use only group-stage rounds to avoid knockout matches merging groups
+  const gsFixtures = fixtures.filter(f => GROUP_ROUNDS.has(f.intRound ?? ''));
+  if (gsFixtures.length === 0) return groups;
+
+  const adj = new Map<string, Set<string>>();
+  gsFixtures.forEach(f => {
+    if (f.strHomeTeamBadge) badges.set(f.strHomeTeam, f.strHomeTeamBadge);
+    if (f.strAwayTeamBadge) badges.set(f.strAwayTeam, f.strAwayTeamBadge);
+    if (!adj.has(f.strHomeTeam)) adj.set(f.strHomeTeam, new Set());
+    if (!adj.has(f.strAwayTeam)) adj.set(f.strAwayTeam, new Set());
+    adj.get(f.strHomeTeam)!.add(f.strAwayTeam);
+    adj.get(f.strAwayTeam)!.add(f.strHomeTeam);
+  });
+
+  // Connected components (BFS)
+  const visited = new Set<string>();
+  const components: string[][] = [];
+  adj.forEach((_, team) => {
+    if (visited.has(team)) return;
+    const comp: string[] = [];
+    const queue = [team];
+    while (queue.length) {
+      const t = queue.shift()!;
+      if (visited.has(t)) continue;
+      visited.add(t); comp.push(t);
+      adj.get(t)!.forEach(n => { if (!visited.has(n)) queue.push(n); });
+    }
+    components.push(comp);
+  });
+
+  // Only groups of exactly 4 teams
+  const validGroups = components.filter(c => c.length === 4);
+
+  // Sort groups alphabetically by smallest pt-BR team name → assigns A, B, C...
+  validGroups.sort((a, b) => {
+    const minA = a.map(teamPt).sort((x, y) => x.localeCompare(y, 'pt-BR'))[0];
+    const minB = b.map(teamPt).sort((x, y) => x.localeCompare(y, 'pt-BR'))[0];
+    return minA.localeCompare(minB, 'pt-BR');
+  });
+
+  validGroups.forEach((comp, i) => {
+    const letter = String.fromCharCode(65 + i); // A, B, C...
+    const gm = new Map<string, TeamStat>();
+    comp.forEach(name => gm.set(name, zeroed(name)));
+    groups.set(letter, gm);
+  });
+
+  applyResults(groups, gsFixtures);
+  groups.forEach(gm => gm.forEach((stat, name) => { stat.badge = badges.get(name) ?? null; }));
+  return groups;
+}
+
+function buildStandings(fixtures: TsdbEvent[]): Map<string, Map<string, TeamStat>> {
+  // Try strGroup first (TheSportsDB may or may not populate this)
+  const byGroup = buildFromStrGroup(fixtures);
+  if (byGroup.size > 0) return byGroup;
+
+  // Fallback: infer from fixture matchups (group stage = rounds 1-3)
+  return buildFromGraph(fixtures);
 }
 
 // ── Sub-components ─────────────────────────────────────────────
