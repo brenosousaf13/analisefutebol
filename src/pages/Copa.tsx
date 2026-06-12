@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
 import { analysisService } from '../services/analysisService';
 import { useAuth } from '../contexts/AuthContext';
-import type { TsdbEvent, TsdbLineupPlayer, TsdbStanding, TsdbPlayer } from '../types/thesportsdb';
+import type { TsdbEvent, TsdbLineupPlayer, TsdbPlayer } from '../types/thesportsdb';
 import type { Player } from '../types/Player';
 import CopaFixtureCard from '../components/copa/CopaFixtureCard';
 import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
@@ -477,7 +477,6 @@ export default function Copa() {
 
   const [fixtures, setFixtures] = useState<TsdbEvent[]>([]);
   const [liveFixtures, setLiveFixtures] = useState<TsdbEvent[]>([]);
-  const [standings, setStandings] = useState<TsdbStanding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [tab, setTab] = useState<Tab>('calendario');
@@ -519,10 +518,9 @@ export default function Copa() {
 
   // ── Fetch ─────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([theSportsDbService.getAllFixtures(), theSportsDbService.getStandings()])
-      .then(([data, table]) => {
+    theSportsDbService.getAllFixtures()
+      .then(data => {
         setFixtures(data);
-        setStandings(table);
         setLastRefresh(new Date());
       })
       .catch(() => setError(true))
@@ -814,7 +812,6 @@ export default function Copa() {
       <div style={{ paddingTop:16 }}>
         <CopaGroupsDisplay
           fixtures={fixtures}
-          standings={standings}
           savedTeams={savedTeams}
           onToggleTeam={onToggleTeam}
         />
