@@ -755,8 +755,8 @@ export default function Copa() {
       );
     }
 
-    // Highlights gallery — CazéTV cached highlights take priority over strVideo
-    const withVideo = pastFixtures.filter(f => highlights.has(f.idEvent) || f.strVideo);
+    // Highlights gallery — somente vídeos do CazéTV (não mistura com strVideo de outros canais)
+    const withVideo = pastFixtures.filter(f => highlights.has(f.idEvent));
 
     const byDate = groupByDate(pastFixtures);
     return (
@@ -772,41 +772,28 @@ export default function Copa() {
             </div>
             <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:4, scrollbarWidth:'none' }}>
               {withVideo.slice(0,10).map(f => {
-                const hl = highlights.get(f.idEvent);
-                let videoId: string | null = null;
-                let videoUrl: string = f.strVideo ?? '';
-                if (hl) {
-                  videoId = hl.videoId;
-                  videoUrl = `https://www.youtube.com/watch?v=${hl.videoId}`;
-                } else if (f.strVideo) {
-                  const vid = f.strVideo.match(/[?&]v=([^&#]+)/) || f.strVideo.match(/youtu\.be\/([^?&#]+)/);
-                  videoId = vid ? vid[1] : null;
-                  videoUrl = f.strVideo;
-                }
-                const thumbnail = hl?.thumbnail ?? (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
+                const hl = highlights.get(f.idEvent)!; // only CazéTV items reach here
+                const videoUrl = `https://www.youtube.com/watch?v=${hl.videoId}`;
+                const thumbnail = hl.thumbnail ?? `https://img.youtube.com/vi/${hl.videoId}/hqdefault.jpg`;
                 return (
                   <a key={f.idEvent} href={videoUrl} target="_blank" rel="noopener noreferrer" style={{
                     flexShrink:0, width:180, borderRadius:6, overflow:'hidden',
-                    border:`1px solid ${hl ? 'rgba(0,230,118,0.25)' : BDR}`, textDecoration:'none',
+                    border:'1px solid rgba(0,230,118,0.25)', textDecoration:'none',
                   }}>
                     <div style={{ height:100, background:S2, position:'relative', overflow:'hidden' }}>
-                      {thumbnail && (
-                        <img src={thumbnail} alt={f.strEvent}
-                          style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                      )}
+                      <img src={thumbnail} alt={f.strEvent}
+                        style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                       <div style={{
                         position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
-                        background:'rgba(0,0,0,0.35)',
+                        background:'rgba(0,0,0,0.3)',
                       }}>
                         <div style={{ width:32, height:32, borderRadius:'50%', background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         </div>
                       </div>
-                      {hl && (
-                        <div style={{ position:'absolute', top:5, right:5, background:'rgba(0,230,118,0.85)', borderRadius:3, padding:'2px 5px', fontSize:8, fontWeight:700, color:'#000', letterSpacing:'.04em' }}>
-                          CAZÉTV
-                        </div>
-                      )}
+                      <div style={{ position:'absolute', top:5, right:5, background:'rgba(0,230,118,0.9)', borderRadius:3, padding:'2px 5px', fontSize:8, fontWeight:700, color:'#000', letterSpacing:'.04em' }}>
+                        CAZÉTV
+                      </div>
                     </div>
                     <div style={{ padding:'7px 8px', background:S }}>
                       <div style={{ fontSize:11, fontWeight:600, color:T, lineHeight:1.3 }}>
