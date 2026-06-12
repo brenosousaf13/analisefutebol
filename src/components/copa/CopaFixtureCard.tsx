@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { theSportsDbService } from '../../services/theSportsDbService';
 import type { TsdbEvent, TsdbLineupPlayer, TsdbTimeline, TsdbEventStats, TsdbTv } from '../../types/thesportsdb';
+import type { HighlightData } from '../../services/highlightsService';
 import { teamPt } from '../../utils/teamNames';
 import CopaLineupList from './CopaLineupList';
 import CopaTimeline from './CopaTimeline';
@@ -30,6 +31,7 @@ interface Props {
   onToggleSave?: (id: string) => void;
   isNotif?: boolean;
   onToggleNotif?: (id: string) => void;
+  youtubeHighlight?: HighlightData | null;
 }
 
 type Panel = 'lineup' | 'timeline' | 'stats' | 'highlight' | 'tv';
@@ -120,7 +122,7 @@ function TeamBadge({ src, name, size = 42 }: { src: string | null; name: string;
   );
 }
 
-export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating, isSaved, onToggleSave, isNotif, onToggleNotif }: Props) {
+export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating, isSaved, onToggleSave, isNotif, onToggleNotif, youtubeHighlight }: Props) {
   const [activePanel, setActivePanel] = useState<Panel | null>(null);
   const [lineup, setLineup] = useState<TsdbLineupPlayer[] | null>(null);
   const [timeline, setTimeline] = useState<TsdbTimeline[] | null>(null);
@@ -153,7 +155,9 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
   const isFinished = FINISHED.has(status);
   const isLive  = LIVE.has(status);
   const hasScore = isFinished || isLive;
-  const videoId  = fixture.strVideo ? extractYoutubeId(fixture.strVideo) : null;
+  // CazéTV highlight takes precedence; fall back to strVideo from TheSportsDB
+  const videoId = youtubeHighlight?.videoId
+    ?? (fixture.strVideo ? extractYoutubeId(fixture.strVideo) : null);
 
   const matchDate = new Date(`${fixture.dateEvent}T${fixture.strTime ?? '00:00:00'}Z`);
   const timeStr = matchDate.toLocaleTimeString('pt-BR', {

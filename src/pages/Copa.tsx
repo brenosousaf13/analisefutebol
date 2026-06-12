@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { theSportsDbService } from '../services/theSportsDbService';
@@ -11,6 +11,11 @@ import CopaGroupsDisplay from '../components/copa/CopaGroupsDisplay';
 import CopaSelecoes from '../components/copa/CopaSelecoes';
 import { teamPt } from '../utils/teamNames';
 import Header from '../components/Header';
+import {
+  type HighlightData,
+  getHighlightsBatch,
+  autoFetchHighlights,
+} from '../services/highlightsService';
 
 // ── Design tokens (v2) ────────────────────────────────────────
 const BG  = '#07090c';
@@ -483,6 +488,11 @@ export default function Copa() {
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
+  // ── Highlights state ──────────────────────────────────────
+  const [highlights, setHighlights] = useState<Map<string, HighlightData>>(new Map());
+  // Tracks event IDs already queued for YouTube fetch (avoids duplicate requests)
+  const highlightsFetchedRef = useRef<Set<string>>(new Set());
+
   // ── Persistent state (localStorage) ──────────────────────
   const [savedTeams, setSavedTeams] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('copa_saved_teams') ?? '[]')); }
@@ -516,12 +526,35 @@ export default function Copa() {
     return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   }, []);
 
-  // ── Fetch ─────────────────────────────────────────────────
+  const FINISHED_STATUSES = new Set(['FT','AET','PEN']);
+
+  // ── Fetch fixtures ────────────────────────────────────────
   useEffect(() => {
     theSportsDbService.getAllFixtures()
-      .then(data => {
+      .then(async data => {
         setFixtures(data);
         setLastRefresh(new Date());
+
+        // Load cached highlights from Supabase for all finished fixtures
+        const ftIds = data.filter(f => FINISHED_STATUSES.has(f.strStatus)).map(f => f.idEvent);
+        if (ftIds.length > 0) {
+          const cached = await getHighlightsBatch(ftIds);
+          if (cached.size > 0) {
+            setHighlights(cached);
+            cached.forEach((_, id) => highlightsFetchedRef.current.add(id));
+          }
+
+          // Queue YouTube fetch for FT fixtures not in Supabase cache
+          const notCached = data
+            .filter(f => FINISHED_STATUSES.has(f.strStatus) && !cached.has(f.idEvent));
+          if (notCached.length > 0) {
+            notCached.forEach(f => highlightsFetchedRef.current.add(f.idEvent));
+            const ctrl = new AbortController();
+            autoFetchHighlights(notCached, (eventId, hlData) => {
+              setHighlights(prev => new Map(prev).set(eventId, hlData));
+            }, ctrl.signal);
+          }
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -529,8 +562,20 @@ export default function Copa() {
 
   const fetchLive = useCallback(async () => {
     const live = await theSportsDbService.getLiveFixtures();
+
+    // Detect newly finished fixtures (FT in live feed) not yet fetched
+    const newlyFinished = live.filter(
+      f => FINISHED_STATUSES.has(f.strStatus) && !highlightsFetchedRef.current.has(f.idEvent)
+    );
+    if (newlyFinished.length > 0) {
+      newlyFinished.forEach(f => highlightsFetchedRef.current.add(f.idEvent));
+      autoFetchHighlights(newlyFinished, (eventId, hlData) => {
+        setHighlights(prev => new Map(prev).set(eventId, hlData));
+      });
+    }
+
     setLiveFixtures(prev => {
-      if (prev.length === 0 && live.length === 0) return prev; // avoid re-render when nothing changed
+      if (prev.length === 0 && live.length === 0) return prev;
       return live;
     });
   }, []);
@@ -669,6 +714,7 @@ export default function Copa() {
                       onToggleSave={onToggleFixtureSave}
                       isNotif={notifFixtures.has(f.idEvent)}
                       onToggleNotif={onToggleFixtureNotif}
+                      youtubeHighlight={highlights.get(f.idEvent) ?? null}
                     />
                   ))}
                 </div>
@@ -778,6 +824,7 @@ export default function Copa() {
                   onToggleSave={onToggleFixtureSave}
                   isNotif={notifFixtures.has(f.idEvent)}
                   onToggleNotif={onToggleFixtureNotif}
+                  youtubeHighlight={highlights.get(f.idEvent) ?? null}
                 />
               ))}
             </div>
