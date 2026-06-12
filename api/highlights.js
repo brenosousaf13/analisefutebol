@@ -1,36 +1,35 @@
-const CAZE_CHANNEL_ID = 'UCZiYbVptd3PVPf4f6eR6UaQ';
-const YT_SEARCH      = 'https://www.googleapis.com/youtube/v3/search';
+// CazéTV uploads playlist = "UU" + channel ID without "UC" prefix
+// Using playlistItems (1 quota unit) instead of search (100 units) — more reliable
+const CAZE_UPLOADS_PLAYLIST = 'UUZiYbVptd3PVPf4f6eR6UaQ';
+const YT_PLAYLIST_ITEMS     = 'https://www.googleapis.com/youtube/v3/playlistItems';
 
-// Normaliza string para comparação: sem acento, maiúsculo
-function norm(s) {
-  return s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// Remove accents and lowercase for reliable comparison
+function norm(str) {
+  return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
-function matchesTitle(title, home, away) {
+function titleMatches(title, home, away) {
   const t = norm(title);
   const h = norm(home);
   const a = norm(away);
-  const hasMM  = t.includes('MELHORES MOMENTOS');
+  const hasMM   = t.startsWith('melhores momentos');
   const hasTeam = t.includes(h) || t.includes(a);
-  const hasCopa = t.includes('COPA DO MUNDO') || t.includes('FIFA') || t.includes('2026');
-  return hasMM && hasTeam && hasCopa;
+  return hasMM && hasTeam;
 }
 
-async function fetchRecentVideos(apiKey, pageToken) {
+async function getPlaylistPage(apiKey, pageToken) {
   const params = new URLSearchParams({
     part:       'snippet',
-    channelId:  CAZE_CHANNEL_ID,
-    type:       'video',
-    order:      'date',
-    maxResults: '20',
+    playlistId: CAZE_UPLOADS_PLAYLIST,
+    maxResults: '50',
     key:        apiKey,
   });
   if (pageToken) params.set('pageToken', pageToken);
 
-  const res = await fetch(`${YT_SEARCH}?${params}`);
+  const res = await fetch(`${YT_PLAYLIST_ITEMS}?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    console.error('[highlights] YouTube error:', res.status, err?.error?.message);
+    console.error('[highlights] playlistItems error:', res.status, err?.error?.message);
     return null;
   }
   return res.json();
@@ -40,36 +39,33 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const { home, away } = req.query;
-  if (!home || !away) return res.status(400).json({ error: 'Missing home/away params' });
+  if (!home || !away) return res.status(400).json({ error: 'Missing home/away' });
 
   const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'YouTube API key not configured' });
+  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  console.log(`[highlights] Buscando: ${home} vs ${away}`);
+  console.log(`[highlights] Procurando: "${home}" vs "${away}"`);
 
   try {
-    // Busca até 2 páginas de vídeos recentes do canal (20 + 20 = 40 vídeos)
-    // e filtra localmente pelo título — muito mais preciso que busca por query
+    // Scan up to 3 pages of recent uploads (50 each = 150 videos max)
     let pageToken;
-
-    for (let page = 0; page < 2; page++) {
-      const data = await fetchRecentVideos(apiKey, pageToken);
+    for (let page = 0; page < 3; page++) {
+      const data = await getPlaylistPage(apiKey, pageToken);
       if (!data?.items?.length) break;
 
       for (const item of data.items) {
-        const videoId = item.id?.videoId;
+        const snippet = item.snippet;
+        const videoId = snippet?.resourceId?.videoId;
         if (!videoId) continue;
 
-        const title = item.snippet?.title ?? '';
-        if (!matchesTitle(title, home, away)) continue;
+        const title = snippet.title ?? '';
+        if (!titleMatches(title, home, away)) continue;
 
+        const thumbs = snippet.thumbnails ?? {};
         const thumbnail =
-          item.snippet.thumbnails?.maxres?.url ??
-          item.snippet.thumbnails?.high?.url   ??
-          item.snippet.thumbnails?.medium?.url ??
-          item.snippet.thumbnails?.default?.url ?? null;
+          thumbs.maxres?.url ?? thumbs.high?.url ?? thumbs.medium?.url ?? thumbs.default?.url ?? null;
 
-        console.log(`[highlights] Encontrado: "${title}"`);
+        console.log(`[highlights] ✓ Encontrado p${page + 1}: "${title}"`);
         return res.json({
           videoId,
           title,
@@ -82,11 +78,11 @@ export default async function handler(req, res) {
       if (!pageToken) break;
     }
 
-    console.log(`[highlights] Nenhum vídeo encontrado para ${home} vs ${away}`);
+    console.log(`[highlights] Não encontrado: "${home}" vs "${away}"`);
     return res.json(null);
 
   } catch (err) {
-    console.error('[highlights] Erro inesperado:', err);
+    console.error('[highlights] Erro:', err);
     return res.json(null);
   }
 }
