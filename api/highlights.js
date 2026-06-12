@@ -1,26 +1,36 @@
-// CazéTV channel ID (provided by user) — used as primary filter
 const CAZE_CHANNEL_ID = 'UCZiYbVptd3PVPf4f6eR6UaQ';
-// Fallback: match by channel name in results (handles ID changes/errors)
-const CAZE_NAME_PATTERNS = ['cazétv', 'cazetv', 'cazé tv', 'caze tv'];
+const YT_SEARCH      = 'https://www.googleapis.com/youtube/v3/search';
 
-const YT_ENDPOINT = 'https://www.googleapis.com/youtube/v3/search';
-
-function isCazeTV(item) {
-  const title = (item.snippet?.channelTitle ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const id    = item.snippet?.channelId ?? '';
-  if (id === CAZE_CHANNEL_ID) return true;
-  // Normalize accents and check name patterns
-  return CAZE_NAME_PATTERNS.some(p =>
-    title.replace(/[̀-ͯ]/g, '').includes(p.normalize('NFD').replace(/[̀-ͯ]/g, ''))
-  );
+// Normaliza string para comparação: sem acento, maiúsculo
+function norm(s) {
+  return s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-async function searchYT(params, apiKey) {
-  const url = `${YT_ENDPOINT}?${new URLSearchParams({ ...params, key: apiKey })}`;
-  const res = await fetch(url);
+function matchesTitle(title, home, away) {
+  const t = norm(title);
+  const h = norm(home);
+  const a = norm(away);
+  const hasMM  = t.includes('MELHORES MOMENTOS');
+  const hasTeam = t.includes(h) || t.includes(a);
+  const hasCopa = t.includes('COPA DO MUNDO') || t.includes('FIFA') || t.includes('2026');
+  return hasMM && hasTeam && hasCopa;
+}
+
+async function fetchRecentVideos(apiKey, pageToken) {
+  const params = new URLSearchParams({
+    part:       'snippet',
+    channelId:  CAZE_CHANNEL_ID,
+    type:       'video',
+    order:      'date',
+    maxResults: '20',
+    key:        apiKey,
+  });
+  if (pageToken) params.set('pageToken', pageToken);
+
+  const res = await fetch(`${YT_SEARCH}?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    console.error('[highlights] YouTube API error:', res.status, err?.error?.message);
+    console.error('[highlights] YouTube error:', res.status, err?.error?.message);
     return null;
   }
   return res.json();
@@ -35,70 +45,48 @@ export default async function handler(req, res) {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'YouTube API key not configured' });
 
-  const query = `melhores momentos ${home} ${away} Copa do Mundo FIFA 2026`;
+  console.log(`[highlights] Buscando: ${home} vs ${away}`);
 
   try {
-    // ── Pass 1: search restricted to CazéTV channel ──────────────
-    const pass1 = await searchYT({
-      part:          'snippet',
-      channelId:     CAZE_CHANNEL_ID,
-      q:             query,
-      type:          'video',
-      videoDuration: 'medium',   // 4–20 min — excludes Shorts and full matches
-      order:         'relevance',
-      maxResults:    '5',
-    }, apiKey);
+    // Busca até 2 páginas de vídeos recentes do canal (20 + 20 = 40 vídeos)
+    // e filtra localmente pelo título — muito mais preciso que busca por query
+    let pageToken;
 
-    if (pass1?.items?.length > 0) {
-      for (const item of pass1.items) {
+    for (let page = 0; page < 2; page++) {
+      const data = await fetchRecentVideos(apiKey, pageToken);
+      if (!data?.items?.length) break;
+
+      for (const item of data.items) {
         const videoId = item.id?.videoId;
         if (!videoId) continue;
-        console.log('[highlights] Pass 1 hit:', item.snippet.title, 'channel:', item.snippet.channelTitle);
+
+        const title = item.snippet?.title ?? '';
+        if (!matchesTitle(title, home, away)) continue;
+
+        const thumbnail =
+          item.snippet.thumbnails?.maxres?.url ??
+          item.snippet.thumbnails?.high?.url   ??
+          item.snippet.thumbnails?.medium?.url ??
+          item.snippet.thumbnails?.default?.url ?? null;
+
+        console.log(`[highlights] Encontrado: "${title}"`);
         return res.json({
           videoId,
-          title:     item.snippet.title,
-          thumbnail: item.snippet.thumbnails?.high?.url
-                  ?? item.snippet.thumbnails?.medium?.url
-                  ?? item.snippet.thumbnails?.default?.url
-                  ?? null,
+          title,
+          thumbnail,
+          url: `https://www.youtube.com/watch?v=${videoId}`,
         });
       }
+
+      pageToken = data.nextPageToken;
+      if (!pageToken) break;
     }
 
-    // ── Pass 2: broader search, filter by channel name ───────────
-    // (Handles cases where the channelId filter returns 0 results)
-    console.log('[highlights] Pass 1 empty — trying broad search for:', query);
-    const pass2 = await searchYT({
-      part:          'snippet',
-      q:             query,
-      type:          'video',
-      videoDuration: 'medium',
-      order:         'relevance',
-      maxResults:    '15',
-    }, apiKey);
-
-    if (pass2?.items?.length > 0) {
-      for (const item of pass2.items) {
-        const videoId = item.id?.videoId;
-        if (!videoId) continue;
-        if (!isCazeTV(item)) continue;
-        console.log('[highlights] Pass 2 hit:', item.snippet.title, 'channel:', item.snippet.channelTitle);
-        return res.json({
-          videoId,
-          title:     item.snippet.title,
-          thumbnail: item.snippet.thumbnails?.high?.url
-                  ?? item.snippet.thumbnails?.medium?.url
-                  ?? item.snippet.thumbnails?.default?.url
-                  ?? null,
-        });
-      }
-    }
-
-    console.log('[highlights] No CazéTV video found for:', home, 'vs', away);
+    console.log(`[highlights] Nenhum vídeo encontrado para ${home} vs ${away}`);
     return res.json(null);
 
   } catch (err) {
-    console.error('[highlights] Unexpected error:', err);
+    console.error('[highlights] Erro inesperado:', err);
     return res.json(null);
   }
 }
