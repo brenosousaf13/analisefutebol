@@ -671,10 +671,18 @@ export default function Copa() {
     const filtered = useMemo(() => {
       let ms = allCalFixtures;
       if (grp === 'BRASIL') ms = ms.filter(f => isBrazilGame(f));
-      else if (grp !== 'TODOS') ms = ms.filter(f => f.strGroup === grp);
+      else if (grp !== 'TODOS') ms = ms.filter(f =>
+        teamPt(f.strHomeTeam).toUpperCase().startsWith(grp) ||
+        teamPt(f.strAwayTeam).toUpperCase().startsWith(grp)
+      );
       if (q) {
         const ql = q.toLowerCase();
-        ms = ms.filter(f => f.strHomeTeam.toLowerCase().includes(ql) || f.strAwayTeam.toLowerCase().includes(ql) || (f.strGroup?.toLowerCase().includes(ql)));
+        ms = ms.filter(f =>
+          f.strHomeTeam.toLowerCase().includes(ql) ||
+          f.strAwayTeam.toLowerCase().includes(ql) ||
+          teamPt(f.strHomeTeam).toLowerCase().includes(ql) ||
+          teamPt(f.strAwayTeam).toLowerCase().includes(ql)
+        );
       }
       return ms;
     }, [q, grp, allCalFixtures]);
