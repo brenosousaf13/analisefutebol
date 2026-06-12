@@ -14,17 +14,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'YouTube API key not configured' });
   }
 
-  const query = `melhores momentos ${home} ${away} Copa do Mundo`;
+  const query = `melhores momentos ${home} ${away} Copa do Mundo 2026`;
 
   try {
     const params = new URLSearchParams({
-      part:       'snippet',
-      channelId:  CAZE_CHANNEL,
-      q:          query,
-      type:       'video',
-      order:      'relevance',
-      maxResults: '5',
-      key:        apiKey,
+      part:          'snippet',
+      channelId:     CAZE_CHANNEL,
+      q:             query,
+      type:          'video',
+      videoDuration: 'medium',  // 4–20 min — exclui Shorts e transmissões longas
+      order:         'relevance',
+      maxResults:    '5',
+      key:           apiKey,
     });
 
     const response = await fetch(`${YT_ENDPOINT}?${params}`);
