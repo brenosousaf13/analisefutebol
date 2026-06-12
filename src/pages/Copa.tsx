@@ -24,7 +24,6 @@ const T2  = '#566b82';
 const T3  = '#4a6077';
 const BC  = "'Barlow Condensed', sans-serif";
 
-const WC_START = new Date('2026-06-11T19:00:00-03:00');
 
 const ALL_GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
 
@@ -100,21 +99,6 @@ function squadToBench(squad: TsdbPlayer[], baseId: number): Player[] {
   });
 }
 
-// ── Countdown hook ────────────────────────────────────────────
-function useCountdown() {
-  const [t, setT] = useState<{d:number;h:number;m:number;s:number} | null>(null);
-  useEffect(() => {
-    const tick = () => {
-      const diff = WC_START.getTime() - Date.now();
-      if (diff <= 0) { setT({d:0,h:0,m:0,s:0}); return; }
-      setT({d:Math.floor(diff/86400000),h:Math.floor(diff%86400000/3600000),m:Math.floor(diff%3600000/60000),s:Math.floor(diff%60000/1000)});
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-  return t;
-}
 
 // ── Breakpoint hook ───────────────────────────────────────────
 function useBreakpoint() {
@@ -252,86 +236,83 @@ function SidebarGameRow({ f, onCreateAnalysis, creatingId, col }: {
   );
 }
 
-// ── Right sidebar: Live + Favoritos + Próximos ────────────────
-function RightSidebar({ savedTeams, allFixtures, liveFixtures, upcomingFixtures, onCreateAnalysis, creatingId }: {
-  savedTeams: Set<string>;
+// ── Right sidebar: Hoje + Favoritos ───────────────────────────
+function RightSidebar({ todayFixtures, starredFixtureIds, allFixtures, onCreateAnalysis, creatingId }: {
+  todayFixtures: TsdbEvent[];
+  starredFixtureIds: Set<string>;
   allFixtures: TsdbEvent[];
-  liveFixtures: TsdbEvent[];
-  upcomingFixtures: TsdbEvent[];
   onCreateAnalysis: (f: TsdbEvent) => void;
   creatingId: string | null;
 }) {
-  const savedFixtures = allFixtures.filter(f =>
-    savedTeams.has(f.strHomeTeam) || savedTeams.has(f.strAwayTeam)
-  ).filter((f, i, arr) => arr.findIndex(x => x.idEvent === f.idEvent) === i);
+  const todayLabel = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+  const liveCount = todayFixtures.filter(f => ['1H','HT','2H','ET','P'].includes(f.strStatus)).length;
+  const favoriteFixtures = allFixtures.filter(f => starredFixtureIds.has(f.idEvent));
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
 
-      {/* 🔴 Ao Vivo */}
-      {liveFixtures.length > 0 && (
-        <div style={{ background:S, borderRadius:6, overflow:'hidden', border:`1px solid rgba(0,230,118,0.2)` }}>
-          <div style={{ padding:'9px 12px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
-            <span style={{ width:7, height:7, borderRadius:'50%', background:AC, display:'inline-block', animation:'pulse 1.5s infinite' }} />
-            <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:900, textTransform:'uppercase', letterSpacing:'.06em', color:AC }}>
-              Ao Vivo Agora
-            </span>
-            <span style={{ marginLeft:'auto', fontFamily:BC, fontSize:11, fontWeight:700, color:AC, background:'rgba(0,230,118,0.12)', padding:'2px 7px', borderRadius:3 }}>
-              {liveFixtures.length}
-            </span>
-          </div>
-          {liveFixtures.map(f => (
-            <SidebarGameRow key={f.idEvent} f={f} onCreateAnalysis={onCreateAnalysis} creatingId={creatingId} col={AC} />
-          ))}
-        </div>
-      )}
-
-      {/* ⭐ Favoritos */}
-      <div style={{ background:S, borderRadius:6, overflow:'hidden', border:`1px solid ${savedTeams.size > 0 ? 'rgba(245,158,11,0.2)' : BDR}` }}>
+      {/* 📅 Hoje */}
+      <div style={{ background:S, borderRadius:6, overflow:'hidden', border:`1px solid ${liveCount > 0 ? 'rgba(0,230,118,0.2)' : BDR}` }}>
         <div style={{ padding:'9px 12px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill={savedTeams.size > 0 ? GD : 'none'} stroke={savedTeams.size > 0 ? GD : T3} strokeWidth="2">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-          <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:900, textTransform:'uppercase', letterSpacing:'.06em', color: savedTeams.size > 0 ? T : T3 }}>
-            Favoritos
+          {liveCount > 0 ? (
+            <span style={{ width:7, height:7, borderRadius:'50%', background:AC, display:'inline-block', flexShrink:0, animation:'pulse 1.5s infinite' }} />
+          ) : (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2" style={{ flexShrink:0 }}>
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          )}
+          <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:900, textTransform:'uppercase', letterSpacing:'.06em', color: liveCount > 0 ? AC : T }}>
+            Hoje
           </span>
-          {savedTeams.size > 0 && (
-            <span style={{ marginLeft:'auto', fontSize:9, color:T3, maxWidth:120, textAlign:'right', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              {[...savedTeams].map(n => teamPt(n)).join(', ')}
+          <span style={{ fontSize:10, color:T3, marginLeft:2 }}>{todayLabel}</span>
+          {todayFixtures.length > 0 && (
+            <span style={{ marginLeft:'auto', fontFamily:BC, fontSize:11, fontWeight:700, color: liveCount > 0 ? AC : T2, background: liveCount > 0 ? 'rgba(0,230,118,0.12)' : S2, padding:'2px 7px', borderRadius:3 }}>
+              {todayFixtures.length}
             </span>
           )}
         </div>
-        {savedTeams.size === 0 ? (
+        {todayFixtures.length === 0 ? (
+          <p style={{ padding:'12px', fontSize:11.5, color:T3, lineHeight:1.6 }}>Sem jogos hoje.</p>
+        ) : (
+          todayFixtures.map(f => {
+            const isLive = ['1H','HT','2H','ET','P'].includes(f.strStatus);
+            const isBrazil = f.strHomeTeam === 'Brazil' || f.strAwayTeam === 'Brazil';
+            return (
+              <SidebarGameRow key={f.idEvent} f={f} onCreateAnalysis={onCreateAnalysis} creatingId={creatingId}
+                col={isLive ? AC : isBrazil ? GD : AC} />
+            );
+          })
+        )}
+      </div>
+
+      {/* ⭐ Favoritos */}
+      <div style={{ background:S, borderRadius:6, overflow:'hidden', border:`1px solid ${starredFixtureIds.size > 0 ? 'rgba(245,158,11,0.2)' : BDR}` }}>
+        <div style={{ padding:'9px 12px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={starredFixtureIds.size > 0 ? GD : 'none'} stroke={starredFixtureIds.size > 0 ? GD : T3} strokeWidth="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:900, textTransform:'uppercase', letterSpacing:'.06em', color: starredFixtureIds.size > 0 ? T : T3 }}>
+            Favoritos
+          </span>
+          {starredFixtureIds.size > 0 && (
+            <span style={{ marginLeft:'auto', fontFamily:BC, fontSize:11, fontWeight:700, color:GD, background:'rgba(245,158,11,0.12)', padding:'2px 7px', borderRadius:3 }}>
+              {starredFixtureIds.size}
+            </span>
+          )}
+        </div>
+        {starredFixtureIds.size === 0 ? (
           <p style={{ padding:'12px', fontSize:11.5, color:T3, lineHeight:1.6 }}>
-            Na aba <strong style={{ color:T2 }}>Tabela</strong> ou <strong style={{ color:T2 }}>Seleções</strong>, clique em ⭐ para acompanhar os jogos aqui.
+            Clique em ⭐ em qualquer jogo para acompanhar aqui.
           </p>
-        ) : savedFixtures.length === 0 ? (
+        ) : favoriteFixtures.length === 0 ? (
           <p style={{ padding:'12px', fontSize:11.5, color:T3, lineHeight:1.6 }}>Nenhum jogo encontrado.</p>
         ) : (
-          savedFixtures.map(f => (
+          favoriteFixtures.map(f => (
             <SidebarGameRow key={f.idEvent} f={f} onCreateAnalysis={onCreateAnalysis} creatingId={creatingId}
               col={f.strHomeTeam === 'Brazil' || f.strAwayTeam === 'Brazil' ? GD : AC} />
           ))
         )}
       </div>
-
-      {/* 📅 Próximos Jogos */}
-      {upcomingFixtures.length > 0 && savedTeams.size === 0 && (
-        <div style={{ background:S, borderRadius:6, overflow:'hidden', border:`1px solid ${BDR}` }}>
-          <div style={{ padding:'9px 12px', borderBottom:`1px solid ${BDR}`, display:'flex', alignItems:'center', gap:7 }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T2} strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:900, textTransform:'uppercase', letterSpacing:'.06em', color:T2 }}>
-              Próximos Jogos
-            </span>
-          </div>
-          {upcomingFixtures.slice(0,5).map(f => (
-            <SidebarGameRow key={f.idEvent} f={f} onCreateAnalysis={onCreateAnalysis} creatingId={creatingId}
-              col={f.strHomeTeam === 'Brazil' || f.strAwayTeam === 'Brazil' ? GD : AC} />
-          ))}
-        </div>
-      )}
 
     </div>
   );
@@ -340,7 +321,6 @@ function RightSidebar({ savedTeams, allFixtures, liveFixtures, upcomingFixtures,
 
 // ── Hero ──────────────────────────────────────────────────────
 function Hero() {
-  const cd = useCountdown();
   return (
     <div style={{ borderBottom:`1px solid ${BDR}` }}>
       {/* Info strip */}
@@ -355,41 +335,14 @@ function Hero() {
           11 Jun – 19 Jul 2026
         </span>
       </div>
-      {/* Main */}
-      <div style={{ padding:'28px 24px 24px', display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:24, flexWrap:'wrap' }}>
-        {/* Title */}
-        <div>
-          <h1 style={{ fontFamily:BC, fontSize:'clamp(44px,6.5vw,80px)', fontWeight:900, color:'#fff', lineHeight:.92, letterSpacing:'-.01em', marginBottom:10 }}>
-            COPA DO<br/>MUNDO
-          </h1>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:28, height:2.5, background:AC, borderRadius:2 }}/>
-            <span style={{ fontFamily:BC, fontSize:22, fontWeight:700, color:AC, letterSpacing:'.01em' }}>no Zona 14</span>
-          </div>
-        </div>
-        {/* Countdown */}
-        <div>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', color:T2, textTransform:'uppercase', marginBottom:10 }}>
-            Começa em
-          </div>
-          {cd ? (
-            <div style={{ display:'flex', alignItems:'baseline', gap:4, flexWrap:'wrap' }}>
-              {([{v:cd.d,l:'D'},{v:cd.h,l:'H'},{v:cd.m,l:'M'},{v:cd.s,l:'S'}] as {v:number;l:string}[]).map(({v,l},i) => (
-                <span key={l} style={{ display:'flex', alignItems:'baseline' }}>
-                  {i>0 && <span style={{ fontFamily:BC, fontSize:30, fontWeight:700, color:T3, lineHeight:1, padding:'0 4px' }}>·</span>}
-                  <span style={{ fontFamily:BC, fontSize:48, fontWeight:900, color:'#fff', lineHeight:1, letterSpacing:'-0.02em' }}>
-                    {String(v).padStart(2,'0')}
-                  </span>
-                  <span style={{ fontSize:11, fontWeight:700, color:T2, letterSpacing:'.07em', paddingBottom:5 }}>{l}</span>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontFamily:BC, fontSize:48, fontWeight:900, color:T3, letterSpacing:'-0.02em' }}>——</div>
-          )}
-          <p style={{ fontSize:11.5, color:T2, marginTop:10, lineHeight:1.6 }}>
-            Escalações reais · Análise de formações · Táticas da Copa
-          </p>
+      {/* Title */}
+      <div style={{ padding:'28px 24px 24px' }}>
+        <h1 style={{ fontFamily:BC, fontSize:'clamp(44px,6.5vw,80px)', fontWeight:900, color:'#fff', lineHeight:.92, letterSpacing:'-.01em', marginBottom:10 }}>
+          COPA DO<br/>MUNDO
+        </h1>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:28, height:2.5, background:AC, borderRadius:2 }}/>
+          <span style={{ fontFamily:BC, fontSize:22, fontWeight:700, color:AC, letterSpacing:'.01em' }}>no Zona 14</span>
         </div>
       </div>
     </div>
@@ -666,6 +619,7 @@ export default function Copa() {
     const [q, setQ] = useState('');
     const [grp, setGrp] = useState('TODOS');
 
+    const todayFixtures = fixtures.filter(f => f.dateEvent === todayStr);
     const allCalFixtures = [...liveAndToday, ...upcomingFixtures].filter((f, i, arr) => arr.findIndex(x => x.idEvent === f.idEvent) === i);
 
     const filtered = useMemo(() => {
@@ -729,10 +683,9 @@ export default function Copa() {
         {lg && (
           <div style={{ position:'sticky', top:116, paddingTop:16 }}>
             <RightSidebar
-              savedTeams={savedTeams}
+              todayFixtures={todayFixtures}
+              starredFixtureIds={savedFixtures}
               allFixtures={fixtures}
-              liveFixtures={liveFixtures}
-              upcomingFixtures={upcomingFixtures}
               onCreateAnalysis={handleCreateAnalysis}
               creatingId={creatingId}
             />
