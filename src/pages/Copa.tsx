@@ -104,11 +104,12 @@ function useBreakpoint() {
 
 // ── Date header ───────────────────────────────────────────────
 function DateHeader({ dateStr }: { dateStr: string }) {
+  const { lg } = useBreakpoint();
   return (
     <div style={{
       display:'flex', alignItems:'center', gap:12,
       padding:'20px 0 10px',
-      position:'sticky', top:116, zIndex:3, background:BG,
+      position:'sticky', top: lg ? 116 : 92, zIndex:3, background:BG,
     }}>
       <span style={{ fontFamily:BC, fontSize:11.5, fontWeight:800, letterSpacing:'.09em', textTransform:'uppercase', color:T2, whiteSpace:'nowrap' }}>
         {fmtFull(dateStr)}
@@ -312,28 +313,29 @@ function RightSidebar({ todayFixtures, starredFixtureIds, allFixtures, onCreateA
 
 // ── Hero ──────────────────────────────────────────────────────
 function Hero() {
+  const { lg } = useBreakpoint();
   return (
     <div style={{ borderBottom:`1px solid ${BDR}` }}>
       {/* Info strip */}
       <div style={{
-        padding:'7px 24px', borderBottom:`1px solid ${BDR}`,
+        padding: lg ? '7px 24px' : '6px 12px', borderBottom:`1px solid ${BDR}`,
         display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap',
       }}>
-        <span style={{ fontSize:10.5, fontWeight:600, letterSpacing:'.07em', color:T2, textTransform:'uppercase' }}>
-          ⚽ FIFA Copa do Mundo 2026™ · USA · Canadá · México
+        <span style={{ fontSize: lg ? 10.5 : 10, fontWeight:600, letterSpacing:'.07em', color:T2, textTransform:'uppercase' }}>
+          ⚽ Copa do Mundo 2026™ · USA · Canadá · México
         </span>
-        <span style={{ fontSize:10.5, fontWeight:600, color:T3, letterSpacing:'.04em' }}>
+        <span style={{ fontSize: lg ? 10.5 : 10, fontWeight:600, color:T3, letterSpacing:'.04em' }}>
           11 Jun – 19 Jul 2026
         </span>
       </div>
       {/* Title */}
-      <div style={{ padding:'28px 24px 24px' }}>
-        <h1 style={{ fontFamily:BC, fontSize:'clamp(44px,6.5vw,80px)', fontWeight:900, color:'#fff', lineHeight:.92, letterSpacing:'-.01em', marginBottom:10 }}>
+      <div style={{ padding: lg ? '28px 24px 24px' : '16px 12px 14px' }}>
+        <h1 style={{ fontFamily:BC, fontSize: lg ? 'clamp(44px,6.5vw,80px)' : 'clamp(36px,10vw,60px)', fontWeight:900, color:'#fff', lineHeight:.92, letterSpacing:'-.01em', marginBottom:10 }}>
           COPA DO<br/>MUNDO
         </h1>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:28, height:2.5, background:AC, borderRadius:2 }}/>
-          <span style={{ fontFamily:BC, fontSize:22, fontWeight:700, color:AC, letterSpacing:'.01em' }}>no Zona 14</span>
+          <div style={{ width: lg ? 28 : 20, height:2.5, background:AC, borderRadius:2 }}/>
+          <span style={{ fontFamily:BC, fontSize: lg ? 22 : 17, fontWeight:700, color:AC, letterSpacing:'.01em' }}>no Zona 14</span>
         </div>
       </div>
     </div>
@@ -705,7 +707,7 @@ export default function Copa() {
 
         {/* Right sidebar (desktop only) */}
         {lg && (
-          <div style={{ position:'sticky', top:116, paddingTop:16 }}>
+          <div style={{ position:'sticky', top: lg ? 116 : 92, paddingTop:16 }}>
             <RightSidebar
               todayFixtures={todayFixtures}
               starredFixtureIds={savedFixtures}
@@ -868,14 +870,18 @@ export default function Copa() {
 
       {/* ── Tab bar ── */}
       <div style={{
-        position:'sticky', top:64, zIndex:15,
+        position:'sticky', top: lg ? 64 : 40, zIndex:15,
         background:'rgba(7,9,12,0.97)', backdropFilter:'blur(12px)',
         borderBottom:`1px solid ${BDR}`,
-        display:'flex', padding:'0 24px',
-      }}>
+        display:'flex', padding: lg ? '0 24px' : '0 4px',
+        overflowX:'auto', scrollbarWidth:'none',
+        WebkitOverflowScrolling:'touch',
+      } as React.CSSProperties}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding:'13px 16px', fontSize:14, fontWeight:600, letterSpacing:'.01em',
+            padding: lg ? '13px 16px' : '12px 12px',
+            fontSize: lg ? 14 : 13, fontWeight:600, letterSpacing:'.01em',
+            flexShrink:0, whiteSpace:'nowrap',
             color: tab === t.id ? AC : T2,
             borderBottom: `2px solid ${tab===t.id ? AC : 'transparent'}`,
             marginBottom:-1, transition:'color .12s,border-color .12s',
@@ -895,7 +901,7 @@ export default function Copa() {
           </button>
         </div>
       ) : (
-        <div style={{ padding:'0 24px', paddingBottom:64 }}>
+        <div style={{ padding: lg ? '0 24px' : '0 12px', paddingBottom:64 }}>
           {tab === 'calendario' && <CalendarioTab />}
           {tab === 'resultados' && <ResultadosTab />}
           {tab === 'tabela'     && <TabelaTab />}

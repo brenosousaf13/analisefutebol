@@ -1,4 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+function useBreakpoint() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const fn = useCallback(() => setW(window.innerWidth), []);
+  useEffect(() => {
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, [fn]);
+  return { lg: w >= 960 };
+}
 import { useParams, useNavigate } from 'react-router-dom';
 import { theSportsDbService } from '../services/theSportsDbService';
 import type { TsdbPlayer, TsdbHonour, TsdbFormerTeam } from '../types/thesportsdb';
@@ -53,6 +63,7 @@ function calcAge(dateBorn: string | null): string {
 export default function CopaJogadorPage() {
   const { playerId } = useParams<{ playerId: string }>();
   const navigate = useNavigate();
+  const { lg } = useBreakpoint();
 
   const [player, setPlayer] = useState<TsdbPlayer | null>(null);
   const [honours, setHonours] = useState<TsdbHonour[]>([]);
@@ -90,15 +101,15 @@ export default function CopaJogadorPage() {
   const photo = player?.strCutout ?? player?.strThumb;
 
   return (
-    <div style={{ background: BG, color: T, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, WebkitFontSmoothing: 'antialiased', paddingTop: 64 } as React.CSSProperties}>
+    <div style={{ background: BG, color: T, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, WebkitFontSmoothing: 'antialiased', paddingTop: lg ? 64 : 40 } as React.CSSProperties}>
       <Header />
 
       {/* Sub-header */}
       <header style={{
-        position: 'sticky', top: 64, zIndex: 20, height: 52,
+        position: 'sticky', top: lg ? 64 : 40, zIndex: 20, height: 52,
         background: 'rgba(7,9,12,0.95)', backdropFilter: 'blur(14px)',
         borderBottom: `1px solid ${BDR}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: lg ? '0 24px' : '0 12px',
       }}>
         <button onClick={() => navigate(-1)} style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -115,11 +126,11 @@ export default function CopaJogadorPage() {
       </header>
 
       {loading ? (
-        <div style={{ padding: '80px 24px', textAlign: 'center', color: T3, fontSize: 14 }}>
+        <div style={{ padding: lg ? '80px 24px' : '60px 12px', textAlign: 'center', color: T3, fontSize: 14 }}>
           Carregando perfil...
         </div>
       ) : !player ? (
-        <div style={{ padding: '80px 24px', textAlign: 'center' }}>
+        <div style={{ padding: lg ? '80px 24px' : '60px 12px', textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: T2, marginBottom: 12 }}>Jogador não encontrado.</p>
           <button onClick={() => navigate(-1)} style={{ color: AC, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>Voltar</button>
         </div>
@@ -127,14 +138,14 @@ export default function CopaJogadorPage() {
         <>
           {/* Hero */}
           <div style={{
-            padding: '32px 24px',
+            padding: lg ? '32px 24px' : '16px 12px',
             background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%)',
             borderBottom: `1px solid ${BDR}`,
           }}>
-            <div style={{ maxWidth: 800, display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 800, display: 'flex', gap: lg ? 24 : 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               {/* Large photo */}
               <div style={{
-                width: 144, height: 144, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
+                width: lg ? 144 : 96, height: lg ? 144 : 96, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
                 background: S2, border: `2px solid ${BDR2}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
@@ -189,7 +200,7 @@ export default function CopaJogadorPage() {
           </div>
 
           {/* Content */}
-          <div style={{ padding: '24px', paddingBottom: 64, maxWidth: 800 }}>
+          <div style={{ padding: lg ? '24px' : '16px 12px', paddingBottom: 64, maxWidth: 800 }}>
 
             {/* Description */}
             {player.strDescriptionEN && (
@@ -282,7 +293,7 @@ export default function CopaJogadorPage() {
         </>
       )}
 
-      <div style={{ padding: '14px 24px', borderTop: `1px solid ${BDR}`, fontSize: 11, color: T3 }}>
+      <div style={{ padding: lg ? '14px 24px' : '14px 12px', borderTop: `1px solid ${BDR}`, fontSize: 11, color: T3 }}>
         Dados via TheSportsDB · Copa do Mundo 2026
       </div>
     </div>

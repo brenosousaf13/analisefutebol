@@ -1,5 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+
+function useBreakpoint() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return { lg: w >= 960 };
+}
 import { theSportsDbService } from '../../services/theSportsDbService';
 import type { TsdbEvent, TsdbLineupPlayer, TsdbTimeline, TsdbEventStats, TsdbTv } from '../../types/thesportsdb';
 import type { HighlightData } from '../../services/highlightsService';
@@ -123,6 +133,7 @@ function TeamBadge({ src, name, size = 42 }: { src: string | null; name: string;
 }
 
 export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating, isSaved, onToggleSave, isNotif, onToggleNotif, youtubeHighlight }: Props) {
+  const { lg } = useBreakpoint();
   const [activePanel, setActivePanel] = useState<Panel | null>(null);
   const [lineup, setLineup] = useState<TsdbLineupPlayer[] | null>(null);
   const [timeline, setTimeline] = useState<TsdbTimeline[] | null>(null);
@@ -285,11 +296,17 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
 
       {/* ── Actions row ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 13px', borderTop: `1px solid ${BDR}`, gap: 8, flexWrap: 'wrap',
+        display: 'flex', flexDirection: lg ? 'row' : 'column',
+        alignItems: lg ? 'center' : 'stretch',
+        justifyContent: lg ? 'space-between' : 'flex-start',
+        padding: '8px 13px', borderTop: `1px solid ${BDR}`, gap: lg ? 8 : 6,
       }}>
-        {/* Left: icons + panel toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        {/* Panel toggles — scrollable on mobile */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 2,
+          overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+          WebkitOverflowScrolling: 'touch',
+        } as React.CSSProperties}>
           <IconBtn28 active={notif} col={AC} title="Notificar" onClick={handleToggleNotif}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill={notif ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -301,7 +318,7 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
             </svg>
           </IconBtn28>
 
-          <div style={{ width: 1, height: 14, background: BDR, margin: '0 4px' }} />
+          <div style={{ width: 1, height: 14, background: BDR, margin: '0 4px', flexShrink: 0 }} />
 
           <SmallBtn active={activePanel === 'lineup'} bra={bra} onClick={() => openPanel('lineup')}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -323,22 +340,23 @@ export default function CopaFixtureCard({ fixture, onCreateAnalysis, isCreating,
           )}
           <SmallBtn active={activePanel === 'tv'} bra={bra} onClick={() => openPanel('tv')}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
-            Onde Assistir
+            {lg ? 'Onde Assistir' : 'TV'}
           </SmallBtn>
         </div>
 
-        {/* Right: criar análise */}
+        {/* Criar análise — full width on mobile */}
         <button
           onClick={() => onCreateAnalysis(fixture)}
           disabled={isCreating}
           onMouseEnter={e => { if (!isCreating) (e.currentTarget as HTMLButtonElement).style.background = a1; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = a0; }}
           style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '5px 12px', borderRadius: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            padding: lg ? '5px 12px' : '8px 12px', borderRadius: 6,
             background: a0, color: a, fontSize: 11.5, fontWeight: 600,
             border: `1px solid ${a1}`, transition: 'background .12s',
             opacity: isCreating ? 0.6 : 1, cursor: isCreating ? 'not-allowed' : 'pointer',
+            ...(lg ? {} : { width: '100%' }),
           }}
         >
           {isCreating

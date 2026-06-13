@@ -1,6 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TsdbEvent } from '../../types/thesportsdb';
 import { teamPt } from '../../utils/teamNames';
+
+function useCompact() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return w < 640;
+}
 
 // ── Design tokens ──────────────────────────────────────────────
 const S   = '#0c1016';
@@ -19,7 +29,9 @@ const GROUP_ORDER = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 const FINISHED    = new Set(['FT','AET','PEN']);
 
 // Grid columns: pos | team | Pts | PJ | VIT | E | DER | GM | GC | SG
-const GRID = '28px 1fr 38px 26px 26px 22px 28px 26px 26px 30px';
+const GRID_FULL    = '28px 1fr 38px 26px 26px 22px 28px 26px 26px 30px';
+// Mobile: pos | team | Pts | PJ | VIT | E | SG  (hide DER/GM/GC)
+const GRID_COMPACT = '22px 1fr 34px 24px 22px 20px 26px';
 
 function normalizeGroup(raw: string | null): string | null {
   if (!raw) return null;
@@ -217,13 +229,17 @@ function Cell({ val, bold, color }: { val: string | number; bold?: boolean; colo
   );
 }
 
-function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
+function GroupCard({ group, teams, savedTeams, onToggleTeam, compact }: {
   group: string;
   teams: TeamStat[];
   savedTeams: Set<string>;
   onToggleTeam: (name: string) => void;
+  compact: boolean;
 }) {
   const hasBrazil = teams.some(t => t.name === 'Brazil');
+  const GRID = compact ? GRID_COMPACT : GRID_FULL;
+  const fs = compact ? 8 : 9;
+  const nameFontSize = compact ? 12 : 13;
 
   return (
     <div style={{ background: S, borderRadius: 6, overflow: 'hidden', border: `1px solid ${hasBrazil ? 'rgba(245,158,11,0.18)' : BDR}` }}>
@@ -236,17 +252,19 @@ function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
       </div>
 
       {/* Column headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '5px 12px 5px 10px', alignItems: 'center', borderBottom: `1px solid ${BDR}` }}>
+      <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: compact ? '5px 8px 5px 6px' : '5px 12px 5px 10px', alignItems: 'center', borderBottom: `1px solid ${BDR}` }}>
         <span />
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', paddingLeft: 30 }}>Equipe</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>Pts</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>PJ</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>VIT</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>E</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>DER</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>GM</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>GC</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>SG</span>
+        <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', paddingLeft: compact ? 26 : 30 }}>Equipe</span>
+        <span style={{ fontSize: fs, fontWeight: 700, color: T, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>Pts</span>
+        <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>PJ</span>
+        <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>VIT</span>
+        <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>E</span>
+        {!compact && <>
+          <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>DER</span>
+          <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>GM</span>
+          <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>GC</span>
+        </>}
+        <span style={{ fontSize: fs, fontWeight: 700, color: T3, textTransform: 'uppercase', letterSpacing: '.05em', textAlign: 'center' }}>SG</span>
       </div>
 
       {/* Team rows */}
@@ -259,7 +277,7 @@ function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
         return (
           <div key={tm.name} style={{
             display: 'grid', gridTemplateColumns: GRID,
-            padding: '6px 12px 6px 10px', alignItems: 'center',
+            padding: compact ? '5px 8px 5px 6px' : '6px 12px 6px 10px', alignItems: 'center',
             borderTop: `1px solid ${BDR}`,
             background: isBra ? 'rgba(245,158,11,0.04)' : 'transparent',
             borderLeft: starred ? `2px solid ${GD}` : qualify ? `2px solid rgba(0,230,118,0.4)` : `2px solid transparent`,
@@ -268,10 +286,10 @@ function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
             <span style={{ fontSize: 11, fontWeight: 600, color: qualify ? AC : T3, textAlign: 'center' }}>{i + 1}</span>
 
             {/* Team: badge + name + star */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-              <TeamBadge src={tm.badge} name={tm.name} size={20} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 7, minWidth: 0 }}>
+              <TeamBadge src={tm.badge} name={tm.name} size={compact ? 18 : 20} />
               <span style={{
-                fontSize: 13, fontWeight: isBra ? 600 : 400,
+                fontSize: nameFontSize, fontWeight: isBra ? 600 : 400,
                 color: isBra ? GD : T,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
               }}>
@@ -281,7 +299,7 @@ function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
             </div>
 
             {/* Pts — bold, white */}
-            <span style={{ textAlign: 'center', fontSize: 13.5, fontWeight: 700, color: T }}>{tm.pts}</span>
+            <span style={{ textAlign: 'center', fontSize: compact ? 13 : 13.5, fontWeight: 700, color: T }}>{tm.pts}</span>
 
             {/* PJ */}
             <Cell val={tm.played} />
@@ -289,12 +307,12 @@ function GroupCard({ group, teams, savedTeams, onToggleTeam }: {
             <Cell val={tm.wins} />
             {/* E */}
             <Cell val={tm.draws} />
-            {/* DER */}
-            <Cell val={tm.losses} />
-            {/* GM */}
-            <Cell val={tm.gf} />
-            {/* GC */}
-            <Cell val={tm.ga} />
+            {/* DER / GM / GC — desktop only */}
+            {!compact && <>
+              <Cell val={tm.losses} />
+              <Cell val={tm.gf} />
+              <Cell val={tm.ga} />
+            </>}
             {/* SG */}
             <span style={{ textAlign: 'center', fontSize: 12.5, fontWeight: tm.gd !== 0 ? 600 : 400, color: gdColor, display: 'block' }}>
               {tm.gd > 0 ? `+${tm.gd}` : tm.gd}
@@ -315,6 +333,7 @@ interface Props {
 }
 
 export default function CopaGroupsDisplay({ fixtures, savedTeams, onToggleTeam }: Props) {
+  const compact = useCompact();
   const groupStats = buildStandings(fixtures);
 
   const groups = GROUP_ORDER
@@ -342,10 +361,11 @@ export default function CopaGroupsDisplay({ fixtures, savedTeams, onToggleTeam }
       <p style={{ fontSize: 10.5, color: T3, marginBottom: 16, lineHeight: 1.6 }}>
         <span style={{ color: AC }}>■</span>{' '}
         <span>Top 2 de cada grupo se classificam &nbsp;·&nbsp; ⭐ Favorite uma seleção para acompanhar</span>
+        {compact && <span> &nbsp;·&nbsp; Mostrando: PTS · PJ · VIT · E · SG</span>}
       </p>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(400px, 100%), 1fr))',
         gap: 14,
       }}>
         {groups.map(({ group, teams }) => (
@@ -355,6 +375,7 @@ export default function CopaGroupsDisplay({ fixtures, savedTeams, onToggleTeam }
             teams={teams}
             savedTeams={savedTeams}
             onToggleTeam={onToggleTeam}
+            compact={compact}
           />
         ))}
       </div>

@@ -1,4 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
+
+function useBreakpoint() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return { lg: w >= 960 };
+}
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { theSportsDbService } from '../services/theSportsDbService';
 import type { TsdbTeam, TsdbPlayer, TsdbEquipment, TsdbEvent } from '../types/thesportsdb';
@@ -187,6 +197,7 @@ export default function CopaSelecaoPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { lg } = useBreakpoint();
 
   const initName = searchParams.get('name') ?? '';
   const initGroup = searchParams.get('group') ?? '';
@@ -246,15 +257,15 @@ export default function CopaSelecaoPage() {
   ];
 
   return (
-    <div style={{ background: BG, color: T, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, WebkitFontSmoothing: 'antialiased', paddingTop: 64 } as React.CSSProperties}>
+    <div style={{ background: BG, color: T, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, WebkitFontSmoothing: 'antialiased', paddingTop: lg ? 64 : 40 } as React.CSSProperties}>
       <Header />
 
       {/* Sub-header */}
       <header style={{
-        position: 'sticky', top: 64, zIndex: 20, height: 52,
+        position: 'sticky', top: lg ? 64 : 40, zIndex: 20, height: 52,
         background: 'rgba(7,9,12,0.95)', backdropFilter: 'blur(14px)',
         borderBottom: `1px solid ${BDR}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: lg ? '0 24px' : '0 12px',
       }}>
         <button onClick={() => navigate('/copa')} style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -272,13 +283,13 @@ export default function CopaSelecaoPage() {
 
       {/* Hero */}
       <div style={{
-        padding: '32px 24px 24px',
+        padding: lg ? '32px 24px 24px' : '16px 12px 14px',
         borderBottom: `1px solid ${BDR}`,
         background: `linear-gradient(180deg, ${hexToRgba(team?.strColour1 ?? null, 0.09)} 0%, transparent 100%)`,
         borderLeft: `4px solid ${hexToRgba(team?.strColour1 ?? null, 0.4)}`,
-        display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+        display: 'flex', alignItems: 'center', gap: lg ? 20 : 14, flexWrap: 'wrap',
       }}>
-        <TeamBadge src={team?.strBadge ?? null} name={initName} size={80}
+        <TeamBadge src={team?.strBadge ?? null} name={initName} size={lg ? 80 : 60}
           borderColor={team ? hexToRgba(team.strColour1, 0.6) : BDR2} />
         <div style={{ flex: 1 }}>
           <h1 style={{
@@ -320,14 +331,17 @@ export default function CopaSelecaoPage() {
 
       {/* Sub-tabs */}
       <div style={{
-        position: 'sticky', top: 116, zIndex: 15,
+        position: 'sticky', top: lg ? 116 : 92, zIndex: 15,
         background: 'rgba(7,9,12,0.97)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${BDR}`,
-        display: 'flex', padding: '0 24px',
-      }}>
+        display: 'flex', padding: lg ? '0 24px' : '0 8px',
+        overflowX: 'auto', scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
+      } as React.CSSProperties}>
         {SUB_TABS.map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{
-            padding: '13px 16px', fontSize: 14, fontWeight: 600,
+            padding: lg ? '13px 16px' : '12px 14px', fontSize: lg ? 14 : 13, fontWeight: 600,
+            flexShrink: 0, whiteSpace: 'nowrap',
             color: subTab === t.id ? teamColor : T2,
             borderBottom: `2px solid ${subTab === t.id ? teamColor : 'transparent'}`,
             marginBottom: -1, transition: 'color .12s, border-color .12s',
@@ -339,7 +353,7 @@ export default function CopaSelecaoPage() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '24px', paddingBottom: 64 }}>
+      <div style={{ padding: lg ? '24px' : '16px 12px', paddingBottom: 64 }}>
 
         {/* ── Elenco ── */}
         {subTab === 'elenco' && (
@@ -458,7 +472,7 @@ export default function CopaSelecaoPage() {
 
         {/* ── Jogos ── */}
         {subTab === 'jogos' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))', gap: 24 }}>
             {/* Próximos jogos */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -506,7 +520,7 @@ export default function CopaSelecaoPage() {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '14px 24px', borderTop: `1px solid ${BDR}`, fontSize: 11, color: T3 }}>
+      <div style={{ padding: lg ? '14px 24px' : '14px 12px', borderTop: `1px solid ${BDR}`, fontSize: 11, color: T3 }}>
         Dados via TheSportsDB · Copa do Mundo 2026
       </div>
     </div>
