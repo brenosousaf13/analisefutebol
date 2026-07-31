@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Play } from 'lucide-react';
+import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Play, Home } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import TeamLogoImage from './TeamLogoImage';
@@ -43,8 +43,9 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
     };
 
     const menuItems = [
-        { icon: PlusCircle, label: 'Criar Análise', path: '/' },
-        { icon: FolderOpen, label: 'Minhas Análises', path: '/minhas-analises' },
+        { icon: Home, label: 'Home', path: '/' },
+        { icon: PlusCircle, label: 'Nova Análise', path: '/nova-analise' },
+        { icon: FolderOpen, label: 'Biblioteca', path: '/biblioteca' },
     ];
 
     const userName = user?.user_metadata?.full_name || 'Analista';

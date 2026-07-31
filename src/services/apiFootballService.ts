@@ -4,6 +4,28 @@ import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, Ap
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
+/**
+ * Ligas priorizadas no painel "Proximos jogos" da Home.
+ * Editar aqui para mudar o que aparece — os IDs sao os da API-Football.
+ */
+const PRIORITY_LEAGUES = new Set<number>([
+    71,  // Brasileirao Serie A
+    72,  // Brasileirao Serie B
+    73,  // Copa do Brasil
+    13,  // Libertadores
+    11,  // Sul-Americana
+    2,   // Champions League
+    3,   // Europa League
+    39,  // Premier League
+    140, // La Liga
+    135, // Serie A (ITA)
+    78,  // Bundesliga
+    61,  // Ligue 1
+]);
+
+const UPCOMING_CACHE_KEY = 'zona14_upcoming_fixtures';
+const UPCOMING_TTL_MS = 30 * 60 * 1000; // 30 min — a API gratuita tem cota diaria baixa
+
 const apiClient = axios.create({
     baseURL: BASE_URL,
     headers: {
@@ -46,6 +68,49 @@ export const apiFootballService = {
         } catch (error) {
             console.error('Error fetching fixtures:', error);
             throw error;
+        }
+    },
+
+    /**
+     * Proximos jogos para o painel da Home.
+     *
+     * Faz UMA chamada (`/fixtures?next=N`) e filtra no cliente pelas ligas de
+     * PRIORITY_LEAGUES — a API-Football nao aceita varias ligas por requisicao, e
+     * uma chamada por liga estouraria a quota do plano gratuito. Se o filtro nao
+     * sobrar nada, devolve os jogos sem filtro para o painel nunca ficar vazio.
+     *
+     * Resultado cacheado em localStorage por UPCOMING_TTL_MS.
+     */
+    async getUpcomingFixtures(limit = 12): Promise<ApiFixture[]> {
+        try {
+            const cached = localStorage.getItem(UPCOMING_CACHE_KEY);
+            if (cached) {
+                const { data, ts } = JSON.parse(cached) as { data: ApiFixture[]; ts: number };
+                if (Date.now() - ts < UPCOMING_TTL_MS) return data.slice(0, limit);
+            }
+        } catch { /* cache corrompido ou storage desabilitado */ }
+
+        try {
+            const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', {
+                params: { next: 80 }
+            });
+            const all = response.data.response ?? [];
+
+            const preferred = all.filter(f => PRIORITY_LEAGUES.has(f.league?.id));
+            const chosen = preferred.length > 0 ? preferred : all;
+
+            const sorted = [...chosen].sort(
+                (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0)
+            );
+
+            try {
+                localStorage.setItem(UPCOMING_CACHE_KEY, JSON.stringify({ data: sorted, ts: Date.now() }));
+            } catch { /* storage cheio ou desabilitado */ }
+
+            return sorted.slice(0, limit);
+        } catch (error) {
+            console.error('Error fetching upcoming fixtures:', error);
+            return [];
         }
     },
 

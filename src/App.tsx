@@ -9,6 +9,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 import SharedAnalysis from './pages/SharedAnalysis';
 import FullAnalysisPage from './pages/FullAnalysisPage';
+import Home from './pages/Home';
+import Campinho from './pages/Campinho';
 
 function App() {
   return (
@@ -19,9 +21,28 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/s/:token" element={<SharedAnalysis />} />
 
+            {/* Home do analista, primeira tela depois do login */}
             <Route path="/" element={
               <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/nova-analise" element={
+              <ProtectedRoute>
                 <CreateAnalysis />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campinho" element={
+              <ProtectedRoute>
+                <Campinho />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/biblioteca" element={
+              <ProtectedRoute>
+                <MyAnalyses />
               </ProtectedRoute>
             } />
 
@@ -49,11 +70,8 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/minhas-analises" element={
-              <ProtectedRoute>
-                <MyAnalyses />
-              </ProtectedRoute>
-            } />
+            {/* Rota antiga: mantida para nao quebrar links salvos */}
+            <Route path="/minhas-analises" element={<Navigate to="/biblioteca" replace />} />
 
             <Route path="/admin" element={
               <ProtectedRoute>

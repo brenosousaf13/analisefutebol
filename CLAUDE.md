@@ -54,6 +54,13 @@ The `events` field (`any[]`, stored as JSON in the DB) may contain a `{ type: '_
 > analyses still carry it**, so the read path in `FullAnalysisPage` and `HighlightsModal`
 > must be preserved. Nothing writes `_meta` anymore.
 
+`competition` (nome do campeonato) é opcional no banco: a migration
+[20260731_add_competition.sql](supabase/migrations/20260731_add_competition.sql)
+adiciona a coluna. **Enquanto ela não rodar, o app continua funcionando** —
+`getMyAnalyses` detecta o erro de coluna inexistente, marca `competitionColumn`
+como `'absent'` e refaz a consulta sem o campo. A escrita só envia `competition`
+depois de confirmar que a coluna existe, para não derrubar o insert inteiro.
+
 Types are defined in [src/types/](src/types/).
 
 ### Page Structure
@@ -61,21 +68,54 @@ Types are defined in [src/types/](src/types/).
 | Page | Route | Purpose |
 |------|-------|---------|
 | `Login` | `/login` | Supabase auth |
-| `CreateAnalysis` | `/` | New analysis wizard |
+| `Home` | `/` | Home do analista — landing pós-login |
+| `CreateAnalysis` | `/nova-analise` | New analysis wizard |
+| `Campinho` | `/campinho` | Placeholder — a definir |
+| `MyAnalyses` | `/biblioteca` | User's analysis dashboard |
 | `Analysis` | `/analise`, `/analise/:id`, `/analysis/saved/:id` | Main editor (tactical field + sidebar) |
 | `FullAnalysisPage` | `/analysis-complete/saved/:id` | Full analysis editor (main use) |
-| `MyAnalyses` | `/minhas-analises` | User's analysis dashboard |
 | `SharedAnalysis` | `/s/:token` | Public shared view |
 | `AdminDashboard` | `/admin` | Admin tools |
 
 Pages behind `ProtectedRoute`: all except `Login` and `SharedAnalysis`.
+`/minhas-analises` redireciona para `/biblioteca` (links antigos).
 Unknown routes redirect to `/` via the catch-all in [src/App.tsx](src/App.tsx).
+
+### Casca das telas internas
+
+[src/layouts/AppLayout.tsx](src/layouts/AppLayout.tsx) é a moldura das telas novas:
+sidebar fixa + topbar com busca opcional (`⌘K` foca o campo). Ele é dono do estado
+de colapso — a largura do conteúdo precisa acompanhar a da sidebar, então o estado
+**não** pode viver dentro de `Sidebar`. Persistido em `localStorage`
+(`zona14_sidebar_collapsed`). Abaixo de `lg` a sidebar vira drawer.
+
+[src/components/layout/Sidebar.tsx](src/components/layout/Sidebar.tsx) segue a
+estrutura da referência ElevenLabs. Itens marcados `soon: true` renderizam como
+`<button disabled>` em vez de `<Link>` — navegar para uma rota inexistente cairia
+no catch-all e voltaria para a home, o que confunde.
+
+`AnalysisLayout` + `Header` (antigos) continuam servindo as telas de análise.
 
 ### Key Services
 
 - **[src/services/analysisService.ts](src/services/analysisService.ts)** — All Supabase CRUD: create/read/update analyses, boards, sharing tokens, background colors
 - **[src/services/apiFootballService.ts](src/services/apiFootballService.ts)** — Player search, squad lookup, fixture/lineup data from API-Football
 - **[src/services/searchService.ts](src/services/searchService.ts)** — Multi-type search (players, teams, coaches, matches, tags) combining API-Football and Supabase
+- **[src/services/fixtureAnalysisService.ts](src/services/fixtureAnalysisService.ts)** —
+  `createAnalysisFromFixture()` cria uma análise a partir de um jogo da API-Football,
+  já com a escalação real. Devolve `usedRealLineups: false` quando a API ainda não
+  publicou a escalação (o caso normal para jogos distantes) — a análise é criada
+  mesmo assim, com o time padrão, e a Home avisa o usuário.
+- **[src/utils/lineupToPlayers.ts](src/utils/lineupToPlayers.ts)** — converte o
+  `grid` ("linha:coluna") da API-Football em posições percentuais no campo.
+  ⚠️ A mesma lógica está duplicada inline em
+  [src/pages/Analysis.tsx](src/pages/Analysis.tsx) (`convertLineupToPlayers`);
+  unificar quando essa página for mexida.
+
+`apiFootballService.getUpcomingFixtures()` alimenta o painel "Próximos jogos".
+Faz **uma** chamada e filtra no cliente por `PRIORITY_LEAGUES`, porque a API não
+aceita várias ligas por requisição e a cota do plano gratuito é baixa. Cache de
+30 min em `localStorage`.
 
 ### State Management
 
@@ -122,13 +162,27 @@ The interactive field is implemented in [src/components/SoccerField.tsx](src/com
 
 ### Styling
 
-Tailwind is configured with a custom palette in [tailwind.config.js](tailwind.config.js). Key tokens:
-- `app-bg: #0B1111` — main background
-- `card-bg: #141A1A` — panels/cards
-- `nav-dark: #030909` — header/nav
-- `brand-primary: #27D888` — green accent
-- `field-green: #2d5a3d` — soccer field color
-- Font: Plus Jakarta Sans (Google Fonts)
+Tailwind is configured with a custom palette in [tailwind.config.js](tailwind.config.js).
+
+**Sistema novo** (usar em telas novas) — estrutura da referência Fynix traduzida
+para dark. Escala de elevação, não cores soltas:
+
+| Token | Valor | Uso |
+|---|---|---|
+| `surface-base` | `#0B1111` | fundo da página |
+| `surface-sunken` | `#080D0D` | sidebar |
+| `surface-raised` | `#141A1A` | cards |
+| `surface-overlay` | `#1B2222` | linhas dentro do card, hover |
+| `surface-hover` | `#222A2A` | item interativo em hover/ativo |
+| `line` / `line-subtle` / `line-strong` | brancos com alpha | bordas e divisores |
+| `content-primary` / `-secondary` / `-muted` | `#E8EFEC` / `#9AA8A4` / `#61706C` | hierarquia de texto |
+| `rounded-card` (20px) / `rounded-control` (12px) | | raios |
+| `shadow-card` / `shadow-pop` | | elevação |
+
+**Tokens legados** (telas antigas ainda usam): `app-bg`, `card-bg`, `nav-dark`,
+`brand-primary: #27D888`, `field-green`. Não remover antes de migrar as telas.
+
+Font: Plus Jakarta Sans (Google Fonts) — a mesma da referência Fynix.
 
 ### Deployment
 

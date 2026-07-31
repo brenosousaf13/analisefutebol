@@ -131,6 +131,46 @@ export interface SavedAnalysisSummary {
     created_at: string;
     updated_at: string;
     thumbnail_url?: string;
+    /** Indefinido enquanto a migration 20260731_add_competition.sql nao rodar. */
+    competition?: string;
+}
+
+/**
+ * A coluna `competition` foi adicionada pela migration 20260731_add_competition.sql.
+ * Enquanto ela nao existir no banco, o app segue funcionando sem o campo: a primeira
+ * consulta que falhar marca a coluna como ausente e refaz a chamada sem ela.
+ */
+let competitionColumn: 'unknown' | 'present' | 'absent' = 'unknown';
+
+function isMissingCompetitionError(error: { message?: string } | null): boolean {
+    if (!error) return false;
+    const msg = (error.message || '').toLowerCase();
+    // PostgREST: "column analyses.competition does not exist" (select)
+    //            "Could not find the 'competition' column ... in the schema cache" (insert)
+    return msg.includes('competition');
+}
+
+/** Linha crua devolvida pelo select de getMyAnalyses. */
+interface AnalysisSummaryRow {
+    id: string;
+    titulo: string | null;
+    descricao: string | null;
+    tipo: AnalysisType | null;
+    status: AnalysisStatus | null;
+    home_team_name: string;
+    away_team_name: string;
+    home_team_logo: string;
+    away_team_logo: string;
+    home_team_color: string | null;
+    away_team_color: string | null;
+    home_team_bg_color: string | null;
+    away_team_bg_color: string | null;
+    home_score: number;
+    away_score: number;
+    created_at: string;
+    updated_at: string;
+    thumbnail_url: string | null;
+    competition?: string | null;
 }
 
 export interface AnalysisFilters {
@@ -176,6 +216,12 @@ export const analysisService = {
                 away_team_color: data.awayTeamColor, // Added missing field
                 home_team_bg_color: data.homeTeamBgColor,
                 away_team_bg_color: data.awayTeamBgColor,
+
+                // Só envia `competition` quando ja confirmamos que a coluna existe.
+                // Se a migration ainda nao rodou, omitir evita quebrar o insert inteiro.
+                ...(competitionColumn === 'present' && data.competition !== undefined
+                    ? { competition: data.competition }
+                    : {}),
 
                 // Old notes
                 notas_casa: data.notasCasa,
@@ -419,91 +465,115 @@ export const analysisService = {
 
         if (!user) throw new Error("Usuário não autenticado");
 
-        let query = supabase
-            .from('analyses')
-            .select(`
+        const buildSelect = (withCompetition: boolean) => `
                 id, titulo, descricao, tipo, status,
                 home_team_name, away_team_name, home_team_logo, away_team_logo,
                 home_team_color, away_team_color,
                 home_score, away_score, created_at, updated_at, thumbnail_url
-            `)
+                ${withCompetition ? ', competition' : ''}
+            `;
+
+        const buildQuery = (withCompetition: boolean) => supabase
+            .from('analyses')
+            .select(buildSelect(withCompetition))
             .eq('user_id', user.id); // STRICT FILTER: Only show my own analyses
 
-        if (filters?.status && filters.status !== 'todas') {
-            query = query.eq('status', filters.status);
+        // A busca por jogador exige um lookup separado antes de montar a query
+        // principal, entao roda uma vez so — fora do builder, que pode repetir.
+        let playerAnalysisIds: string[] | null = null;
+        if (filters?.search?.trim() && (filters.searchType || 'all') === 'player') {
+            const { data: players } = await supabase
+                .from('analysis_players')
+                .select('analysis_id')
+                .ilike('name', `%${filters.search.trim()}%`);
+
+            playerAnalysisIds = (players || []).map(p => p.analysis_id);
+            if (playerAnalysisIds.length === 0) return [];
         }
 
-        if (filters?.fixtureId) {
-            query = query.eq('fixture_id', filters.fixtureId);
-        }
+        // Montada como funcao para poder ser refeita sem `competition`
+        // caso a migration ainda nao tenha rodado.
+        const runQuery = (withCompetition: boolean) => {
+            let query = buildQuery(withCompetition);
 
-        if (filters?.search && filters.search.trim() !== '') {
-            const searchTerm = filters.search.trim();
-            const searchType = filters.searchType || 'all';
-
-            switch (searchType) {
-                case 'team':
-                    query = query.or(`home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%`);
-                    break;
-                case 'match':
-                    query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%`);
-                    break;
-                case 'coach':
-                    query = query.or(`home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
-                    break;
-                case 'player':
-                    // Player search requires a subquery or separate lookup
-                    const { data: players } = await supabase
-                        .from('analysis_players')
-                        .select('analysis_id')
-                        .ilike('name', `%${searchTerm}%`);
-
-                    if (players && players.length > 0) {
-                        const ids = players.map(p => p.analysis_id);
-                        query = query.in('id', ids);
-                    } else {
-                        return [];
-                    }
-                    break;
-                case 'tag':
-                    query = query.contains('tags', [searchTerm]);
-                    break;
-                case 'all':
-                default:
-                    query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%,home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
-                    // Note: querying tags in "OR" with ilike is hard in Supabase/PostgREST without generic text search
-                    // but we can try basic text match if needed, or leave tags for explicit search
-                    break;
+            if (filters?.status && filters.status !== 'todas') {
+                query = query.eq('status', filters.status);
             }
+
+            if (filters?.fixtureId) {
+                query = query.eq('fixture_id', filters.fixtureId);
+            }
+
+            if (filters?.search && filters.search.trim() !== '') {
+                const searchTerm = filters.search.trim();
+                const searchType = filters.searchType || 'all';
+
+                switch (searchType) {
+                    case 'team':
+                        query = query.or(`home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%`);
+                        break;
+                    case 'match':
+                        query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%`);
+                        break;
+                    case 'coach':
+                        query = query.or(`home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
+                        break;
+                    case 'player':
+                        query = query.in('id', playerAnalysisIds || []);
+                        break;
+                    case 'tag':
+                        query = query.contains('tags', [searchTerm]);
+                        break;
+                    case 'all':
+                    default:
+                        query = query.or(`titulo.ilike.%${searchTerm}%,home_team_name.ilike.%${searchTerm}%,away_team_name.ilike.%${searchTerm}%,home_coach.ilike.%${searchTerm}%,away_coach.ilike.%${searchTerm}%`);
+                        // Note: querying tags in "OR" with ilike is hard in Supabase/PostgREST without generic text search
+                        // but we can try basic text match if needed, or leave tags for explicit search
+                        break;
+                }
+            }
+
+            const orderBy = filters?.orderBy || 'created_at';
+            const orderDirection = filters?.orderDirection || 'desc';
+            return query.order(orderBy, { ascending: orderDirection === 'asc' });
+        };
+
+        let { data, error } = await runQuery(competitionColumn !== 'absent');
+
+        if (error && competitionColumn !== 'absent' && isMissingCompetitionError(error)) {
+            // Migration 20260731_add_competition.sql ainda nao rodou neste banco.
+            competitionColumn = 'absent';
+            ({ data, error } = await runQuery(false));
+        } else if (!error && competitionColumn === 'unknown') {
+            competitionColumn = 'present';
         }
-
-        const orderBy = filters?.orderBy || 'created_at';
-        const orderDirection = filters?.orderDirection || 'desc';
-        query = query.order(orderBy, { ascending: orderDirection === 'asc' });
-
-        const { data, error } = await query;
 
         if (error) throw error;
 
-        return (data || []).map(item => ({
+        // O select e montado dinamicamente (por causa de `competition`), entao o
+        // Supabase nao consegue inferir a forma da linha — declarada aqui.
+        const rows = (data || []) as unknown as AnalysisSummaryRow[];
+
+        return rows.map(item => ({
             id: item.id,
             titulo: item.titulo || `${item.home_team_name} vs ${item.away_team_name}`,
-            descricao: item.descricao,
+            descricao: item.descricao ?? undefined,
             tipo: item.tipo || 'partida',
             status: item.status || 'rascunho',
             home_team_name: item.home_team_name,
             away_team_name: item.away_team_name,
             home_team_logo: item.home_team_logo,
             away_team_logo: item.away_team_logo,
-            home_team_color: item.home_team_color,
-            away_team_color: item.away_team_color,
-            home_team_bg_color: (item as any).home_team_bg_color,
-            away_team_bg_color: (item as any).away_team_bg_color,
+            home_team_color: item.home_team_color ?? undefined,
+            away_team_color: item.away_team_color ?? undefined,
+            home_team_bg_color: item.home_team_bg_color ?? undefined,
+            away_team_bg_color: item.away_team_bg_color ?? undefined,
             home_score: item.home_score,
             away_score: item.away_score,
             created_at: item.created_at,
             updated_at: item.updated_at,
-            thumbnail_url: item.thumbnail_url
+            thumbnail_url: item.thumbnail_url ?? undefined,
+            competition: item.competition ?? undefined
         }));
     },
 
@@ -647,6 +717,7 @@ export const analysisService = {
             matchDate: analysis.match_date,
             matchTime: analysis.match_time,
             shareToken: analysis.share_token,
+            competition: analysis.competition ?? undefined,
             titulo: analysis.titulo,
             descricao: analysis.descricao,
             tipo: analysis.tipo,
@@ -1000,6 +1071,7 @@ export const analysisService = {
             matchDate: analysis.match_date,
             matchTime: analysis.match_time,
             shareToken: analysis.share_token,
+            competition: analysis.competition ?? undefined,
             titulo: analysis.titulo,
             descricao: analysis.descricao,
             tipo: analysis.tipo,
