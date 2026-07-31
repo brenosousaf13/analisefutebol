@@ -8,9 +8,6 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 import SharedAnalysis from './pages/SharedAnalysis';
-import Copa from './pages/Copa';
-import CopaSelecaoPage from './pages/CopaSelecaoPage';
-import CopaJogadorPage from './pages/CopaJogadorPage';
 import FullAnalysisPage from './pages/FullAnalysisPage';
 
 function App() {
@@ -21,9 +18,6 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/s/:token" element={<SharedAnalysis />} />
-            <Route path="/copa" element={<Copa />} />
-            <Route path="/copa/selecao/:teamId" element={<CopaSelecaoPage />} />
-            <Route path="/copa/jogador/:playerId" element={<CopaJogadorPage />} />
 
             <Route path="/" element={
               <ProtectedRoute>

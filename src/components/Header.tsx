@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Trophy, Play } from 'lucide-react';
+import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Play } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import TeamLogoImage from './TeamLogoImage';
@@ -197,18 +197,6 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                                     </Link>
                                 );
                             })}
-
-                            <Link
-                                to="/copa"
-                                onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium ${activePath.startsWith('/copa')
-                                    ? 'bg-accent-green text-white shadow-lg shadow-green-900/20'
-                                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                                    }`}
-                            >
-                                <Trophy size={20} />
-                                <span>Copa do Mundo 2026</span>
-                            </Link>
                         </nav>
 
                         <div className="p-4 border-t border-gray-700 bg-gray-800/50 shrink-0">
