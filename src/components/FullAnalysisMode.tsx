@@ -621,11 +621,23 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     abaixo. Antes os dois disputavam a mesma altura fixa e o
                     campo era esmagado. */}
                 <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 px-4 pb-4">
+                    {/* Abas por fora do campo, como ja e feito no mobile. Dentro
+                        do TacticalField elas forcam um pt-12 que comeria a altura
+                        da caixa e faria o campo encolher de novo. */}
+                    {tabsSlot && <div className="shrink-0">{tabsSlot}</div>}
+
+                    {/* A largura manda: a altura sai da proporcao do campo (105x68).
+                        Antes a altura e que era fixa, e como o campo preserva a
+                        proporcao, sobrava margem enorme dos dois lados. */}
                     <div
                         className="shrink-0 w-full relative"
-                        style={{ height: 'clamp(340px, 52vh, 620px)' }}
+                        style={{ aspectRatio: '105 / 68', minHeight: 320 }}
                     >
-                        <TacticalField {...tacticalFieldProps} orientation="horizontal" />
+                        <TacticalField
+                            {...tacticalFieldProps}
+                            orientation="horizontal"
+                            tabsSlot={undefined}
+                        />
                     </div>
 
                     {/* Anotacao unica do time — segue o switcher de posse de bola.

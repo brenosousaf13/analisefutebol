@@ -622,10 +622,14 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     newHeight = newWidth / targetRatio;
                 }
 
-                // Add a small buffer/padding to prevent exact edge touching if desired
+                // Folga para o campo nao encostar na borda do container.
+                // No horizontal (desktop) o wrapper ja vem com a proporcao exata
+                // e com padding proprio, entao 4% a mais so desperdicaria espaco.
+                const buffer = isVertical ? 0.96 : 1;
+
                 setDimensions({
-                    width: newWidth * 0.96,
-                    height: newHeight * 0.96
+                    width: newWidth * buffer,
+                    height: newHeight * buffer
                 });
 
             }
