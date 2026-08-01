@@ -14,7 +14,7 @@ import {
     Share2
 } from 'lucide-react';
 
-export type ToolType = 'select' | 'arrow' | 'rectangle' | 'line' | 'eraser';
+export type ToolType = 'select' | 'arrow' | 'rectangle' | 'line' | 'eraser' | 'text';
 
 interface ToolbarProps {
     activeTool: ToolType;

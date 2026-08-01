@@ -2,7 +2,6 @@ import React, { useState, useMemo, type ReactNode } from 'react';
 import TacticalField from './TacticalField';
 import { type ToolType } from './Toolbar';
 import { FullAnalysisToolbar } from './FullAnalysisToolbar';
-import BenchArea from './BenchArea';
 import MobileBottomSheet from './MobileBottomSheet';
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { Player } from '../types/Player';
@@ -15,6 +14,8 @@ import {
     Pencil, Users, Trash2,
 } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
+import RosterList from './analysis/RosterList';
+import { nameKey, type PlayerTally } from '../utils/playerTally';
 
 interface FullAnalysisModeProps {
     homeTeamName: string;
@@ -73,6 +74,9 @@ interface FullAnalysisModeProps {
     onRemoveRectangle: (id: string, team: 'home' | 'away', phase: string) => void;
     onMoveRectangle: (id: string, dx: number, dy: number, team: 'home' | 'away', phase: string) => void;
 
+    /** Eventos da partida — alimentam os indicativos de gol e assistencia. */
+    events?: Array<{ type?: string; player_name?: string; secondary_player_name?: string }>;
+
     readOnly?: boolean;
     hideSidePanels?: boolean;
     tabsSlot?: ReactNode;
@@ -100,11 +104,12 @@ const TeamColumn: React.FC<{
     readOnly?: boolean;
     onBenchPlayerClick: (player: Player, team: 'home' | 'away') => void;
     onPlayerDoubleClick: (player: Player) => void;
+    tallies: Map<string, PlayerTally>;
 }> = ({
-    name, players, substitutes, color, bgColor = '#090909',
+    name, players, substitutes, color,
     isVisible, onToggleVisibility, team, align, coachName, onCoachChange,
     onTeamClick, isExpandedOnMobile, onToggleMobileExpansion,
-    readOnly = false, onBenchPlayerClick, onPlayerDoubleClick,
+    readOnly = false, onBenchPlayerClick, onPlayerDoubleClick, tallies,
 }) => (
     <div className="flex flex-col border-r border-l border-gray-800 bg-[#070d0d] w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden">
         <div
@@ -166,16 +171,24 @@ const TeamColumn: React.FC<{
                     readOnly={readOnly}
                 />
             </div>
-            <div className="flex flex-col p-2 flex-1 min-h-0 overflow-hidden">
-                <BenchArea
-                    players={substitutes}
-                    team={team}
+            {/* Duas listas: quem esta em campo e quem esta no banco. */}
+            <div className="flex flex-col gap-4 p-2 flex-1 min-h-0 overflow-y-auto">
+                <RosterList
+                    title="Em campo"
+                    players={players}
                     teamColor={color}
-                    teamBgColor={bgColor}
-                    orientation="vertical"
-                    align={align || 'left'}
-                    onPromotePlayer={readOnly ? () => {} : (p) => onBenchPlayerClick(p, team)}
+                    tallies={tallies}
                     onPlayerDoubleClick={onPlayerDoubleClick}
+                    emptyLabel="Nenhum jogador em campo."
+                />
+                <RosterList
+                    title="Suplentes"
+                    players={substitutes}
+                    teamColor={color}
+                    tallies={tallies}
+                    onPlayerDoubleClick={onPlayerDoubleClick}
+                    onPlayerClick={readOnly ? undefined : (p) => onBenchPlayerClick(p, team)}
+                    emptyLabel="Banco vazio."
                 />
             </div>
         </div>
@@ -194,9 +207,11 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     awayPlayersDef, awayPlayersOff, awaySubstitutes, awayArrows, awayRectangles,
     onBallMove, onPlayerMove, onBenchPlayerClick, onPlayerClick, onPlayerDoubleClick,
     activeTool, onToolChange, onOpenColorPicker, onOpenAnalysis, onOpenEvents,
-    onSave, onExport, onAddPlayer, isSaving, hasUnsavedChanges, onShare, onHeaderTeamClick,
+    // onExport nao e mais usado aqui: a acao de baixar subiu para o cabecalho.
+    onSave, onAddPlayer, isSaving, hasUnsavedChanges, onShare, onHeaderTeamClick,
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
+    events,
     readOnly = false, hideSidePanels = false, tabsSlot, activeBoardId, onDeleteBoard,
 }) => {
     const isMobile = useIsMobile();
@@ -208,6 +223,27 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const [isBenchSheetOpen, setIsBenchSheetOpen] = useState(false);
     const [isToolsSheetOpen, setIsToolsSheetOpen] = useState(false);
     const [showLabels, setShowLabels] = useState(true);
+    // Antes um unico toggle escondia nome e bola juntos; agora sao independentes.
+    const [showBall, setShowBall] = useState(true);
+
+    // Gols e assistencias por jogador. Associados por nome porque MatchEvent
+    // guarda player_name/secondary_player_name, nao o id do jogador.
+    const tallies = useMemo(() => {
+        const map = new Map<string, PlayerTally>();
+        const bump = (n: string | undefined, field: keyof PlayerTally) => {
+            if (!n?.trim()) return;
+            const key = nameKey(n);
+            const cur = map.get(key) ?? { goals: 0, assists: 0 };
+            cur[field] += 1;
+            map.set(key, cur);
+        };
+        for (const e of events ?? []) {
+            if (e?.type !== 'goal') continue;
+            bump(e.player_name, 'goals');
+            bump(e.secondary_player_name, 'assists');
+        }
+        return map;
+    }, [events]);
 
     const toggleMobileExpansion = (team: 'home' | 'away') =>
         setMobileExpandedTeam(prev => prev === team ? null : team);
@@ -274,6 +310,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         onBallMove: (pos: { x: number, y: number }) => onBallMove?.(pos, possession, 'offensive'),
         ballScale: 0.7,
         showLabels,
+        showBall,
     };
 
     // ── MOBILE LAYOUT ────────────────────────────────────────────────────────
@@ -505,6 +542,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             {/* LEFT COLUMN: HOME */}
             {!hideSidePanels && (
             <TeamColumn
+                tallies={tallies}
                 name={homeTeamName}
                 players={homePlayersDef}
                 substitutes={homeSubstitutes}
@@ -566,14 +604,11 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                 onOpenColorPicker={() => { onOpenColorPicker(); setIsToolbarOpen(false); }}
                                 onOpenAnalysis={() => { onOpenAnalysis(); setIsToolbarOpen(false); }}
                                 onOpenEvents={() => { onOpenEvents(); setIsToolbarOpen(false); }}
-                                onSave={onSave}
-                                onExport={onExport}
                                 onAddPlayer={() => { onAddPlayer(); setIsToolbarOpen(false); }}
-                                isSaving={isSaving}
-                                hasUnsavedChanges={hasUnsavedChanges}
-                                onShare={onShare}
                                 showLabels={showLabels}
                                 onToggleLabels={() => setShowLabels(v => !v)}
+                                showBall={showBall}
+                                onToggleBall={() => setShowBall(v => !v)}
                             />
                         </div>
                     )}
@@ -587,6 +622,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             {/* RIGHT COLUMN: AWAY */}
             {!hideSidePanels && (
             <TeamColumn
+                tallies={tallies}
                 name={awayTeamName}
                 players={awayPlayersDef}
                 substitutes={awaySubstitutes}

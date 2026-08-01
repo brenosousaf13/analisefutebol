@@ -23,9 +23,11 @@ interface HeaderProps {
     onHeaderTeamClick?: (team: 'home' | 'away') => void;
     videoUrl?: string | null;
     onHighlightClick?: () => void;
+    /** Acoes da analise (baixar, compartilhar, salvar) no canto direito. */
+    actions?: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick }) => {
+const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick, actions }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
@@ -145,6 +147,9 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                         Highlights
                     </button>
                 )}
+
+                {/* Acoes da analise */}
+                {actions && <div className="flex items-center gap-1">{actions}</div>}
 
                 {/* Theme Toggle — desktop only on analysis pages */}
                 {isAnalysisPage && <div className="hidden lg:block"><ThemeToggle /></div>}

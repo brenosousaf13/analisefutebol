@@ -24,6 +24,10 @@ import EventsSidebar from '../components/EventsSidebar';
 import ColorPickerModal from '../components/ColorPickerModal';
 import { AnalysisTabs } from '../components/AnalysisTabs';
 import HighlightsModal from '../components/HighlightsModal';
+import IconButton from '../components/analysis/IconButton';
+import { Download, Share2, Save } from 'lucide-react';
+import { downloadFieldImage, fieldFileName } from '../utils/captureField';
+import { apiFootballService } from '../services/apiFootballService';
 
 function FullAnalysisPage() {
     const navigate = useNavigate();
@@ -52,6 +56,7 @@ function FullAnalysisPage() {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // --- Boards State ---
     const [boards, setBoards] = useState<AnalysisBoard[]>([]);
@@ -221,6 +226,13 @@ function FullAnalysisPage() {
 
                     setHomeCoach(data.homeCoach || '');
                     setAwayCoach(data.awayCoach || '');
+
+                    // Tecnico vem da API-Football quando a analise nasceu de um jogo
+                    // e o campo ainda esta vazio. Nunca sobrescreve o que ja existe:
+                    // se o usuario digitou algo, aquilo vale mais que a API.
+                    if (data.matchId && (!data.homeCoach?.trim() || !data.awayCoach?.trim())) {
+                        void fetchCoachesFromApi(data.matchId, data.homeTeam, data.awayTeam);
+                    }
 
                     if (data.shareToken) setShareToken(data.shareToken);
 
@@ -934,6 +946,42 @@ function FullAnalysisPage() {
         toast.success('Evento removido');
     };
 
+    /**
+     * Busca o nome dos tecnicos na escalacao da API-Football.
+     *
+     * Silenciosa de proposito: se a API nao tem a escalacao ou a cota estourou,
+     * o campo simplesmente segue manual — nao vale interromper o usuario por isso.
+     */
+    const fetchCoachesFromApi = async (fixtureId: number, homeName: string, awayName: string) => {
+        try {
+            const lineups = await apiFootballService.getLineups(fixtureId);
+            if (lineups.length === 0) return;
+
+            const matchTeam = (teamName: string) =>
+                lineups.find(l => l.team?.name?.toLowerCase() === teamName.toLowerCase());
+
+            // A ordem da API costuma ser [casa, visitante]; o nome e mais confiavel.
+            const home = matchTeam(homeName) ?? lineups[0];
+            const away = matchTeam(awayName) ?? lineups[1];
+
+            if (home?.coach?.name) setHomeCoach(prev => prev.trim() ? prev : home.coach.name);
+            if (away?.coach?.name) setAwayCoach(prev => prev.trim() ? prev : away.coach.name);
+        } catch {
+            /* segue com o campo manual */
+        }
+    };
+
+    const handleDownloadField = async () => {
+        setIsDownloading(true);
+        try {
+            await downloadFieldImage(null, fieldFileName(matchInfo.homeTeam, matchInfo.awayTeam));
+        } catch {
+            toast.error('Não foi possível gerar a imagem do campinho.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     const handleSaveEvent = (eventData: Omit<MatchEvent, 'id'>) => {
         if (eventToEdit) {
             setEvents(prev => prev.map(e => e.id === eventToEdit.id ? { ...eventData, id: e.id } : e));
@@ -961,6 +1009,28 @@ function FullAnalysisPage() {
             onHeaderTeamClick={handleTeamClick}
             videoUrl={videoUrl}
             onHighlightClick={() => setShowHighlights(true)}
+            actions={
+                <>
+                    <IconButton
+                        icon={<Download className="w-4 h-4" />}
+                        label="Baixar imagem do campinho"
+                        onClick={handleDownloadField}
+                        isLoading={isDownloading}
+                    />
+                    <IconButton
+                        icon={<Share2 className="w-4 h-4" />}
+                        label="Compartilhar análise"
+                        onClick={() => setIsShareModalOpen(true)}
+                    />
+                    <IconButton
+                        icon={<Save className="w-4 h-4" />}
+                        label="Salvar análise"
+                        onClick={handleSave}
+                        isLoading={saveStatus === 'loading'}
+                        badge={hasUnsavedChanges}
+                    />
+                </>
+            }
         >
 
 
@@ -1041,6 +1111,7 @@ function FullAnalysisPage() {
                     onRemoveRectangle={handleRemoveRectangle}
                     onMoveRectangle={handleMoveRectangle}
 
+                    events={events}
                     onOpenColorPicker={() => setIsColorPickerOpen(true)}
                     onOpenAnalysis={() => setIsAnalysisSidebarOpen(true)}
                     onOpenEvents={() => setIsEventsSidebarOpen(true)}

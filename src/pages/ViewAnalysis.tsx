@@ -7,6 +7,7 @@ import TacticalField from '../components/TacticalField';
 import TeamLogoImage from '../components/TeamLogoImage';
 import TeamRosterCard from '../components/analysis/TeamRosterCard';
 import { nameKey, type PlayerTally } from '../utils/playerTally';
+import { downloadFieldImage, fieldFileName } from '../utils/captureField';
 import { analysisService } from '../services/analysisService';
 import type { AnalysisData } from '../services/analysisService';
 import type { Player } from '../types/Player';
@@ -169,25 +170,11 @@ const ViewAnalysis: React.FC = () => {
         if (!fieldRef.current || !analysis) return;
         setDownloading(true);
         try {
-            // Carregado sob demanda para nao pesar o bundle inicial.
-            const { default: html2canvas } = await import('html2canvas');
-            const canvas = await html2canvas(fieldRef.current, {
-                backgroundColor: '#0B1111',
-                scale: 2,
-                useCORS: true,
-            });
-
-            const link = document.createElement('a');
-            const slug = `${analysis.homeTeam}-x-${analysis.awayTeam}`
-                .normalize('NFD')
-                .replace(/\p{Diacritic}/gu, '') // remove acentos
-                .replace(/[^a-zA-Z0-9]+/g, '-')
-                .replace(/^-|-$/g, '')
-                .toLowerCase();
-
-            link.download = `${slug}-${possession === 'home' ? analysis.homeTeam : analysis.awayTeam}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const posseDe = possession === 'home' ? analysis.homeTeam : analysis.awayTeam;
+            await downloadFieldImage(
+                fieldRef.current,
+                fieldFileName(analysis.homeTeam, analysis.awayTeam, posseDe),
+            );
         } catch {
             toast.error('Não foi possível gerar a imagem do campinho.');
         } finally {
@@ -323,7 +310,6 @@ const ViewAnalysis: React.FC = () => {
                             onPlayerMove={() => { /* somente leitura */ }}
                             onPlayerClick={p => p.note && setOpenNote({ name: p.name, note: p.note })}
                             playerNotes={playerNotes}
-                            showNoteIndicators={false}
                             readOnly
                             arrows={possession === 'home' ? analysis.homeArrowsDef : analysis.awayArrowsDef}
                             rectangles={possession === 'home' ? analysis.homeRectanglesDef : analysis.awayRectanglesDef}

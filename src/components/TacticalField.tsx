@@ -4,6 +4,7 @@ import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
 import { getPlayerSize, getFontSize } from '../utils/playerCoordinates';
+import { fieldDisplayName } from '../utils/playerName';
 
 interface TacticalFieldProps {
     players: Player[];
@@ -11,12 +12,11 @@ interface TacticalFieldProps {
     onPlayerClick?: (player: Player) => void;
     onPlayerDoubleClick?: (player: Player) => void;
     selectedPlayerId?: number | null;
-    playerNotes?: { [key: number]: string };
     /**
-     * Bolinha no marcador do jogador quando ele tem anotacao. A tela de
-     * visualizacao desliga isso porque la os indicadores vivem na lista lateral.
+     * Usado apenas para saber quais jogadores sao clicaveis (tem anotacao).
+     * Nao desenha mais nenhum indicador sobre o marcador.
      */
-    showNoteIndicators?: boolean;
+    playerNotes?: { [key: number]: string };
     mode?: 'move' | 'draw' | 'rectangle';
     arrows?: Arrow[];
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
@@ -37,6 +37,11 @@ interface TacticalFieldProps {
     compact?: boolean;
 
     showLabels?: boolean;
+    /**
+     * Visibilidade da bola. Separada de `showLabels` — antes um unico toggle
+     * escondia nome e bola juntos. Default `true` para nao mudar quem nao passa.
+     */
+    showBall?: boolean;
     readOnly?: boolean;
     orientation?: 'vertical' | 'horizontal';
     playerScale?: number;
@@ -137,7 +142,6 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onPlayerDoubleClick,
     selectedPlayerId,
     playerNotes = {},
-    showNoteIndicators = true,
     mode = 'move',
     arrows = [],
     onAddArrow,
@@ -152,6 +156,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     playerColor = '#EAB308', // Default yellow
     compact = false,
     showLabels = true,
+    showBall = true,
     readOnly = false,
     orientation = 'vertical',
     playerScale = 1,
@@ -693,8 +698,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
 
                 <div
                     ref={containerRef}
+                    /* Alvo estavel para o html2canvas capturar so o campo. */
+                    data-field-capture=""
                     className={`
-                        w-full h-full relative 
+                        w-full h-full relative
                         ${theme === 'dark'
                             ? 'bg-[#1a1a1a]'
                             : 'bg-gradient-to-b from-field-green to-[#3d6a4d]'
@@ -722,7 +729,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     </div>
 
                     {/* BALL */}
-                    {showLabels && (ballPosition || tempBallPosition) && (() => {
+                    {showBall && (ballPosition || tempBallPosition) && (() => {
                         // tempBallPosition is visual; ballPosition is stored → transform
                         const bp = (draggingBall && tempBallPosition)
                             ? tempBallPosition
@@ -906,10 +913,12 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                     onTouchEnd={(e) => handlePlayerTouchEnd(e, player)}
                                     onDoubleClick={() => onPlayerDoubleClick?.(player)}
                                 >
+                                    {/* Sem indicador de anotacao/evento aqui: por decisao de design
+                                        esses indicativos vivem apenas na lista lateral do time. */}
                                     <div className="relative w-fit">
                                         <div
                                             className={`
-                                            rounded-full 
+                                            rounded-full
                                             flex items-center justify-center font-bold
                                             shadow-lg transition-transform duration-75
                                             ${isDragging ? 'scale-110 ring-2 ring-white' : (readOnly ? '' : 'hover:scale-105')}
@@ -926,24 +935,20 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         >
                                             {player.number}
                                         </div>
-
-                                        {/* Note Indicator - Now relative to the circle container */}
-                                        {showNoteIndicators && playerNotes[player.id] && (
-                                            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />
-                                        )}
                                     </div>
 
                                     {showLabels && (
+                                        // Tarja preta a 40% atras do nome. Sem max-width nem ellipsis:
+                                        // o sobrenome nunca pode ser cortado.
                                         <div
-                                            className="text-white text-center mt-0.5 font-medium drop-shadow-md pointer-events-none overflow-hidden"
+                                            className="mt-0.5 rounded-sm px-1 py-px text-center font-semibold leading-tight text-white pointer-events-none"
                                             style={{
                                                 fontSize: Math.max(8, fontSizes.name),
-                                                maxWidth: '60px',
                                                 whiteSpace: 'nowrap',
-                                                textOverflow: 'ellipsis',
+                                                backgroundColor: 'rgba(0,0,0,0.4)',
                                             }}
                                         >
-                                            {player.name}
+                                            {fieldDisplayName(player.name)}
                                         </div>
                                     )}
                                 </div>

@@ -20,6 +20,8 @@ interface AnalysisLayoutProps {
     onHeaderTeamClick?: (team: 'home' | 'away') => void;
     videoUrl?: string | null;
     onHighlightClick?: () => void;
+    /** Acoes da analise renderizadas no canto direito do Header. */
+    actions?: ReactNode;
 }
 
 const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
@@ -31,6 +33,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     onHeaderTeamClick,
     videoUrl,
     onHighlightClick,
+    actions,
 }) => {
     useEffect(() => {
         // Lock html/body scroll so the field handles all touch without page scroll.
@@ -67,6 +70,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
                     onHeaderTeamClick={onHeaderTeamClick}
                     videoUrl={videoUrl}
                     onHighlightClick={onHighlightClick}
+                    actions={actions}
                 />
 
                 {/* Page Content */}
