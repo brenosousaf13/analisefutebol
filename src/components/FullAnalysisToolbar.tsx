@@ -53,9 +53,9 @@ export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
     onToggleBall,
 }) => (
     <div className="
-        flex flex-row items-center gap-1
+        flex w-max flex-row items-center gap-0.5
         rounded-full border border-white/10 bg-nav-dark/90
-        px-4 py-2 shadow-2xl backdrop-blur-md
+        px-2 py-1 shadow-lg backdrop-blur-md
     ">
         <IconButton
             icon={<Hand className="h-5 w-5" />}

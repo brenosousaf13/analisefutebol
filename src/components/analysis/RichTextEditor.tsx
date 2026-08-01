@@ -133,7 +133,7 @@ const RichTextEditor: React.FC<Props> = ({
     };
 
     return (
-        <div className="flex flex-col rounded-lg border border-gray-700 bg-[#0f1515]">
+        <div className="flex h-full min-h-0 flex-col rounded-lg border border-gray-700 bg-[#0f1515]">
             {/* Nome do time da anotacao, logo acima do campo de texto */}
             <div className="flex items-center justify-between gap-2 border-b border-gray-700 px-3 py-2">
                 <span

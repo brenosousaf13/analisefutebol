@@ -143,3 +143,14 @@ body,
     border-radius: 8px;
     margin: 0.5em 0;
 }
+
+/* Usada em barras roláveis horizontais (toolbar do campo, barra mobile).
+   Estava sendo referenciada em Toolbar.tsx sem nunca ter sido definida. */
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

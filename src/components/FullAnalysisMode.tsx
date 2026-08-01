@@ -8,7 +8,7 @@ import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
 import {
-    Eye, EyeOff, Menu, X, ChevronDown, ChevronUp,
+    Eye, EyeOff, ChevronDown, ChevronUp,
     Hand, MoveRight, Square, Palette, Eraser,
     FileText, Zap, Share2, Save, Loader2, UserPlus,
     Pencil, Users, Trash2,
@@ -227,7 +227,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 }) => {
     const isMobile = useIsMobile();
     const [possession, setPossession] = useState<'home' | 'away'>('home');
-    const [isToolbarOpen, setIsToolbarOpen] = useState(false);
+    // A toolbar do desktop agora e sempre visivel, entao nao ha mais estado de
+    // aberta/fechada. No mobile as ferramentas continuam no bottom sheet.
     const [showHomePlayers, setShowHomePlayers] = useState(true);
     const [showAwayPlayers, setShowAwayPlayers] = useState(true);
     const [mobileExpandedTeam, setMobileExpandedTeam] = useState<'home' | 'away' | null>(null);
@@ -575,47 +576,38 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             {/* CENTER: FIELD */}
             <div className={`flex flex-col w-full ${hideSidePanels ? '' : 'lg:w-[64%]'} h-auto lg:h-full relative shrink-0 order-1 lg:order-none`}>
 
-                <div className="flex flex-col items-center justify-center pt-2 pb-1 gap-1 z-30 shrink-0 relative">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
-                        Posse de Bola
-                    </span>
-
-                    <div className="flex items-center gap-2">
+                {/* Barra do topo: posse de bola a esquerda, ferramentas a direita,
+                    sempre visiveis — sem menu escondendo as ferramentas. */}
+                <div className="shrink-0 z-30 flex flex-wrap items-end justify-between gap-x-3 gap-y-2 px-4 pt-3 pb-2">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
+                            Posse de Bola
+                        </span>
                         <div className="flex items-center bg-gray-800 rounded-full p-1 border border-gray-700">
                             <button
                                 onClick={() => setPossession('home')}
-                                className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'home' ? 'bg-white text-gray-900 shadow-lg scale-105' : 'text-gray-400 hover:text-white'}`}
+                                className={`max-w-[150px] truncate px-5 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'home' ? 'bg-white text-gray-900 shadow' : 'text-gray-400 hover:text-white'}`}
                             >
                                 {homeTeamName}
                             </button>
                             <button
                                 onClick={() => setPossession('away')}
-                                className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'away' ? 'bg-white text-gray-900 shadow-lg scale-105' : 'text-gray-400 hover:text-white'}`}
+                                className={`max-w-[150px] truncate px-5 py-1.5 rounded-full text-xs font-bold transition-all ${possession === 'away' ? 'bg-white text-gray-900 shadow' : 'text-gray-400 hover:text-white'}`}
                             >
                                 {awayTeamName}
                             </button>
                         </div>
-
-                        {!readOnly && (
-                            <button
-                                onClick={() => setIsToolbarOpen(!isToolbarOpen)}
-                                className={`p-2 rounded-full border transition-all duration-200 ${isToolbarOpen ? 'bg-white border-white text-black shadow-lg rotate-90' : 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'}`}
-                                title="Ferramentas"
-                            >
-                                {isToolbarOpen ? <X size={18} /> : <Menu size={18} />}
-                            </button>
-                        )}
                     </div>
 
-                    {isToolbarOpen && !readOnly && (
-                        <div className="absolute top-full mt-2 z-50 animate-in slide-in-from-top-2 fade-in duration-200">
+                    {!readOnly && (
+                        <div className="min-w-0 max-w-full overflow-x-auto no-scrollbar">
                             <FullAnalysisToolbar
                                 activeTool={activeTool}
-                                onToolChange={(tool) => { onToolChange(tool); setIsToolbarOpen(false); }}
-                                onOpenColorPicker={() => { onOpenColorPicker(); setIsToolbarOpen(false); }}
-                                onOpenAnalysis={() => { onOpenAnalysis(); setIsToolbarOpen(false); }}
-                                onOpenEvents={() => { onOpenEvents(); setIsToolbarOpen(false); }}
-                                onAddPlayer={() => { onAddPlayer(); setIsToolbarOpen(false); }}
+                                onToolChange={onToolChange}
+                                onOpenColorPicker={onOpenColorPicker}
+                                onOpenAnalysis={onOpenAnalysis}
+                                onOpenEvents={onOpenEvents}
+                                onAddPlayer={onAddPlayer}
                                 showLabels={showLabels}
                                 onToggleLabels={() => setShowLabels(v => !v)}
                                 showBall={showBall}
@@ -625,23 +617,33 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     )}
                 </div>
 
-                <div className="flex-1 w-full flex items-center justify-center relative pb-4 min-h-0">
-                    <TacticalField {...tacticalFieldProps} orientation="horizontal" />
-                </div>
-
-                {/* Anotacao unica do time — segue o switcher de posse de bola. */}
-                {!hideSidePanels && (
-                    <div className="shrink-0 w-full px-4 pb-4">
-                        <RichTextEditor
-                            teamName={possession === 'home' ? homeTeamName : awayTeamName}
-                            teamColor={possession === 'home' ? homeTeamColor : awayTeamColor}
-                            value={possession === 'home' ? homeNoteHtml : awayNoteHtml}
-                            onChange={html => onNoteChange?.(possession, html)}
-                            readOnly={readOnly}
-                            onError={onNoteError}
-                        />
+                {/* Area rolavel: o campo tem altura garantida e a anotacao vem
+                    abaixo. Antes os dois disputavam a mesma altura fixa e o
+                    campo era esmagado. */}
+                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 px-4 pb-4">
+                    <div
+                        className="shrink-0 w-full relative"
+                        style={{ height: 'clamp(340px, 52vh, 620px)' }}
+                    >
+                        <TacticalField {...tacticalFieldProps} orientation="horizontal" />
                     </div>
-                )}
+
+                    {/* Anotacao unica do time — segue o switcher de posse de bola.
+                        flex-1 para ocupar a sobra abaixo do campo em vez de
+                        deixar um vazio ate o rodape. */}
+                    {!hideSidePanels && (
+                        <div className="flex w-full flex-1 flex-col" style={{ minHeight: 200 }}>
+                            <RichTextEditor
+                                teamName={possession === 'home' ? homeTeamName : awayTeamName}
+                                teamColor={possession === 'home' ? homeTeamColor : awayTeamColor}
+                                value={possession === 'home' ? homeNoteHtml : awayNoteHtml}
+                                onChange={html => onNoteChange?.(possession, html)}
+                                readOnly={readOnly}
+                                onError={onNoteError}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* RIGHT COLUMN: AWAY */}

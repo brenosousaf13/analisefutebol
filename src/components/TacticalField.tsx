@@ -896,7 +896,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                     key={player.id}
                                     className={`
                                     absolute select-none flex flex-col items-center justify-center
-                                    ${isDragging ? 'z-50' : 'z-10'}
+                                    ${isDragging ? 'z-50' : 'z-10 hover:z-40'}
                                     ${readOnly
                                             ? `pointer-events-auto ${playerNotes?.[player.id] ? 'cursor-pointer' : 'cursor-default'}`
                                             : ((mode === 'draw' || mode === 'rectangle') ? '' : 'cursor-grab active:cursor-grabbing pointer-events-auto')
@@ -937,20 +937,27 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         </div>
                                     </div>
 
-                                    {showLabels && (
-                                        // Tarja preta a 40% atras do nome. Sem max-width nem ellipsis:
-                                        // o sobrenome nunca pode ser cortado.
-                                        <div
-                                            className="mt-0.5 rounded-sm px-1 py-px text-center font-semibold leading-tight text-white pointer-events-none"
-                                            style={{
-                                                fontSize: Math.max(8, fontSizes.name),
-                                                whiteSpace: 'nowrap',
-                                                backgroundColor: 'rgba(0,0,0,0.4)',
-                                            }}
-                                        >
-                                            {fieldDisplayName(player.name)}
-                                        </div>
-                                    )}
+                                    {showLabels && (() => {
+                                        const label = fieldDisplayName(player.name);
+                                        // Nome longo encolhe um pouco: sao justamente os que
+                                        // encostam no do jogador vizinho. Nunca trunca —
+                                        // sem max-width e sem ellipsis, de proposito.
+                                        const scale = label.length > 12 ? 0.8 : label.length > 9 ? 0.88 : 1;
+
+                                        return (
+                                            <div
+                                                className="mt-0.5 rounded-sm px-1 py-px text-center font-semibold leading-tight text-white pointer-events-none"
+                                                style={{
+                                                    fontSize: Math.max(7, fontSizes.name * scale),
+                                                    whiteSpace: 'nowrap',
+                                                    letterSpacing: '-0.01em',
+                                                    backgroundColor: 'rgba(0,0,0,0.4)',
+                                                }}
+                                            >
+                                                {label}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             );
                         })}

@@ -29,7 +29,9 @@ const RosterList: React.FC<Props> = ({
     const ordered = sortRoster(players);
 
     return (
-        <div className="min-h-0">
+        // shrink-0: sem isso, como filho de um flex column a lista encolhe
+        // abaixo da propria altura e o conteudo transborda por cima da de baixo.
+        <div className="shrink-0">
             <h4 className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wider text-gray-500">
                 {title}
             </h4>

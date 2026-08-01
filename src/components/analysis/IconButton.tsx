@@ -30,7 +30,7 @@ const IconButton: React.FC<Props> = ({
             aria-label={label}
             aria-pressed={isActive}
             className={`
-                relative flex h-10 w-10 items-center justify-center rounded-full
+                relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full
                 transition-all duration-200
                 ${isActive
                     ? 'bg-accent-green text-white shadow-lg'
