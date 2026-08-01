@@ -91,7 +91,8 @@ const Home: React.FC = () => {
         return list.slice(0, LATEST_LIMIT);
     }, [analyses, search]);
 
-    const handleOpen = (id: string) => navigate(`/analysis-complete/saved/${id}`);
+    // "Abrir" leva para a visualizacao; a edicao fica atras do botao de lapis de la.
+    const handleOpen = (id: string) => navigate(`/ver-analise/${id}`);
 
     const handleCreateFromFixture = async (fixture: ApiFixture) => {
         if (creatingFixtureId !== null) return;

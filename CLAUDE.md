@@ -72,6 +72,7 @@ Types are defined in [src/types/](src/types/).
 | `CreateAnalysis` | `/nova-analise` | New analysis wizard |
 | `Campinho` | `/campinho` | Placeholder — a definir |
 | `MyAnalyses` | `/biblioteca` | User's analysis dashboard |
+| `ViewAnalysis` | `/ver-analise/:id` | Visualização somente leitura de uma análise |
 | `Analysis` | `/analise`, `/analise/:id`, `/analysis/saved/:id` | Main editor (tactical field + sidebar) |
 | `FullAnalysisPage` | `/analysis-complete/saved/:id` | Full analysis editor (main use) |
 | `SharedAnalysis` | `/s/:token` | Public shared view |
@@ -95,6 +96,24 @@ estrutura da referência ElevenLabs. Itens marcados `soon: true` renderizam como
 no catch-all e voltaria para a home, o que confunde.
 
 `AnalysisLayout` + `Header` (antigos) continuam servindo as telas de análise.
+
+### Tela de visualização (`ViewAnalysis`)
+
+Somente leitura. Aberta pelo "Abrir" da Home; a edição fica atrás do botão de
+lápis do próprio cabeçalho, que leva para `FullAnalysisPage`.
+
+- **Posse de bola** usa a mesma semântica do editor (`FullAnalysisMode`): quem tem
+  a posse aparece na fase ofensiva e o adversário na defensiva.
+- **Indicadores de anotação, gol e assistência vivem só na lista lateral.** A
+  bolinha azul no marcador em campo é desligada via `showNoteIndicators={false}`
+  em `TacticalField` — a prop existe justamente para isso e continua `true` por
+  padrão, então o editor segue mostrando a bolinha.
+- Gols e assistências vêm de `events` com `type: 'goal'`, associados ao elenco
+  **por nome** (`nameKey` em [src/utils/playerTally.ts](src/utils/playerTally.ts)) —
+  `MatchEvent` guarda `player_name`/`secondary_player_name`, não ids. Jogador
+  renomeado depois do evento deixa de casar.
+- O download usa `html2canvas` em import dinâmico (chunk próprio de ~200 kB) e
+  captura **a fase visível no momento**, não as duas.
 
 ### Key Services
 

@@ -12,6 +12,11 @@ interface TacticalFieldProps {
     onPlayerDoubleClick?: (player: Player) => void;
     selectedPlayerId?: number | null;
     playerNotes?: { [key: number]: string };
+    /**
+     * Bolinha no marcador do jogador quando ele tem anotacao. A tela de
+     * visualizacao desliga isso porque la os indicadores vivem na lista lateral.
+     */
+    showNoteIndicators?: boolean;
     mode?: 'move' | 'draw' | 'rectangle';
     arrows?: Arrow[];
     onAddArrow?: (arrow: Omit<Arrow, 'id'>) => void;
@@ -132,6 +137,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     onPlayerDoubleClick,
     selectedPlayerId,
     playerNotes = {},
+    showNoteIndicators = true,
     mode = 'move',
     arrows = [],
     onAddArrow,
@@ -922,7 +928,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         </div>
 
                                         {/* Note Indicator - Now relative to the circle container */}
-                                        {playerNotes[player.id] && (
+                                        {showNoteIndicators && playerNotes[player.id] && (
                                             <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />
                                         )}
                                     </div>

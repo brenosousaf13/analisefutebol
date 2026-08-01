@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Menu, Search } from 'lucide-react';
+import { Menu, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
 
 interface AppLayoutProps {
@@ -10,6 +10,13 @@ interface AppLayoutProps {
         onChange: (value: string) => void;
         placeholder?: string;
     };
+    /** Esconde a topbar — telas que trazem o proprio cabecalho. */
+    bare?: boolean;
+    /**
+     * Botao de recolher grudado na borda esquerda do conteudo, para ganhar
+     * largura em telas densas como a de visualizacao de analise.
+     */
+    edgeToggle?: boolean;
 }
 
 /**
@@ -26,7 +33,7 @@ function readCollapsed(): boolean {
     }
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, search }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, search, bare = false, edgeToggle = false }) => {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState<boolean>(readCollapsed);
     const searchRef = useRef<HTMLInputElement>(null);
@@ -68,11 +75,28 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, search }) => {
                 />
             )}
 
+            {/* Recolher grudado na borda do conteudo, alinhado com a sidebar. */}
+            {edgeToggle && (
+                <button
+                    onClick={() => setCollapsed(v => !v)}
+                    aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+                    style={{ left: collapsed ? 68 : 232 }}
+                    className="
+                        fixed top-24 z-50 hidden -translate-x-1/2 rounded-full
+                        border border-line bg-surface-raised p-1.5 text-content-secondary shadow-pop
+                        transition-[left,colors] duration-sidebar ease-out
+                        hover:text-content-primary lg:block
+                    "
+                >
+                    {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                </button>
+            )}
+
             {/* A sidebar e fixed, entao o conteudo compensa a largura dela no desktop. */}
             <div
                 className={`transition-[padding] duration-sidebar ease-out ${collapsed ? 'lg:pl-[68px]' : 'lg:pl-[232px]'}`}
             >
-                <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface-base/85 px-4 backdrop-blur lg:px-8">
+                <header className={`sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface-base/85 px-4 backdrop-blur lg:px-8 ${bare ? 'lg:hidden' : ''}`}>
                     <button
                         onClick={() => setMobileOpen(true)}
                         aria-label="Abrir menu"
@@ -110,7 +134,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, search }) => {
                     )}
                 </header>
 
-                <main className="px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+                <main className={bare ? 'p-0' : 'px-4 py-6 lg:px-8 lg:py-8'}>{children}</main>
             </div>
         </div>
     );

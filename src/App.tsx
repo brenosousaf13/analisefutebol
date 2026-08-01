@@ -11,6 +11,7 @@ import SharedAnalysis from './pages/SharedAnalysis';
 import FullAnalysisPage from './pages/FullAnalysisPage';
 import Home from './pages/Home';
 import Campinho from './pages/Campinho';
+import ViewAnalysis from './pages/ViewAnalysis';
 
 function App() {
   return (
@@ -43,6 +44,13 @@ function App() {
             <Route path="/biblioteca" element={
               <ProtectedRoute>
                 <MyAnalyses />
+              </ProtectedRoute>
+            } />
+
+            {/* Visualizacao somente leitura de uma analise salva */}
+            <Route path="/ver-analise/:id" element={
+              <ProtectedRoute>
+                <ViewAnalysis />
               </ProtectedRoute>
             } />
 
