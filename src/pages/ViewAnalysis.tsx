@@ -8,6 +8,7 @@ import TeamLogoImage from '../components/TeamLogoImage';
 import TeamRosterCard from '../components/analysis/TeamRosterCard';
 import { nameKey, type PlayerTally } from '../utils/playerTally';
 import { downloadFieldImage, fieldFileName } from '../utils/captureField';
+import { sanitizeNoteHtml, isEmptyHtml } from '../utils/sanitizeHtml';
 import { analysisService } from '../services/analysisService';
 import type { AnalysisData } from '../services/analysisService';
 import type { Player } from '../types/Player';
@@ -52,23 +53,42 @@ const IconAction: React.FC<{
     </button>
 );
 
-/** Quadro de anotacao coletiva de um time. */
-const TeamNotesBox: React.FC<{ teamName: string; teamColor?: string; notes?: string }> = ({
-    teamName, teamColor, notes,
-}) => (
-    <div className="rounded-card border border-line bg-surface-raised p-4 shadow-card">
-        <h3
-            className="mb-2 border-l-4 pl-2 text-sm font-bold text-content-primary"
-            style={{ borderColor: teamColor || 'transparent' }}
-        >
-            {teamName}
-        </h3>
-        {notes?.trim()
-            ? <p className="whitespace-pre-wrap text-sm leading-relaxed text-content-secondary">{notes}</p>
-            : <p className="text-sm italic text-content-muted">Sem anotações para este time.</p>
-        }
-    </div>
-);
+/**
+ * Quadro de anotacao coletiva de um time.
+ *
+ * Analises novas guardam HTML com formatacao (`noteHtml`); as antigas guardam
+ * texto puro (`notes`). Enquanto as antigas nao forem migradas, os dois
+ * caminhos precisam funcionar — o HTML tem prioridade quando existe.
+ */
+const TeamNotesBox: React.FC<{
+    teamName: string; teamColor?: string; notes?: string; noteHtml?: string;
+}> = ({ teamName, teamColor, notes, noteHtml }) => {
+    const html = !isEmptyHtml(noteHtml) ? sanitizeNoteHtml(noteHtml) : null;
+
+    return (
+        <div className="rounded-card border border-line bg-surface-raised p-4 shadow-card">
+            <h3
+                className="mb-2 border-l-4 pl-2 text-sm font-bold text-content-primary"
+                style={{ borderColor: teamColor || 'transparent' }}
+            >
+                {teamName}
+            </h3>
+
+            {html ? (
+                // Sanitizado logo acima: sem isso, uma analise compartilhada por
+                // link publico poderia executar script no navegador de quem abrisse.
+                <div
+                    className="note-content text-sm leading-relaxed text-content-secondary"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                />
+            ) : notes?.trim() ? (
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-content-secondary">{notes}</p>
+            ) : (
+                <p className="text-sm italic text-content-muted">Sem anotações para este time.</p>
+            )}
+        </div>
+    );
+};
 
 const ViewAnalysis: React.FC = () => {
     const navigate = useNavigate();
@@ -326,11 +346,13 @@ const ViewAnalysis: React.FC = () => {
                                 teamName={analysis.homeTeam}
                                 teamColor={analysis.homeTeamColor}
                                 notes={analysis.notasCasa}
+                                noteHtml={analysis.homeNoteHtml}
                             />
                             <TeamNotesBox
                                 teamName={analysis.awayTeam}
                                 teamColor={analysis.awayTeamColor}
                                 notes={analysis.notasVisitante}
+                                noteHtml={analysis.awayNoteHtml}
                             />
                         </div>
                     </section>

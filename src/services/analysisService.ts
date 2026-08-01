@@ -69,6 +69,15 @@ export interface AnalysisData {
     awayOffensiveNotes: string;
     awayBenchNotes: string;
 
+    /**
+     * Anotacao unica do time, com formatacao (HTML sanitizado).
+     * Substitui a dupla ofensiva/defensiva nas analises NOVAS — os campos
+     * acima seguem intactos para as antigas, que serao migradas depois.
+     * Migration: 20260801_field_texts_and_rich_notes.sql
+     */
+    homeNoteHtml?: string;
+    awayNoteHtml?: string;
+
     defensiveNotes?: string;
     offensiveNotes?: string;
 
@@ -141,6 +150,14 @@ export interface SavedAnalysisSummary {
  * consulta que falhar marca a coluna como ausente e refaz a chamada sem ela.
  */
 let competitionColumn: 'unknown' | 'present' | 'absent' = 'unknown';
+
+/**
+ * Mesma ideia para as colunas de anotacao com formatacao (migration 20260801),
+ * mas detectadas de outro jeito: getAnalysis usa `select('*')`, entao a
+ * presenca da chave na linha ja diz se a coluna existe. Enquanto nao rodar, o
+ * app segue salvando todo o resto normalmente.
+ */
+let noteHtmlColumns: 'unknown' | 'present' | 'absent' = 'unknown';
 
 function isMissingCompetitionError(error: { message?: string } | null): boolean {
     if (!error) return false;
@@ -237,6 +254,15 @@ export const analysisService = {
                 away_defensive_notes: data.awayDefensiveNotes,
                 away_offensive_notes: data.awayOffensiveNotes,
                 away_bench_notes: data.awayBenchNotes,
+
+                // Anotacao unica com formatacao — so quando a migration 20260801
+                // ja rodou, pelo mesmo motivo do `competition` acima.
+                ...(noteHtmlColumns === 'present'
+                    ? {
+                        home_note_html: data.homeNoteHtml ?? null,
+                        away_note_html: data.awayNoteHtml ?? null,
+                    }
+                    : {}),
 
                 // Legacy global fields
                 defensive_notes: data.defensiveNotes || '',
@@ -586,6 +612,12 @@ export const analysisService = {
 
         if (error || !analysis) return null;
 
+        // `select('*')` traz o que existir: a presenca da chave na linha diz se
+        // a migration 20260801 ja rodou, sem precisar de uma consulta de sonda.
+        if (noteHtmlColumns === 'unknown') {
+            noteHtmlColumns = 'home_note_html' in analysis ? 'present' : 'absent';
+        }
+
         await supabase
             .from('analyses')
             .update({ ultimo_acesso: new Date().toISOString() })
@@ -718,6 +750,8 @@ export const analysisService = {
             matchTime: analysis.match_time,
             shareToken: analysis.share_token,
             competition: analysis.competition ?? undefined,
+            homeNoteHtml: analysis.home_note_html ?? undefined,
+            awayNoteHtml: analysis.away_note_html ?? undefined,
             titulo: analysis.titulo,
             descricao: analysis.descricao,
             tipo: analysis.tipo,
@@ -1072,6 +1106,8 @@ export const analysisService = {
             matchTime: analysis.match_time,
             shareToken: analysis.share_token,
             competition: analysis.competition ?? undefined,
+            homeNoteHtml: analysis.home_note_html ?? undefined,
+            awayNoteHtml: analysis.away_note_html ?? undefined,
             titulo: analysis.titulo,
             descricao: analysis.descricao,
             tipo: analysis.tipo,

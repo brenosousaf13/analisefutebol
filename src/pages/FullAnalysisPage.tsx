@@ -57,6 +57,9 @@ function FullAnalysisPage() {
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    // Anotacao unica por time (HTML). Migration 20260801.
+    const [homeNoteHtml, setHomeNoteHtml] = useState('');
+    const [awayNoteHtml, setAwayNoteHtml] = useState('');
 
     // --- Boards State ---
     const [boards, setBoards] = useState<AnalysisBoard[]>([]);
@@ -223,6 +226,9 @@ function FullAnalysisPage() {
                     setHomeOffensiveNotes(data.homeOffensiveNotes || '');
                     setAwayDefensiveNotes(data.awayDefensiveNotes || '');
                     setAwayOffensiveNotes(data.awayOffensiveNotes || '');
+
+                    setHomeNoteHtml(data.homeNoteHtml || '');
+                    setAwayNoteHtml(data.awayNoteHtml || '');
 
                     setHomeCoach(data.homeCoach || '');
                     setAwayCoach(data.awayCoach || '');
@@ -483,6 +489,7 @@ function FullAnalysisPage() {
                     homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
                     notasCasa, notasVisitante,
                     homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
+                    homeNoteHtml, awayNoteHtml,
                     events,
                     allPlayerNotes,
                     tags,
@@ -507,6 +514,7 @@ function FullAnalysisPage() {
         homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
         notasCasa, notasVisitante,
         homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
+        homeNoteHtml, awayNoteHtml,
         events, allPlayerNotes, tags]);
 
 
@@ -795,6 +803,8 @@ function FullAnalysisPage() {
                 awayDefensiveNotes,
                 awayOffensiveNotes,
                 awayBenchNotes,
+                homeNoteHtml,
+                awayNoteHtml,
                 homeTeamColor,
                 awayTeamColor,
                 homeTeamBgColor,
@@ -1112,6 +1122,14 @@ function FullAnalysisPage() {
                     onMoveRectangle={handleMoveRectangle}
 
                     events={events}
+                    homeNoteHtml={homeNoteHtml}
+                    awayNoteHtml={awayNoteHtml}
+                    onNoteChange={(team, html) => {
+                        if (team === 'home') setHomeNoteHtml(html);
+                        else setAwayNoteHtml(html);
+                        setHasUnsavedChanges(true);
+                    }}
+                    onNoteError={(msg) => toast.error(msg)}
                     onOpenColorPicker={() => setIsColorPickerOpen(true)}
                     onOpenAnalysis={() => setIsAnalysisSidebarOpen(true)}
                     onOpenEvents={() => setIsEventsSidebarOpen(true)}

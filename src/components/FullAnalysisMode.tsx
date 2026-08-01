@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
 import RosterList from './analysis/RosterList';
+import RichTextEditor from './analysis/RichTextEditor';
 import { nameKey, type PlayerTally } from '../utils/playerTally';
 
 interface FullAnalysisModeProps {
@@ -76,6 +77,15 @@ interface FullAnalysisModeProps {
 
     /** Eventos da partida — alimentam os indicativos de gol e assistencia. */
     events?: Array<{ type?: string; player_name?: string; secondary_player_name?: string }>;
+
+    /**
+     * Anotacao unica por time (HTML). Qual das duas aparece e definido pelo
+     * switcher de posse de bola.
+     */
+    homeNoteHtml?: string;
+    awayNoteHtml?: string;
+    onNoteChange?: (team: 'home' | 'away', html: string) => void;
+    onNoteError?: (message: string) => void;
 
     readOnly?: boolean;
     hideSidePanels?: boolean;
@@ -212,6 +222,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
     events,
+    homeNoteHtml = '', awayNoteHtml = '', onNoteChange, onNoteError,
     readOnly = false, hideSidePanels = false, tabsSlot, activeBoardId, onDeleteBoard,
 }) => {
     const isMobile = useIsMobile();
@@ -614,9 +625,23 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     )}
                 </div>
 
-                <div className="flex-1 w-full flex items-center justify-center relative pb-4">
+                <div className="flex-1 w-full flex items-center justify-center relative pb-4 min-h-0">
                     <TacticalField {...tacticalFieldProps} orientation="horizontal" />
                 </div>
+
+                {/* Anotacao unica do time — segue o switcher de posse de bola. */}
+                {!hideSidePanels && (
+                    <div className="shrink-0 w-full px-4 pb-4">
+                        <RichTextEditor
+                            teamName={possession === 'home' ? homeTeamName : awayTeamName}
+                            teamColor={possession === 'home' ? homeTeamColor : awayTeamColor}
+                            value={possession === 'home' ? homeNoteHtml : awayNoteHtml}
+                            onChange={html => onNoteChange?.(possession, html)}
+                            readOnly={readOnly}
+                            onError={onNoteError}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* RIGHT COLUMN: AWAY */}
