@@ -170,12 +170,28 @@ digitação antiga sobrescreve a atual.
 Somente leitura. Aberta pelo "Abrir" da Home; a edição fica atrás do botão de
 lápis do próprio cabeçalho, que leva para `FullAnalysisPage`.
 
+- **Cabeçalho**: campeonato e data ladeiam o confronto numa grade
+  `1fr / auto / 1fr`, a 10% da própria coluna — o placar fica centralizado e os
+  dois não ficam colados nas pontas.
+- **Campeonato e placar são os reais da API-Football**, buscados por
+  `getFixturesByIds([matchId])` (mesma chamada e mesmo cache de 6h da Home). Sem
+  `fixture_id`, ou se a chamada falhar, cai no que está salvo no banco.
+- **A caixa do campo é a mesma da tela de edição**: `aspect-ratio: 105/68` com
+  `w-full`, orientação horizontal no desktop e vertical abaixo de `lg`
+  (`useIsMobile`). ⚠️ A orientação vertical dentro de uma caixa sem altura
+  definida mede **zero** — foi assim que o campo sumiu da tela uma vez.
+- **Abas de cena** usam o próprio `AnalysisTabs` em `readOnly`, renderizadas
+  **fora** do `TacticalField` (por `tabsSlot` elas ligam um `pt-12` que come a
+  altura). Só aparecem quando a análise tem mais de um board. A cena ativa troca
+  jogadores, setas, retângulos e bola — `AnalysisBoard` e a raiz de
+  `AnalysisData` expõem os mesmos campos, então não há conversão no meio.
 - **Posse de bola** usa a mesma semântica do editor (`FullAnalysisMode`): quem tem
-  a posse aparece na fase ofensiva e o adversário na defensiva.
-- **Indicadores de anotação, gol e assistência vivem só na lista lateral.** A
-  bolinha azul no marcador em campo é desligada via `showNoteIndicators={false}`
-  em `TacticalField` — a prop existe justamente para isso e continua `true` por
-  padrão, então o editor segue mostrando a bolinha.
+  a posse aparece na fase ofensiva e o adversário na defensiva. O switcher
+  também escolhe **qual anotação aparece** — só a do time com a posse, com a
+  largura exata do campo (os dois são irmãos `w-full` na coluna central).
+- **Indicadores de anotação, gol e assistência vivem só na lista lateral.** O
+  marcador do jogador em campo não tem nenhum indicativo — nem aqui nem no
+  editor (a decisão está no próprio `TacticalField`).
 - Gols e assistências vêm de `events` com `type: 'goal'`, associados ao elenco
   **por nome** (`nameKey` em [src/utils/playerTally.ts](src/utils/playerTally.ts)) —
   `MatchEvent` guarda `player_name`/`secondary_player_name`, não ids. Jogador
