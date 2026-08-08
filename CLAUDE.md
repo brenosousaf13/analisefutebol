@@ -17,6 +17,44 @@ No test framework is configured.
 `src/services/`, `src/types/api-football.ts` and `src/utils/cpfValidation.ts`).
 Don't treat a non-zero lint exit as a regression unless the error is in a file you touched.
 
+**Baseline de lint dos arquivos delicados.** `TacticalField.tsx`,
+`FullAnalysisMode.tsx` e `FullAnalysisPage.tsx` somam **17 problemas
+pré-existentes** (8 errors, 9 warnings). Antes de commitar mudanças neles,
+compare — se continuar 17, não houve regressão:
+
+```bash
+npx eslint src/components/TacticalField.tsx src/components/FullAnalysisMode.tsx src/pages/FullAnalysisPage.tsx
+```
+
+## Como trabalhar neste repositório
+
+**Não faça push sem autorização explícita do Breno.** Ele confere localmente
+com `npm run dev` e depois manda subir. Commits locais podem ser feitos à
+vontade; o push é o passo que espera o "ok".
+
+**Verifique mudança visual com screenshot, não no escuro.** Já entregamos uma
+tela ruim por falta disso. Não há Playwright nem chromium-cli instalados, mas o
+Edge do Windows tira screenshot headless:
+
+```bash
+"/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
+  --headless=new --disable-gpu --hide-scrollbars --virtual-time-budget=7000 \
+  --window-size=1600,900 --screenshot="saida.png" "http://localhost:5173/__preview"
+```
+
+As telas internas ficam atrás de `ProtectedRoute`, então o caminho é criar uma
+**rota temporária `/__preview`** com um harness de dados falsos, tirar o
+screenshot, e **apagar o harness antes de commitar**. Reproduza no harness o que
+o app real tem (ex.: o `tabsSlot` das cenas altera a altura do campo) — sem
+isso o screenshot mente.
+
+Ressalvas medidas: o Edge headless **não desce abaixo de ~490px de viewport**,
+mesmo com `--window-size` menor; dá para validar até o breakpoint `sm`, mas
+390px real depende de aparelho/DevTools. E o screenshot pode ser capturado numa
+largura diferente da renderizada — se algo parecer "cortado", **meça**
+(`document.body.scrollWidth` vs `documentElement.clientWidth`) antes de
+concluir que há overflow.
+
 ## Architecture
 
 **Zona 14** is a tactical football analysis tool. Coaches/analysts create analysis boards, draw formations and movement (arrows/rectangles) on an interactive soccer field, search players and teams via API-Football, and share analyses via public tokens.
@@ -96,6 +134,36 @@ estrutura da referência ElevenLabs. Itens marcados `soon: true` renderizam como
 no catch-all e voltaria para a home, o que confunde.
 
 `AnalysisLayout` + `Header` (antigos) continuam servindo as telas de análise.
+
+### Home (`/`)
+
+Landing pós-login. Dois blocos numa grade **60/40**
+(`xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]`):
+
+- **Últimas análises** — lista accordion. Confronto alinhado à esquerda, com
+  placar, campeonato e data. Expandir carrega a análise **sob demanda**
+  (`getAnalysis`) e mostra a anotação do time, com switcher entre os dois.
+  Análises novas usam a anotação única em HTML; as antigas caem nos campos de
+  fase ofensiva/defensiva, que ainda não foram migrados.
+- **Jogos do dia** ([TodayFixturesPanel](src/components/home/TodayFixturesPanel.tsx)) —
+  jogos de hoje com horário em `America/Sao_Paulo` (UTC-3) independente do fuso
+  da máquina, botão "Analisar" por jogo e filtro de campeonatos em dropdown com
+  checkbox. Jogo encerrado mostra placar no lugar do horário.
+
+**Placar e campeonato reais** vêm de `apiFootballService.getFixturesByIds()`:
+uma **única** chamada em lote para todas as análises visíveis que têm
+`fixture_id` (a API aceita 20 ids por requisição), com cache de 6h. Se falhar,
+a linha cai no placar salvo. Não faça uma chamada por linha — a cota é baixa.
+
+**A busca** ([SearchDropdown](src/components/home/SearchDropdown.tsx)) usa o
+`searchService` que já existia, com debounce de 300ms e resultados em dropdown.
+Respostas fora de ordem são descartadas por número de sequência — sem isso uma
+digitação antiga sobrescreve a atual.
+
+> ⚠️ **Datas**: use sempre `formatShortDate` de
+> [src/utils/formatDate.ts](src/utils/formatDate.ts). `new Date("2026-08-05")`
+> (colunas `DATE`, como `match_date`) é lido como meia-noite **UTC** e, exibido
+> em UTC-3, volta um dia — `01/01/2026` chegava a virar `31/12/2025`.
 
 ### Tela de visualização (`ViewAnalysis`)
 
@@ -206,6 +274,96 @@ Font: Plus Jakarta Sans (Google Fonts) — a mesma da referência Fynix.
 ### Deployment
 
 Deployed to Vercel. Config in [vercel.json](vercel.json) rewrites all routes to `/index.html` for SPA routing. Build output is `dist/`.
+
+### Tela de edição (`FullAnalysisPage` + `FullAnalysisMode`)
+
+**A parte mais delicada do app.** Arrastar jogador, desenhar seta e retângulo
+funcionam bem em desktop e mobile — foram muito trabalhados. Mexa com cuidado e
+sempre compare o baseline de lint acima.
+
+Layout do desktop (o mobile tem um branch próprio, `if (isMobile)`, que **não
+foi tocado** nas últimas mudanças):
+
+- Barra do topo com **posse de bola à esquerda e ferramentas à direita**, ambas
+  sempre visíveis. Não existe mais menu de abrir/fechar ferramentas no desktop.
+- Abaixo, área **rolável**: campo com `aspect-ratio: 105/68` e `w-full` — a
+  **largura manda** e a altura decorre dela. Se inverter (altura fixa), o campo
+  preserva a proporção e sobram margens enormes nas laterais.
+- As **abas de cena são renderizadas fora do `TacticalField`** no desktop, como
+  o mobile já fazia. Dentro dele elas ligam um `pt-12` que come a altura da
+  caixa e o campo encolhe de novo.
+- A anotação do time fica abaixo do campo, alcançada rolando.
+
+Detalhes que já custaram retrabalho:
+
+- A folga de 4% nas dimensões calculadas do campo vale **só na orientação
+  vertical** (mobile). No horizontal o wrapper já chega com a proporção exata.
+- `RosterList` usa `shrink-0` na raiz. Com `min-h-0`, como filho de um flex
+  column, a lista encolhe abaixo da própria altura e o conteúdo **transborda por
+  cima** da lista de baixo.
+- O nome do jogador no campo é `fieldDisplayName()`
+  ([playerName.ts](src/utils/playerName.ts)): caixa alta, primeiro nome
+  abreviado, tarja preta a 40%. **Não truncar** — sem `max-width`, sem
+  ellipsis. Nome longo só reduz a fonte.
+- **Nenhum indicativo de anotação ou evento no marcador do jogador.** Os
+  indicadores vivem só nas listas laterais.
+- O goleiro é detectado por nome ou camisa 1 em
+  [rosterOrder.ts](src/utils/rosterOrder.ts). É heurística: `Player` não guarda
+  posição, e geometria não serve porque o goleiro fica no eixo Y no vertical e
+  no X no horizontal. Para ficar exato seria preciso persistir o `pos` da
+  API-Football numa coluna de `analysis_players`.
+
+**Anotação com formatação** ([RichTextEditor](src/components/analysis/RichTextEditor.tsx)):
+`contentEditable` + `document.execCommand`, sem dependência nova. O
+`execCommand` é deprecated mas funciona em todos os navegadores atuais; como o
+formato salvo é HTML, trocar por tiptap depois é direto. O conteúdo digitado é
+estilizado por `.note-editor` / `.note-content` no `index.css`, porque o
+preflight do Tailwind zera heading e lista.
+
+> 🔒 **Todo HTML de anotação passa por `sanitizeNoteHtml`**
+> ([sanitizeHtml.ts](src/utils/sanitizeHtml.ts)) antes de ir para
+> `dangerouslySetInnerHTML`. Ele é renderizado na página pública `/s/:token`,
+> então um `onerror` colado no editor rodaria no navegador de quem abrisse o
+> link. A limpeza percorre **os filhos antes do próprio nó** — de cima para
+> baixo, os filhos promovidos ao desembrulhar uma tag proibida escapam sem
+> limpeza. Não inverta essa ordem.
+
+### Storage de imagens
+
+Bucket **`zona14`** no Supabase Storage, público (leitura liberada pela URL, o
+que a página compartilhada precisa). Upload em
+[storageService.ts](src/services/storageService.ts), caminho
+`analyses/<user_id>/<arquivo>` — as policies conferem a segunda pasta contra o
+`auth.uid()`.
+
+### Migrations pendentes de execução
+
+Estão no repo mas **o Breno precisa rodar no SQL Editor do Supabase**. O app
+degrada de forma controlada sem elas, então não trate ausência como bug:
+
+| Migration | Sem ela |
+|---|---|
+| `20260731_add_competition.sql` | coluna "Campeonato" fica vazia; `getMyAnalyses` detecta e refaz a query sem o campo |
+| `20260801_field_texts_and_rich_notes.sql` | anotação com formatação **não é salva**; tabela `analysis_field_texts` não existe |
+| `20260801_storage_policies.sql` | upload de imagem falha com violação de RLS |
+
+### Pendências abertas
+
+1. **Ferramenta de texto no campo** — último item da tela de edição. O botão e o
+   tipo `text` em `ToolType` existem, mas **sem comportamento**. A tabela
+   `analysis_field_texts` já está na migration; falta o clique criar, arrastar
+   para reposicionar, a borracha apagar, e a leitura/escrita no `analysisService`.
+2. **Rotacionar `VITE_API_FOOTBALL_KEY`** — exposta no histórico do git e no
+   bundle do cliente. ⚠️ Verificado em 31/07/2026: o repositório
+   `brenosousaf13/analisefutebol` **ainda é público** — o Breno pediu instruções
+   para fechá-lo mas não confirmou ter feito. Conferir antes de assumir.
+3. **Proxy serverless da API-Football** — hoje o browser chama a API direto,
+   então qualquer `VITE_*` é pública por construção. O molde é
+   `api/proxy-logo.js`.
+4. **Migrar as anotações antigas** — os campos de fase ofensiva/defensiva para a
+   anotação única. O Breno quer fazer isso junto, não automaticamente.
+5. **Unificar `lineupToPlayers`** — a mesma lógica está duplicada inline em
+   `Analysis.tsx` (`convertLineupToPlayers`).
 
 ### Removed: Copa do Mundo 2026
 
