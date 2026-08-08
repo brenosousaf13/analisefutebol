@@ -55,6 +55,27 @@ largura diferente da renderizada — se algo parecer "cortado", **meça**
 (`document.body.scrollWidth` vs `documentElement.clientWidth`) antes de
 concluir que há overflow.
 
+**Comportamento (não só layout) dá para testar de verdade.** Screenshot não
+prova atalho de teclado nem `contentEditable`. O Edge aceita CDP e o Node 24
+tem `WebSocket` global, então dá para dirigir a página sem instalar nada:
+
+```bash
+msedge.exe --headless=new --disable-gpu --remote-debugging-port=9222 \
+  --user-data-dir=<temp> "http://localhost:5173/__preview/x"
+# depois: GET /json/list → webSocketDebuggerUrl → Runtime.evaluate,
+# Input.dispatchKeyEvent, Input.dispatchMouseEvent, Page.navigate
+```
+
+Duas armadilhas que já deram resultado falso:
+
+- Para digitar, mande **`keyDown` com `text`** num único evento. Mandar
+  `keyDown` + `char` insere o caractere **duas vezes**, e um `char` avulso
+  ignora o `preventDefault` do handler — foi assim que um espaço "sobrou" na
+  tela e pareceu bug do app.
+- `ctrl+A` + `Delete` num `contentEditable` deixa blocos vazios para trás. Entre
+  um caso de teste e outro, **recarregue a página** (`Page.navigate`) em vez de
+  limpar o editor, senão o resíduo contamina o caso seguinte.
+
 ## Architecture
 
 **Zona 14** is a tactical football analysis tool. Coaches/analysts create analysis boards, draw formations and movement (arrows/rectangles) on an interactive soccer field, search players and teams via API-Football, and share analyses via public tokens.
