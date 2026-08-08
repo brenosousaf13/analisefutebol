@@ -5,7 +5,7 @@ const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
 /**
- * Ligas priorizadas no painel "Proximos jogos" da Home.
+ * Ligas priorizadas no painel "Jogos do dia" da Home.
  * Editar aqui para mudar o que aparece — os IDs sao os da API-Football.
  */
 const PRIORITY_LEAGUES = new Set<number>([
@@ -23,8 +23,11 @@ const PRIORITY_LEAGUES = new Set<number>([
     61,  // Ligue 1
 ]);
 
-const UPCOMING_CACHE_KEY = 'zona14_upcoming_fixtures';
-const UPCOMING_TTL_MS = 30 * 60 * 1000; // 30 min — a API gratuita tem cota diaria baixa
+const TODAY_CACHE_KEY = 'zona14_today_fixtures';
+const TODAY_TTL_MS = 10 * 60 * 1000; // 10 min — placar do dia muda durante os jogos
+
+const FIXTURE_CACHE_PREFIX = 'zona14_fixture_';
+const FIXTURE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — placar de jogo encerrado nao muda
 
 const apiClient = axios.create({
     baseURL: BASE_URL,
@@ -72,46 +75,102 @@ export const apiFootballService = {
     },
 
     /**
-     * Proximos jogos para o painel da Home.
+     * Jogos de hoje no fuso de Brasilia (UTC-3).
      *
-     * Faz UMA chamada (`/fixtures?next=N`) e filtra no cliente pelas ligas de
-     * PRIORITY_LEAGUES — a API-Football nao aceita varias ligas por requisicao, e
-     * uma chamada por liga estouraria a quota do plano gratuito. Se o filtro nao
-     * sobrar nada, devolve os jogos sem filtro para o painel nunca ficar vazio.
-     *
-     * Resultado cacheado em localStorage por UPCOMING_TTL_MS.
+     * A API espera a data em YYYY-MM-DD e devolve os horarios em UTC; a
+     * formatacao para UTC-3 e feita na interface. Filtra por PRIORITY_LEAGUES,
+     * caindo para a lista completa quando o filtro zera.
      */
-    async getUpcomingFixtures(limit = 12): Promise<ApiFixture[]> {
+    async getTodayFixtures(): Promise<ApiFixture[]> {
+        const today = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(new Date()); // en-CA ja formata como YYYY-MM-DD
+
+        const cacheKey = `${TODAY_CACHE_KEY}_${today}`;
         try {
-            const cached = localStorage.getItem(UPCOMING_CACHE_KEY);
+            const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 const { data, ts } = JSON.parse(cached) as { data: ApiFixture[]; ts: number };
-                if (Date.now() - ts < UPCOMING_TTL_MS) return data.slice(0, limit);
+                if (Date.now() - ts < TODAY_TTL_MS) return data;
             }
-        } catch { /* cache corrompido ou storage desabilitado */ }
+        } catch { /* cache invalido */ }
 
         try {
             const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', {
-                params: { next: 80 }
+                params: { date: today },
             });
             const all = response.data.response ?? [];
 
             const preferred = all.filter(f => PRIORITY_LEAGUES.has(f.league?.id));
             const chosen = preferred.length > 0 ? preferred : all;
-
             const sorted = [...chosen].sort(
                 (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0)
             );
 
             try {
-                localStorage.setItem(UPCOMING_CACHE_KEY, JSON.stringify({ data: sorted, ts: Date.now() }));
-            } catch { /* storage cheio ou desabilitado */ }
+                localStorage.setItem(cacheKey, JSON.stringify({ data: sorted, ts: Date.now() }));
+            } catch { /* storage cheio */ }
 
-            return sorted.slice(0, limit);
+            return sorted;
         } catch (error) {
-            console.error('Error fetching upcoming fixtures:', error);
+            console.error('Error fetching today fixtures:', error);
             return [];
         }
+    },
+
+    /**
+     * Busca varios jogos de uma vez pelos ids.
+     *
+     * Usada para preencher placar e campeonato das analises salvas sem gastar
+     * uma requisicao por analise — a API aceita ids separados por hifen, ate 20
+     * por chamada. Cacheado por 6h: placar de jogo passado nao muda.
+     */
+    async getFixturesByIds(ids: number[]): Promise<Map<number, ApiFixture>> {
+        const result = new Map<number, ApiFixture>();
+        const unique = [...new Set(ids.filter(Boolean))];
+        if (unique.length === 0) return result;
+
+        const pending: number[] = [];
+        for (const id of unique) {
+            try {
+                const cached = localStorage.getItem(`${FIXTURE_CACHE_PREFIX}${id}`);
+                if (cached) {
+                    const { data, ts } = JSON.parse(cached) as { data: ApiFixture; ts: number };
+                    if (Date.now() - ts < FIXTURE_TTL_MS) {
+                        result.set(id, data);
+                        continue;
+                    }
+                }
+            } catch { /* cache invalido */ }
+            pending.push(id);
+        }
+
+        // A API limita a 20 ids por chamada.
+        for (let i = 0; i < pending.length; i += 20) {
+            const batch = pending.slice(i, i + 20);
+            try {
+                const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', {
+                    params: { ids: batch.join('-') },
+                });
+                for (const fixture of response.data.response ?? []) {
+                    const id = fixture.fixture?.id;
+                    if (!id) continue;
+                    result.set(id, fixture);
+                    try {
+                        localStorage.setItem(
+                            `${FIXTURE_CACHE_PREFIX}${id}`,
+                            JSON.stringify({ data: fixture, ts: Date.now() }),
+                        );
+                    } catch { /* storage cheio */ }
+                }
+            } catch (error) {
+                console.error('Error fetching fixtures batch:', error);
+                // Segue com o que ja tem: a Home usa o placar salvo como fallback.
+            }
+        }
+
+        return result;
     },
 
     /**

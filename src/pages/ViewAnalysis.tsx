@@ -9,6 +9,7 @@ import TeamRosterCard from '../components/analysis/TeamRosterCard';
 import { nameKey, type PlayerTally } from '../utils/playerTally';
 import { downloadFieldImage, fieldFileName } from '../utils/captureField';
 import { sanitizeNoteHtml, isEmptyHtml } from '../utils/sanitizeHtml';
+import { formatShortDate } from '../utils/formatDate';
 import { analysisService } from '../services/analysisService';
 import type { AnalysisData } from '../services/analysisService';
 import type { Player } from '../types/Player';
@@ -20,13 +21,6 @@ interface TallyEvent {
     type?: string;
     player_name?: string;
     secondary_player_name?: string;
-}
-
-function formatDate(iso?: string): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 /** Botao de acao do cabecalho — so icone, com o rotulo no title/aria. */
@@ -267,7 +261,7 @@ const ViewAnalysis: React.FC = () => {
                     </div>
 
                     <span className="hidden shrink-0 text-sm tabular-nums text-content-secondary md:block">
-                        {formatDate(analysis.matchDate)}
+                        {formatShortDate(analysis.matchDate, '')}
                     </span>
 
                     <div className="flex shrink-0 items-center gap-2">

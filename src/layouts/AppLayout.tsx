@@ -9,6 +9,9 @@ interface AppLayoutProps {
         value: string;
         onChange: (value: string) => void;
         placeholder?: string;
+        /** Painel de resultados, renderizado ancorado ao campo. */
+        dropdown?: React.ReactNode;
+        onFocus?: () => void;
     };
     /** Esconde a topbar — telas que trazem o proprio cabecalho. */
     bare?: boolean;
@@ -106,7 +109,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, search, bare = false, e
                     </button>
 
                     {search ? (
-                        <div className="relative w-full max-w-xl">
+                        // min-w-0 + flex-1 em vez de w-full: como irmao do botao de
+                        // menu num flex, w-full soma mais que 100% e alarga a pagina
+                        // inteira no mobile.
+                        <div data-search-box className="relative min-w-0 flex-1 max-w-xl">
                             <Search
                                 size={16}
                                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-muted"
@@ -116,7 +122,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, search, bare = false, e
                                 type="text"
                                 value={search.value}
                                 onChange={e => search.onChange(e.target.value)}
-                                placeholder={search.placeholder ?? 'Pesquise pelo que quiser'}
+                                onFocus={search.onFocus}
+                                placeholder={search.placeholder ?? 'Pesquise por times, jogadores, técnicos ou partidas'}
                                 className="
                                     w-full rounded-control border border-line bg-surface-raised
                                     py-2.5 pl-9 pr-14 text-sm text-content-primary
@@ -128,6 +135,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, search, bare = false, e
                             <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-muted sm:block">
                                 ⌘K
                             </kbd>
+
+                            {search.dropdown}
                         </div>
                     ) : (
                         <div className="flex-1" />

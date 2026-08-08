@@ -140,6 +140,8 @@ export interface SavedAnalysisSummary {
     created_at: string;
     updated_at: string;
     thumbnail_url?: string;
+    /** Id do jogo na API-Football, quando a analise nasceu de uma partida real. */
+    fixtureId?: number;
     /** Indefinido enquanto a migration 20260731_add_competition.sql nao rodar. */
     competition?: string;
 }
@@ -187,6 +189,7 @@ interface AnalysisSummaryRow {
     created_at: string;
     updated_at: string;
     thumbnail_url: string | null;
+    fixture_id: number | null;
     competition?: string | null;
 }
 
@@ -495,7 +498,7 @@ export const analysisService = {
                 id, titulo, descricao, tipo, status,
                 home_team_name, away_team_name, home_team_logo, away_team_logo,
                 home_team_color, away_team_color,
-                home_score, away_score, created_at, updated_at, thumbnail_url
+                home_score, away_score, created_at, updated_at, thumbnail_url, fixture_id
                 ${withCompetition ? ', competition' : ''}
             `;
 
@@ -599,6 +602,7 @@ export const analysisService = {
             created_at: item.created_at,
             updated_at: item.updated_at,
             thumbnail_url: item.thumbnail_url ?? undefined,
+            fixtureId: item.fixture_id ?? undefined,
             competition: item.competition ?? undefined
         }));
     },
