@@ -6,12 +6,15 @@ import AppLayout from '../layouts/AppLayout';
 import TacticalField from '../components/TacticalField';
 import TeamLogoImage from '../components/TeamLogoImage';
 import TeamRosterCard from '../components/analysis/TeamRosterCard';
+import { AnalysisTabs } from '../components/AnalysisTabs';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { nameKey, type PlayerTally } from '../utils/playerTally';
 import { downloadFieldImage, fieldFileName } from '../utils/captureField';
 import { sanitizeNoteHtml, isEmptyHtml } from '../utils/sanitizeHtml';
 import { formatShortDate } from '../utils/formatDate';
 import { analysisService } from '../services/analysisService';
-import type { AnalysisData } from '../services/analysisService';
+import { apiFootballService } from '../services/apiFootballService';
+import type { AnalysisData, AnalysisBoard } from '../services/analysisService';
 import type { Player } from '../types/Player';
 
 type Possession = 'home' | 'away';
@@ -22,6 +25,25 @@ interface TallyEvent {
     player_name?: string;
     secondary_player_name?: string;
 }
+
+/** Campeonato e placar reais, vindos da API-Football. */
+interface FixtureInfo {
+    competition?: string;
+    homeScore: number | null;
+    awayScore: number | null;
+}
+
+/**
+ * Estado de uma cena. A raiz da analise (aba "Principal") e cada board expoem
+ * exatamente estes campos, entao os dois servem de fonte sem conversao.
+ */
+type SceneState = Pick<
+    AnalysisBoard,
+    | 'homePlayersDef' | 'homePlayersOff' | 'awayPlayersDef' | 'awayPlayersOff'
+    | 'homeArrowsDef' | 'awayArrowsDef'
+    | 'homeRectanglesDef' | 'awayRectanglesDef'
+    | 'homeBallOff' | 'awayBallOff'
+>;
 
 /** Botao de acao do cabecalho — so icone, com o rotulo no title/aria. */
 const IconAction: React.FC<{
@@ -87,10 +109,15 @@ const TeamNotesBox: React.FC<{
 const ViewAnalysis: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    // Mesma quebra do editor: retrato no celular, paisagem no desktop.
+    const isMobile = useIsMobile();
 
     const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
     const [notFound, setNotFound] = useState(false);
     const [possession, setPossession] = useState<Possession>('home');
+    // null = aba "Principal" (o estado da raiz da analise), igual ao editor.
+    const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+    const [fixture, setFixture] = useState<FixtureInfo | null>(null);
     const [openNote, setOpenNote] = useState<{ name: string; note: string } | null>(null);
     const [downloading, setDownloading] = useState(false);
     const [sharing, setSharing] = useState(false);
@@ -112,7 +139,38 @@ const ViewAnalysis: React.FC = () => {
         return () => { cancelled = true; };
     }, [id]);
 
+    // Campeonato e placar reais do jogo. `getFixturesByIds` cacheia por 6h e e
+    // a mesma chamada da Home, entao normalmente ja vem do cache.
+    const fixtureId = analysis?.matchId;
+
+    useEffect(() => {
+        if (!fixtureId) return;
+        let cancelled = false;
+
+        apiFootballService.getFixturesByIds([fixtureId])
+            .then(map => {
+                const f = map.get(fixtureId);
+                if (cancelled || !f) return;
+                setFixture({
+                    competition: f.league?.name,
+                    homeScore: f.goals?.home ?? null,
+                    awayScore: f.goals?.away ?? null,
+                });
+            })
+            .catch(() => { /* cai no campeonato e no placar salvos */ });
+
+        return () => { cancelled = true; };
+    }, [fixtureId]);
+
     const loading = !analysis && !notFound;
+
+    const boards = useMemo(() => analysis?.boards ?? [], [analysis]);
+
+    // Cena visivel: o board selecionado ou a raiz da analise.
+    const scene = useMemo<SceneState | null>(() => {
+        if (!analysis) return null;
+        return boards.find(b => b.id === activeBoardId) ?? analysis;
+    }, [analysis, boards, activeBoardId]);
 
     // Gols e assistencias por jogador. Os eventos guardam o nome, nao o id,
     // entao a associacao e feita por nome normalizado.
@@ -139,14 +197,14 @@ const ViewAnalysis: React.FC = () => {
     // Mesma semantica do editor: quem tem a posse aparece na fase ofensiva,
     // o adversario na defensiva.
     const homeOnField = useMemo<Player[]>(() => {
-        if (!analysis) return [];
-        return possession === 'home' ? analysis.homePlayersOff : analysis.homePlayersDef;
-    }, [analysis, possession]);
+        if (!scene) return [];
+        return possession === 'home' ? scene.homePlayersOff : scene.homePlayersDef;
+    }, [scene, possession]);
 
     const awayOnField = useMemo<Player[]>(() => {
-        if (!analysis) return [];
-        return possession === 'home' ? analysis.awayPlayersDef : analysis.awayPlayersOff;
-    }, [analysis, possession]);
+        if (!scene) return [];
+        return possession === 'home' ? scene.awayPlayersDef : scene.awayPlayersOff;
+    }, [scene, possession]);
 
     const fieldPlayers = useMemo<Player[]>(() => {
         if (!analysis) return [];
@@ -207,7 +265,7 @@ const ViewAnalysis: React.FC = () => {
         );
     }
 
-    if (notFound || !analysis) {
+    if (notFound || !analysis || !scene) {
         return (
             <AppLayout>
                 <div className="mx-auto max-w-md rounded-card border border-line bg-surface-raised px-6 py-16 text-center shadow-card">
@@ -226,7 +284,11 @@ const ViewAnalysis: React.FC = () => {
         );
     }
 
-    const hasScore = analysis.homeScore != null && analysis.awayScore != null;
+    // Placar e campeonato: o que a API devolve manda; sem ela, o que ficou salvo.
+    const homeScore = fixture?.homeScore ?? analysis.homeScore ?? null;
+    const awayScore = fixture?.awayScore ?? analysis.awayScore ?? null;
+    const hasScore = homeScore != null && awayScore != null;
+    const competition = fixture?.competition || analysis.competition || '';
 
     return (
         <AppLayout bare edgeToggle>
@@ -242,27 +304,37 @@ const ViewAnalysis: React.FC = () => {
                         <ChevronLeft size={20} />
                     </button>
 
-                    <span className="hidden shrink-0 truncate text-sm text-content-secondary md:block">
-                        {analysis.competition || '—'}
-                    </span>
+                    {/*
+                        Grade 1fr / auto / 1fr: o confronto fica centralizado e
+                        campeonato e data ladeiam a 10% da propria coluna — perto
+                        do centro, em vez de colados nas pontas do cabecalho.
+                    */}
+                    <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
+                        <span
+                            title={competition || undefined}
+                            className="hidden min-w-0 justify-self-end truncate pr-[10%] text-sm text-content-secondary md:block"
+                        >
+                            {competition || '—'}
+                        </span>
 
-                    <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-                        <span className="hidden truncate text-sm font-medium text-content-primary sm:block">
-                            {analysis.homeTeam}
-                        </span>
-                        <TeamLogoImage logoUrl={analysis.homeTeamLogo} teamName={analysis.homeTeam} className="h-6 w-6 shrink-0" />
-                        <span className="shrink-0 rounded-md bg-surface-overlay px-2 py-1 text-xs font-bold tabular-nums text-content-primary">
-                            {hasScore ? `${analysis.homeScore}-${analysis.awayScore}` : 'vs'}
-                        </span>
-                        <TeamLogoImage logoUrl={analysis.awayTeamLogo} teamName={analysis.awayTeam} className="h-6 w-6 shrink-0" />
-                        <span className="hidden truncate text-sm font-medium text-content-primary sm:block">
-                            {analysis.awayTeam}
+                        <div className="flex min-w-0 items-center justify-center gap-2">
+                            <span className="hidden truncate text-sm font-medium text-content-primary sm:block">
+                                {analysis.homeTeam}
+                            </span>
+                            <TeamLogoImage logoUrl={analysis.homeTeamLogo} teamName={analysis.homeTeam} className="h-6 w-6 shrink-0" />
+                            <span className="shrink-0 rounded-md bg-surface-overlay px-2 py-1 text-xs font-bold tabular-nums text-content-primary">
+                                {hasScore ? `${homeScore}-${awayScore}` : 'vs'}
+                            </span>
+                            <TeamLogoImage logoUrl={analysis.awayTeamLogo} teamName={analysis.awayTeam} className="h-6 w-6 shrink-0" />
+                            <span className="hidden truncate text-sm font-medium text-content-primary sm:block">
+                                {analysis.awayTeam}
+                            </span>
+                        </div>
+
+                        <span className="hidden justify-self-start whitespace-nowrap pl-[10%] text-sm tabular-nums text-content-secondary md:block">
+                            {formatShortDate(analysis.matchDate, '')}
                         </span>
                     </div>
-
-                    <span className="hidden shrink-0 text-sm tabular-nums text-content-secondary md:block">
-                        {formatShortDate(analysis.matchDate, '')}
-                    </span>
 
                     <div className="flex shrink-0 items-center gap-2">
                         <IconAction label="Baixar imagem do campinho" onClick={handleDownload} disabled={downloading}>
@@ -289,9 +361,11 @@ const ViewAnalysis: React.FC = () => {
                     onPlayerClick={p => p.note && setOpenNote({ name: p.name, note: p.note })}
                 />
 
-                <div className="min-w-0">
+                {/* Coluna central. Abas, campo e anotacao sao irmaos com w-full,
+                    entao a anotacao tem exatamente a largura do campo. */}
+                <div className="flex min-w-0 flex-col gap-3">
                     {/* Posse de bola */}
-                    <div className="mb-3 flex flex-col items-center gap-1.5">
+                    <div className="flex flex-col items-center gap-1.5">
                         <span className="text-xs font-semibold text-content-secondary">Posse de bola</span>
                         <div className="inline-flex rounded-full border border-line bg-surface-overlay p-0.5">
                             {(['home', 'away'] as Possession[]).map(side => {
@@ -317,38 +391,54 @@ const ViewAnalysis: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Campinho — somente leitura, sem a bolinha de anotacao */}
-                    <div ref={fieldRef} className="overflow-hidden rounded-card border border-line bg-surface-raised shadow-card">
+                    {/* Abas de cena, so quando a analise tem mais de uma. Ficam
+                        por fora do TacticalField: passadas por `tabsSlot` elas
+                        ligam um pt-12 que come a altura da caixa. */}
+                    {boards.length > 0 && (
+                        <AnalysisTabs
+                            boards={boards}
+                            activeBoardId={activeBoardId}
+                            onSwitchBoard={setActiveBoardId}
+                            onAddBoard={() => { /* somente leitura */ }}
+                            onUpdateBoardTitle={() => { /* somente leitura */ }}
+                            onDeleteBoard={() => { /* somente leitura */ }}
+                            readOnly
+                        />
+                    )}
+
+                    {/* Campinho — mesma caixa da tela de edicao: a largura manda e
+                        a altura sai da proporcao 105x68. Somente leitura. */}
+                    <div
+                        ref={fieldRef}
+                        className="relative w-full overflow-hidden rounded-card border border-line bg-surface-raised shadow-card"
+                        style={isMobile
+                            ? { aspectRatio: '68 / 105' }
+                            : { aspectRatio: '105 / 68', minHeight: 320 }}
+                    >
                         <TacticalField
                             players={fieldPlayers}
                             onPlayerMove={() => { /* somente leitura */ }}
                             onPlayerClick={p => p.note && setOpenNote({ name: p.name, note: p.note })}
                             playerNotes={playerNotes}
                             readOnly
-                            arrows={possession === 'home' ? analysis.homeArrowsDef : analysis.awayArrowsDef}
-                            rectangles={possession === 'home' ? analysis.homeRectanglesDef : analysis.awayRectanglesDef}
-                            ballPosition={possession === 'home' ? analysis.homeBallOff : analysis.awayBallOff}
-                            playerScale={0.85}
+                            orientation={isMobile ? 'vertical' : 'horizontal'}
+                            arrows={possession === 'home' ? scene.homeArrowsDef : scene.awayArrowsDef}
+                            rectangles={possession === 'home' ? scene.homeRectanglesDef : scene.awayRectanglesDef}
+                            ballPosition={possession === 'home' ? scene.homeBallOff : scene.awayBallOff}
+                            playerScale={isMobile ? 1.5 : 0.85}
+                            ballScale={0.7}
                         />
                     </div>
 
-                    {/* ── Anotacoes coletivas, um quadro por time ── */}
-                    <section className="mt-4">
+                    {/* ── Anotacao do time com a posse, so ela ── */}
+                    <section>
                         <h2 className="mb-2 text-base font-bold text-content-primary">Anotações</h2>
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <TeamNotesBox
-                                teamName={analysis.homeTeam}
-                                teamColor={analysis.homeTeamColor}
-                                notes={analysis.notasCasa}
-                                noteHtml={analysis.homeNoteHtml}
-                            />
-                            <TeamNotesBox
-                                teamName={analysis.awayTeam}
-                                teamColor={analysis.awayTeamColor}
-                                notes={analysis.notasVisitante}
-                                noteHtml={analysis.awayNoteHtml}
-                            />
-                        </div>
+                        <TeamNotesBox
+                            teamName={possession === 'home' ? analysis.homeTeam : analysis.awayTeam}
+                            teamColor={possession === 'home' ? analysis.homeTeamColor : analysis.awayTeamColor}
+                            notes={possession === 'home' ? analysis.notasCasa : analysis.notasVisitante}
+                            noteHtml={possession === 'home' ? analysis.homeNoteHtml : analysis.awayNoteHtml}
+                        />
                     </section>
                 </div>
 
