@@ -300,15 +300,20 @@ sempre compare o baseline de lint acima.
 Layout do desktop (o mobile tem um branch próprio, `if (isMobile)`, que **não
 foi tocado** nas últimas mudanças):
 
+- **Cabeçalho** ([Header.tsx](src/components/Header.tsx)): campeonato | times +
+  placar | data, na mesma grade `1fr / auto / 1fr` da tela de ver partida, dentro
+  de um bloco centralizado na tela — o placar fica no centro exato. Campeonato e
+  placar vêm da API-Football (`getFixturesByIds`), com o banco como fallback.
 - Barra do topo com **posse de bola à esquerda e ferramentas à direita**, ambas
   sempre visíveis. Não existe mais menu de abrir/fechar ferramentas no desktop.
-- Abaixo, área **rolável**: campo com `aspect-ratio: 105/68` e `w-full` — a
-  **largura manda** e a altura decorre dela. Se inverter (altura fixa), o campo
-  preserva a proporção e sobram margens enormes nas laterais.
+- Abaixo, área **rolável com duas telas**: campo e anotação ocupam cada um
+  `h-full` da caixa rolável. O padding entra dentro dos 100% (border-box), então
+  cada bloco vale exatamente uma tela e rolar troca de um para o outro.
+  A **altura manda** e o `TacticalField` preserva a proporção 105x68 — em janela
+  muito larga sobra folga nas laterais, é esperado.
 - As **abas de cena são renderizadas fora do `TacticalField`** no desktop, como
   o mobile já fazia. Dentro dele elas ligam um `pt-12` que come a altura da
   caixa e o campo encolhe de novo.
-- A anotação do time fica abaixo do campo, alcançada rolando.
 
 Detalhes que já custaram retrabalho:
 
@@ -319,10 +324,18 @@ Detalhes que já custaram retrabalho:
   cima** da lista de baixo.
 - O nome do jogador no campo é `fieldDisplayName()`
   ([playerName.ts](src/utils/playerName.ts)): caixa alta, primeiro nome
-  abreviado, tarja preta a 40%. **Não truncar** — sem `max-width`, sem
-  ellipsis. Nome longo só reduz a fonte.
+  abreviado, tarja preta a 40%. **Não truncar e não reduzir a fonte** — todos os
+  nomes saem no mesmo tamanho, independente do comprimento.
+- A bolinha do número na lista lateral repete as cores do marcador em campo
+  (fundo do time, número e borda na cor do time) — `RosterList` recebe
+  `teamBgColor` para isso.
 - **Nenhum indicativo de anotação ou evento no marcador do jogador.** Os
   indicadores vivem só nas listas laterais.
+- O **nome do técnico não é editável**: vem sempre da escalação da API-Football
+  (`getLineups`), e o valor do banco só vale se a API não responder.
+- A coluna do time mostra **escudo acima do nome**, sem contador de jogadores, e
+  o nome **não é link** — a anotação coletiva abre pelo botão de notas da barra
+  de ferramentas.
 - O goleiro é detectado por nome ou camisa 1 em
   [rosterOrder.ts](src/utils/rosterOrder.ts). É heurística: `Player` não guarda
   posição, e geometria não serve porque o goleiro fica no eixo Y no vertical e
@@ -335,6 +348,19 @@ Detalhes que já custaram retrabalho:
 formato salvo é HTML, trocar por tiptap depois é direto. O conteúdo digitado é
 estilizado por `.note-editor` / `.note-content` no `index.css`, porque o
 preflight do Tailwind zera heading e lista.
+
+- Cabeçalho com **escudo do time**; a barra de formatação fica **no rodapé,
+  dentro da caixa de texto**.
+- Atalhos: `Ctrl/Cmd+B`, e no início da linha `#`, `##`, `-`/`*`, `1.` e
+  `/imagem` seguidos de espaço. "Início da linha" é decidido pelo irmão anterior
+  do nó de texto (nada, `<br>` ou outro bloco) — sem isso um "- " no meio de uma
+  frase viraria lista.
+- ⚠️ O editor vazio guarda um `<p><br></p>` (`ensureBlock`). Sem nenhum bloco, o
+  texto fica solto no próprio `contentEditable` e o `formatBlock` **não tem o que
+  converter** — `#` e `##` apagavam o marcador sem virar título. As listas não
+  sofriam disso porque `insertUnorderedList` cria a própria estrutura.
+- Como esse `<p>` quebra o `:empty`, o placeholder passou a depender de
+  `data-empty`, mantido por `syncPlaceholder` e lido em `index.css`.
 
 > 🔒 **Todo HTML de anotação passa por `sanitizeNoteHtml`**
 > ([sanitizeHtml.ts](src/utils/sanitizeHtml.ts)) antes de ir para

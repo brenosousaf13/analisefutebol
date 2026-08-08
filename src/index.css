@@ -80,7 +80,7 @@ body,
    que é escrito dentro do editor precisa vir daqui. As mesmas regras
    valem para a exibição em modo leitura (.note-content).            */
 
-.note-editor:empty::before {
+.note-editor[data-empty="true"]::before {
     content: attr(data-placeholder);
     color: #61706C;
     pointer-events: none;

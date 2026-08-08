@@ -14,6 +14,7 @@ import {
     Pencil, Users, Trash2,
 } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
+import TeamLogoImage from './TeamLogoImage';
 import RosterList from './analysis/RosterList';
 import RichTextEditor from './analysis/RichTextEditor';
 import { nameKey, type PlayerTally } from '../utils/playerTally';
@@ -25,10 +26,11 @@ interface FullAnalysisModeProps {
     awayTeamColor: string;
     homeTeamBgColor?: string;
     awayTeamBgColor?: string;
+    homeTeamLogo?: string;
+    awayTeamLogo?: string;
+    /** Vem da escalacao da API-Football; nao e editavel na tela. */
     homeCoachName: string;
     awayCoachName: string;
-    onHomeCoachChange?: (name: string) => void;
-    onAwayCoachChange?: (name: string) => void;
 
     ballPositions: {
         homeDef: { x: number; y: number };
@@ -65,7 +67,6 @@ interface FullAnalysisModeProps {
     isSaving: boolean;
     hasUnsavedChanges: boolean;
     onShare: () => void;
-    onHeaderTeamClick?: (team: 'home' | 'away') => void;
 
     onAddArrow: (arrow: Omit<Arrow, 'id'>, team: 'home' | 'away', phase: string) => void;
     onRemoveArrow: (id: string, team: 'home' | 'away', phase: string) => void;
@@ -95,9 +96,10 @@ interface FullAnalysisModeProps {
 }
 
 
-// ─── Desktop TeamColumn (unchanged) ─────────────────────────────────────────
+// ─── Desktop TeamColumn ─────────────────────────────────────────────────────
 const TeamColumn: React.FC<{
     name: string;
+    logoUrl?: string;
     players: Player[];
     substitutes: Player[];
     color: string;
@@ -107,8 +109,6 @@ const TeamColumn: React.FC<{
     team: 'home' | 'away';
     align?: 'left' | 'right';
     coachName?: string;
-    onCoachChange?: (name: string) => void;
-    onTeamClick?: () => void;
     isExpandedOnMobile?: boolean;
     onToggleMobileExpansion?: () => void;
     readOnly?: boolean;
@@ -116,9 +116,9 @@ const TeamColumn: React.FC<{
     onPlayerDoubleClick: (player: Player) => void;
     tallies: Map<string, PlayerTally>;
 }> = ({
-    name, players, substitutes, color,
-    isVisible, onToggleVisibility, team, align, coachName, onCoachChange,
-    onTeamClick, isExpandedOnMobile, onToggleMobileExpansion,
+    name, logoUrl, players, substitutes, color, bgColor,
+    isVisible, onToggleVisibility, team, align, coachName,
+    isExpandedOnMobile, onToggleMobileExpansion,
     readOnly = false, onBenchPlayerClick, onPlayerDoubleClick, tallies,
 }) => (
     <div className="flex flex-col border-r border-l border-gray-800 bg-[#070d0d] w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden">
@@ -128,57 +128,46 @@ const TeamColumn: React.FC<{
                 if (onToggleMobileExpansion && window.innerWidth < 1024) onToggleMobileExpansion();
             }}
         >
-            <div className="flex justify-between items-center">
-                <h3
-                    className={`text-white font-bold uppercase text-sm tracking-wider mb-1 px-1 border-l-4 ${align === 'right' ? 'text-right border-l-0 border-r-4' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
-                    style={{ borderColor: color }}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onTeamClick?.();
-                        if (onToggleMobileExpansion && window.innerWidth < 1024) onToggleMobileExpansion();
-                    }}
-                >
-                    {name}
-                </h3>
-                <div className="lg:hidden text-gray-400">
-                    {isExpandedOnMobile ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            {/* Escudo acima do nome, como na tela de ver partida. O nome nao e
+                mais um link: a anotacao coletiva abre pelo botao de notas da
+                barra de ferramentas. */}
+            <div className={`flex items-center justify-between gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+                <div className={`min-w-0 ${align === 'right' ? 'text-right' : ''}`}>
+                    <div className={`mb-2 grid h-12 w-12 place-items-center overflow-hidden rounded-lg border border-gray-700 bg-black/40 ${align === 'right' ? 'ml-auto' : ''}`}>
+                        <TeamLogoImage logoUrl={logoUrl} teamName={name} className="h-9 w-9" />
+                    </div>
+                    <h3
+                        className={`truncate text-white font-bold uppercase text-sm tracking-wider px-1 border-l-4 ${align === 'right' ? 'border-l-0 border-r-4' : ''}`}
+                        style={{ borderColor: color }}
+                    >
+                        {name}
+                    </h3>
                 </div>
-            </div>
 
-            <div className={`flex items-center mt-2 ${align === 'right' ? 'justify-end' : 'justify-between'}`}>
-                {align !== 'right' && (
-                    <>
-                        <span className="text-xs text-gray-400 font-mono">{players.length} Jogadores</span>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
-                            className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
-                        >
-                            {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
-                        </button>
-                    </>
-                )}
-                {align === 'right' && (
-                    <>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
-                            className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors mr-auto"
-                        >
-                            {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
-                        </button>
-                        <span className="text-xs text-gray-400 font-mono">{players.length} Jogadores</span>
-                    </>
-                )}
+                <div className="flex shrink-0 items-center gap-1">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
+                        title={isVisible ? 'Ocultar time no campo' : 'Mostrar time no campo'}
+                        className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                    >
+                        {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                    </button>
+                    <div className="lg:hidden text-gray-400">
+                        {isExpandedOnMobile ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
+                </div>
             </div>
         </div>
 
         <div className={`${isExpandedOnMobile ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-h-0 overflow-hidden`}>
             <div className="px-4 py-2 border-b border-gray-700/50 bg-[#070d0d]">
+                {/* Sempre readOnly: o nome vem da escalacao da API-Football. */}
                 <CoachNameDisplay
                     coachName={coachName || ''}
-                    onSave={onCoachChange || (() => {})}
+                    onSave={() => { /* nao editavel */ }}
                     align={align === 'right' ? 'right' : 'left'}
-                    placeholder="Nome do Técnico"
-                    readOnly={readOnly}
+                    placeholder="Não informado"
+                    readOnly
                 />
             </div>
             {/* Duas listas: quem esta em campo e quem esta no banco. */}
@@ -187,6 +176,7 @@ const TeamColumn: React.FC<{
                     title="Em campo"
                     players={players}
                     teamColor={color}
+                    teamBgColor={bgColor}
                     tallies={tallies}
                     onPlayerDoubleClick={onPlayerDoubleClick}
                     emptyLabel="Nenhum jogador em campo."
@@ -195,6 +185,7 @@ const TeamColumn: React.FC<{
                     title="Suplentes"
                     players={substitutes}
                     teamColor={color}
+                    teamBgColor={bgColor}
                     tallies={tallies}
                     onPlayerDoubleClick={onPlayerDoubleClick}
                     onPlayerClick={readOnly ? undefined : (p) => onBenchPlayerClick(p, team)}
@@ -211,14 +202,14 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     homeTeamColor, awayTeamColor,
     homeTeamBgColor = '#090909', awayTeamBgColor = '#090909',
     homeCoachName, awayCoachName,
-    onHomeCoachChange, onAwayCoachChange,
+    homeTeamLogo, awayTeamLogo,
     ballPositions,
     homePlayersDef, homePlayersOff, homeSubstitutes, homeArrows, homeRectangles,
     awayPlayersDef, awayPlayersOff, awaySubstitutes, awayArrows, awayRectangles,
     onBallMove, onPlayerMove, onBenchPlayerClick, onPlayerClick, onPlayerDoubleClick,
     activeTool, onToolChange, onOpenColorPicker, onOpenAnalysis, onOpenEvents,
     // onExport nao e mais usado aqui: a acao de baixar subiu para o cabecalho.
-    onSave, onAddPlayer, isSaving, hasUnsavedChanges, onShare, onHeaderTeamClick,
+    onSave, onAddPlayer, isSaving, hasUnsavedChanges, onShare,
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
     events,
@@ -556,15 +547,15 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             <TeamColumn
                 tallies={tallies}
                 name={homeTeamName}
+                logoUrl={homeTeamLogo}
                 players={homePlayersDef}
                 substitutes={homeSubstitutes}
                 color={homeTeamColor}
+                bgColor={homeTeamBgColor}
                 isVisible={showHomePlayers}
                 onToggleVisibility={() => setShowHomePlayers(!showHomePlayers)}
                 team="home"
                 coachName={homeCoachName}
-                onCoachChange={onHomeCoachChange}
-                onTeamClick={() => onHeaderTeamClick?.('home')}
                 isExpandedOnMobile={mobileExpandedTeam === 'home'}
                 onToggleMobileExpansion={() => toggleMobileExpansion('home')}
                 readOnly={readOnly}
@@ -617,37 +608,39 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     )}
                 </div>
 
-                {/* Area rolavel: o campo tem altura garantida e a anotacao vem
-                    abaixo. Antes os dois disputavam a mesma altura fixa e o
-                    campo era esmagado. */}
-                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 px-4 pb-4">
-                    {/* Abas por fora do campo, como ja e feito no mobile. Dentro
-                        do TacticalField elas forcam um pt-12 que comeria a altura
-                        da caixa e faria o campo encolher de novo. */}
-                    {tabsSlot && <div className="shrink-0">{tabsSlot}</div>}
+                {/* Area rolavel com duas telas: campo e anotacao ocupam cada uma
+                    100% da altura visivel (`h-full` resolve contra a altura desta
+                    caixa, que e definida pelo flex-1). O padding entra dentro dos
+                    100% — box-sizing border-box —, entao cada bloco continua
+                    valendo exatamente uma tela. */}
+                <div className="flex-1 min-h-0 overflow-y-auto px-4">
+                    {/* Tela 1: abas + campo. */}
+                    <div className="flex h-full flex-col gap-3 py-3" style={{ minHeight: 360 }}>
+                        {/* Abas por fora do campo, como ja e feito no mobile. Dentro
+                            do TacticalField elas forcam um pt-12 que comeria a altura
+                            da caixa e faria o campo encolher de novo. */}
+                        {tabsSlot && <div className="shrink-0">{tabsSlot}</div>}
 
-                    {/* A largura manda: a altura sai da proporcao do campo (105x68).
-                        Antes a altura e que era fixa, e como o campo preserva a
-                        proporcao, sobrava margem enorme dos dois lados. */}
-                    <div
-                        className="shrink-0 w-full relative"
-                        style={{ aspectRatio: '105 / 68', minHeight: 320 }}
-                    >
-                        <TacticalField
-                            {...tacticalFieldProps}
-                            orientation="horizontal"
-                            tabsSlot={undefined}
-                        />
+                        {/* Agora a altura manda: o campo preenche a tela na vertical
+                            e o TacticalField preserva a proporcao 105x68, sobrando
+                            uma folga nas laterais quando a janela e muito larga. */}
+                        <div className="relative min-h-0 w-full flex-1">
+                            <TacticalField
+                                {...tacticalFieldProps}
+                                orientation="horizontal"
+                                tabsSlot={undefined}
+                            />
+                        </div>
                     </div>
 
-                    {/* Anotacao unica do time — segue o switcher de posse de bola.
-                        flex-1 para ocupar a sobra abaixo do campo em vez de
-                        deixar um vazio ate o rodape. */}
+                    {/* Tela 2: anotacao unica do time — segue o switcher de posse
+                        de bola — com a mesma altura do campo. */}
                     {!hideSidePanels && (
-                        <div className="flex w-full flex-1 flex-col" style={{ minHeight: 200 }}>
+                        <div className="flex h-full w-full flex-col pb-3" style={{ minHeight: 280 }}>
                             <RichTextEditor
                                 teamName={possession === 'home' ? homeTeamName : awayTeamName}
                                 teamColor={possession === 'home' ? homeTeamColor : awayTeamColor}
+                                teamLogo={possession === 'home' ? homeTeamLogo : awayTeamLogo}
                                 value={possession === 'home' ? homeNoteHtml : awayNoteHtml}
                                 onChange={html => onNoteChange?.(possession, html)}
                                 readOnly={readOnly}
@@ -663,6 +656,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             <TeamColumn
                 tallies={tallies}
                 name={awayTeamName}
+                logoUrl={awayTeamLogo}
                 players={awayPlayersDef}
                 substitutes={awaySubstitutes}
                 color={awayTeamColor}
@@ -672,8 +666,6 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 team="away"
                 align="right"
                 coachName={awayCoachName}
-                onCoachChange={onAwayCoachChange}
-                onTeamClick={() => onHeaderTeamClick?.('away')}
                 isExpandedOnMobile={mobileExpandedTeam === 'away'}
                 onToggleMobileExpansion={() => toggleMobileExpansion('away')}
                 readOnly={readOnly}

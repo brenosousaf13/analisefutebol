@@ -1045,10 +1045,10 @@ function Analysis() {
                             awayTeamColor={awayTeamColor}
                             homeTeamBgColor={homeTeamBgColor}
                             awayTeamBgColor={awayTeamBgColor}
+                            homeTeamLogo={matchInfo.homeTeamLogo}
+                            awayTeamLogo={matchInfo.awayTeamLogo}
                             homeCoachName={homeCoach}
                             awayCoachName={awayCoach}
-                            onHomeCoachChange={(name) => { setHomeCoach(name); setHasUnsavedChanges(true); }}
-                            onAwayCoachChange={(name) => { setAwayCoach(name); setHasUnsavedChanges(true); }}
 
                             // Independent Data
                             ballPositions={{
@@ -1095,7 +1095,6 @@ function Analysis() {
                             isSaving={saveStatus === 'loading'}
                             hasUnsavedChanges={hasUnsavedChanges && saveStatus === 'idle'}
                             onShare={() => setIsShareModalOpen(true)}
-                            onHeaderTeamClick={handleTeamClick}
 
                             // Drawing Adapters (Handling Team + Phase)
                             onAddArrow={(arrow: Omit<Arrow, 'id'>, team: 'home' | 'away', phase: string) => {

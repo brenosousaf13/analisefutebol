@@ -5,6 +5,7 @@ import { FolderOpen, LogOut, User, Menu, X, PlusCircle, Play, Home } from 'lucid
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import TeamLogoImage from './TeamLogoImage';
+import { formatShortDate } from '../utils/formatDate';
 
 interface MatchInfo {
     homeTeam: string;
@@ -14,6 +15,8 @@ interface MatchInfo {
     competition?: string;
     date?: string;
     time?: string;
+    homeScore?: number | null;
+    awayScore?: number | null;
 }
 
 interface HeaderProps {
@@ -58,6 +61,8 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
 
     const isAnalysisPage = location.pathname.includes('/analysis') || location.pathname.includes('/analise');
 
+    const hasScore = matchInfo?.homeScore != null && matchInfo?.awayScore != null;
+
     return (
         <header className="fixed top-0 left-0 right-0 h-10 lg:h-16 bg-nav-dark/50 backdrop-blur-md border-b border-white/5 px-2 lg:px-4 flex items-center justify-between shrink-0 z-50">
             {/* Left: Hamburger Menu */}
@@ -70,47 +75,57 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                 </button>
             </div>
 
-            {/* Center: Match Info (Team Names) */}
+            {/* Center: Match Info — campeonato | times + placar | data.
+                Grade 1fr/auto/1fr dentro de um bloco centralizado na tela: o
+                confronto fica no centro exato e os dois lados nao o empurram. */}
             {matchInfo ? (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                    <div className="flex items-center gap-1.5 lg:gap-6">
-                        {/* Home Team */}
-                        <div
-                            className="flex items-center gap-1 lg:gap-3 justify-end min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => onHeaderTeamClick && onHeaderTeamClick('home')}
+                <div className="absolute left-1/2 top-1/2 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 px-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
+                        <span
+                            title={matchInfo.competition || undefined}
+                            className="hidden lg:block min-w-0 justify-self-end truncate pr-[10%] text-xs text-gray-500 font-medium"
                         >
-                            <span className={`text-xs lg:text-lg font-bold truncate max-w-[72px] lg:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
-                                {matchInfo.homeTeam}
-                            </span>
-                            <TeamLogoImage logoUrl={matchInfo.homeTeamLogo} teamName={matchInfo.homeTeam} className="w-5 h-5 lg:w-8 lg:h-8 shrink-0" />
-                        </div>
+                            {matchInfo.competition || '—'}
+                        </span>
 
-                        <span className="text-gray-600 text-[10px] lg:text-sm font-bold shrink-0">VS</span>
-
-                        {/* Away Team */}
-                        <div
-                            className="flex items-center gap-1 lg:gap-3 justify-start min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => onHeaderTeamClick && onHeaderTeamClick('away')}
-                        >
-                            <TeamLogoImage logoUrl={matchInfo.awayTeamLogo} teamName={matchInfo.awayTeam} className="w-5 h-5 lg:w-8 lg:h-8 shrink-0" />
-                            <span className={`text-xs lg:text-lg font-bold truncate max-w-[72px] lg:max-w-none ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
-                                {matchInfo.awayTeam}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Date & Time — desktop only */}
-                    {(matchInfo.date || matchInfo.time) && (
-                        <div className="hidden lg:flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium tracking-wide">
-                            {matchInfo.date && (
-                                <span>
-                                    {new Date(matchInfo.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })}
+                        <div className="flex items-center justify-center gap-1.5 lg:gap-4 min-w-0">
+                            {/* Home Team */}
+                            <div
+                                className="flex items-center gap-1 lg:gap-3 justify-end min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => onHeaderTeamClick && onHeaderTeamClick('home')}
+                            >
+                                <span className={`text-xs lg:text-lg font-bold truncate max-w-[72px] lg:max-w-none ${activeTeam === 'home' ? 'text-white' : 'text-gray-500'}`}>
+                                    {matchInfo.homeTeam}
                                 </span>
+                                <TeamLogoImage logoUrl={matchInfo.homeTeamLogo} teamName={matchInfo.homeTeam} className="w-5 h-5 lg:w-8 lg:h-8 shrink-0" />
+                            </div>
+
+                            {hasScore ? (
+                                <span className="shrink-0 rounded-md bg-white/10 px-2 py-1 text-[10px] lg:text-sm font-bold tabular-nums text-white">
+                                    {matchInfo.homeScore}-{matchInfo.awayScore}
+                                </span>
+                            ) : (
+                                <span className="text-gray-600 text-[10px] lg:text-sm font-bold shrink-0">VS</span>
                             )}
+
+                            {/* Away Team */}
+                            <div
+                                className="flex items-center gap-1 lg:gap-3 justify-start min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => onHeaderTeamClick && onHeaderTeamClick('away')}
+                            >
+                                <TeamLogoImage logoUrl={matchInfo.awayTeamLogo} teamName={matchInfo.awayTeam} className="w-5 h-5 lg:w-8 lg:h-8 shrink-0" />
+                                <span className={`text-xs lg:text-lg font-bold truncate max-w-[72px] lg:max-w-none ${activeTeam === 'away' ? 'text-white' : 'text-gray-500'}`}>
+                                    {matchInfo.awayTeam}
+                                </span>
+                            </div>
+                        </div>
+
+                        <span className="hidden lg:flex items-center gap-1.5 justify-self-start whitespace-nowrap pl-[10%] text-xs text-gray-500 font-medium tabular-nums">
+                            {matchInfo.date && <span>{formatShortDate(matchInfo.date, '')}</span>}
                             {matchInfo.date && matchInfo.time && <span>•</span>}
                             {matchInfo.time && <span>{matchInfo.time.slice(0, 5)}</span>}
-                        </div>
-                    )}
+                        </span>
+                    </div>
                 </div>
             ) : (
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">

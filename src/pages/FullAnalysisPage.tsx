@@ -146,6 +146,29 @@ function FullAnalysisPage() {
     // Initial Load - Ref to avoid cyclic dependencies in useEffect
     const boardsRef = useRef<AnalysisBoard[]>([]);
 
+    // Campeonato e placar reais do jogo, como na tela de ver partida.
+    // `getFixturesByIds` cacheia por 6h e e a mesma chamada da Home.
+    const fixtureId = matchInfo.matchId;
+
+    useEffect(() => {
+        if (!fixtureId) return;
+        let cancelled = false;
+
+        apiFootballService.getFixturesByIds([fixtureId])
+            .then(map => {
+                const f = map.get(fixtureId);
+                if (cancelled || !f) return;
+                if (f.league?.name) {
+                    setMatchInfo(prev => ({ ...prev, competition: f.league.name }));
+                }
+                if (f.goals?.home != null) setHomeScore(f.goals.home);
+                if (f.goals?.away != null) setAwayScore(f.goals.away);
+            })
+            .catch(() => { /* fica o campeonato e o placar do banco */ });
+
+        return () => { cancelled = true; };
+    }, [fixtureId]);
+
     // Initial Load
     useEffect(() => {
         if (routeAnalysisId && routeAnalysisId !== 'new') {
@@ -233,10 +256,10 @@ function FullAnalysisPage() {
                     setHomeCoach(data.homeCoach || '');
                     setAwayCoach(data.awayCoach || '');
 
-                    // Tecnico vem da API-Football quando a analise nasceu de um jogo
-                    // e o campo ainda esta vazio. Nunca sobrescreve o que ja existe:
-                    // se o usuario digitou algo, aquilo vale mais que a API.
-                    if (data.matchId && (!data.homeCoach?.trim() || !data.awayCoach?.trim())) {
+                    // O tecnico e sempre o da escalacao da API-Football — o campo
+                    // deixou de ser editavel na tela. O que veio do banco fica
+                    // como valor inicial e so vale se a API nao responder.
+                    if (data.matchId) {
                         void fetchCoachesFromApi(data.matchId, data.homeTeam, data.awayTeam);
                     }
 
@@ -959,8 +982,9 @@ function FullAnalysisPage() {
     /**
      * Busca o nome dos tecnicos na escalacao da API-Football.
      *
-     * Silenciosa de proposito: se a API nao tem a escalacao ou a cota estourou,
-     * o campo simplesmente segue manual — nao vale interromper o usuario por isso.
+     * Fonte unica: o campo nao e mais editavel na tela. Silenciosa de proposito
+     * — se a API nao publicou a escalacao ou a cota estourou, fica o que estava
+     * salvo no banco, sem interromper o usuario.
      */
     const fetchCoachesFromApi = async (fixtureId: number, homeName: string, awayName: string) => {
         try {
@@ -974,8 +998,8 @@ function FullAnalysisPage() {
             const home = matchTeam(homeName) ?? lineups[0];
             const away = matchTeam(awayName) ?? lineups[1];
 
-            if (home?.coach?.name) setHomeCoach(prev => prev.trim() ? prev : home.coach.name);
-            if (away?.coach?.name) setAwayCoach(prev => prev.trim() ? prev : away.coach.name);
+            if (home?.coach?.name) setHomeCoach(home.coach.name);
+            if (away?.coach?.name) setAwayCoach(away.coach.name);
         } catch {
             /* segue com o campo manual */
         }
@@ -1015,7 +1039,7 @@ function FullAnalysisPage() {
     return (
         <>
         <AnalysisLayout
-            matchInfo={matchInfo}
+            matchInfo={{ ...matchInfo, homeScore, awayScore }}
             onHeaderTeamClick={handleTeamClick}
             videoUrl={videoUrl}
             onHighlightClick={() => setShowHighlights(true)}
@@ -1079,6 +1103,8 @@ function FullAnalysisPage() {
                     awayTeamColor={awayTeamColor}
                     homeTeamBgColor={homeTeamBgColor}
                     awayTeamBgColor={awayTeamBgColor}
+                    homeTeamLogo={matchInfo.homeTeamLogo}
+                    awayTeamLogo={matchInfo.awayTeamLogo}
 
                     homePlayersDef={homePlayersDef}
                     homePlayersOff={homePlayersOff}
@@ -1095,8 +1121,6 @@ function FullAnalysisPage() {
 
                     homeCoachName={homeCoach}
                     awayCoachName={awayCoach}
-                    onHomeCoachChange={(name) => { setHomeCoach(name); setHasUnsavedChanges(true); }}
-                    onAwayCoachChange={(name) => { setAwayCoach(name); setHasUnsavedChanges(true); }}
 
                     ballPositions={{
                         homeDef: homeBallDef,
@@ -1139,7 +1163,6 @@ function FullAnalysisPage() {
                     isSaving={saveStatus === 'loading'}
                     hasUnsavedChanges={hasUnsavedChanges}
                     onShare={() => setIsShareModalOpen(true)}
-                    onHeaderTeamClick={handleTeamClick}
                     activeBoardId={activeBoardId}
                     onDeleteBoard={handleDeleteBoard}
                     tabsSlot={

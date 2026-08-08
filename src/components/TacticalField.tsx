@@ -941,27 +941,22 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                                         </div>
                                     </div>
 
-                                    {showLabels && (() => {
-                                        const label = fieldDisplayName(player.name);
-                                        // Nome longo encolhe um pouco: sao justamente os que
-                                        // encostam no do jogador vizinho. Nunca trunca —
-                                        // sem max-width e sem ellipsis, de proposito.
-                                        const scale = label.length > 12 ? 0.8 : label.length > 9 ? 0.88 : 1;
-
-                                        return (
-                                            <div
-                                                className="mt-0.5 rounded-sm px-1 py-px text-center font-semibold leading-tight text-white pointer-events-none"
-                                                style={{
-                                                    fontSize: Math.max(7, fontSizes.name * scale),
-                                                    whiteSpace: 'nowrap',
-                                                    letterSpacing: '-0.01em',
-                                                    backgroundColor: 'rgba(0,0,0,0.4)',
-                                                }}
-                                            >
-                                                {label}
-                                            </div>
-                                        );
-                                    })()}
+                                    {showLabels && (
+                                        // Tamanho unico para todos os nomes: nome comprido
+                                        // nao encolhe a fonte. Tambem nao trunca — sem
+                                        // max-width e sem ellipsis, de proposito.
+                                        <div
+                                            className="mt-0.5 rounded-sm px-1 py-px text-center font-semibold leading-tight text-white pointer-events-none"
+                                            style={{
+                                                fontSize: Math.max(7, fontSizes.name),
+                                                whiteSpace: 'nowrap',
+                                                letterSpacing: '-0.01em',
+                                                backgroundColor: 'rgba(0,0,0,0.4)',
+                                            }}
+                                        >
+                                            {fieldDisplayName(player.name)}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

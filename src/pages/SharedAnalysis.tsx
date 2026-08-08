@@ -214,6 +214,8 @@ export default function SharedAnalysis() {
                             awayTeamColor={data.awayTeamColor || '#3B82F6'}
                             homeTeamBgColor={data.homeTeamBgColor || '#090909'}
                             awayTeamBgColor={data.awayTeamBgColor || '#090909'}
+                            homeTeamLogo={data.homeTeamLogo}
+                            awayTeamLogo={data.awayTeamLogo}
 
                             homePlayersDef={activeData.homePlayersDef}
                             homePlayersOff={activeData.homePlayersOff}
@@ -229,8 +231,6 @@ export default function SharedAnalysis() {
 
                             homeCoachName={data.homeCoach || ''}
                             awayCoachName={data.awayCoach || ''}
-                            onHomeCoachChange={() => { }}
-                            onAwayCoachChange={() => { }}
 
                             ballPositions={{
                                 homeDef: activeData.homeBallDef || { x: 50, y: 50 },

@@ -9,6 +9,8 @@ interface MatchInfo {
     competition?: string;
     date?: string;
     time?: string;
+    homeScore?: number | null;
+    awayScore?: number | null;
 }
 
 interface AnalysisLayoutProps {

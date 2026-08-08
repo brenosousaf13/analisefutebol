@@ -8,6 +8,8 @@ interface Props {
     title: string;
     players: Player[];
     teamColor: string;
+    /** Fundo do marcador em campo — a bolinha da lista usa o mesmo. */
+    teamBgColor?: string;
     tallies: Map<string, PlayerTally>;
     /** Duplo clique abre a janela de anotacoes do jogador. */
     onPlayerDoubleClick?: (player: Player) => void;
@@ -23,7 +25,7 @@ interface Props {
  * marcador dentro do campo nao mostra nenhum indicador.
  */
 const RosterList: React.FC<Props> = ({
-    title, players, teamColor, tallies, onPlayerDoubleClick, onPlayerClick,
+    title, players, teamColor, teamBgColor, tallies, onPlayerDoubleClick, onPlayerClick,
     emptyLabel = 'Ninguém nesta lista.',
 }) => {
     const ordered = sortRoster(players);
@@ -54,9 +56,15 @@ const RosterList: React.FC<Props> = ({
                                     title="Duplo clique para abrir as anotações"
                                     className="flex cursor-pointer select-none items-center gap-2 rounded px-1 py-1 transition-colors hover:bg-white/5"
                                 >
+                                    {/* Mesmas cores do marcador em campo: fundo do
+                                        time, numero e borda na cor do time. */}
                                     <span
-                                        className="grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] font-bold text-white"
-                                        style={{ borderColor: teamColor }}
+                                        className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold"
+                                        style={{
+                                            backgroundColor: teamBgColor || '#090909',
+                                            color: teamColor,
+                                            border: `2px solid ${teamColor}`,
+                                        }}
                                     >
                                         {player.number}
                                     </span>
