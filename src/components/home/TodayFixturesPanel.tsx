@@ -74,7 +74,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
     return (
         <section className="flex flex-col rounded-card border border-line bg-surface-raised shadow-card">
             <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5">
-                <h2 className="text-xl font-bold tracking-tight text-content-primary">Jogos do dia</h2>
+                <h2 className="text-xl font-bold tracking-tight text-content-primary">Agenda do dia</h2>
 
                 {leagues.length > 0 && (
                     <div ref={filterRef} className="relative">
