@@ -231,6 +231,8 @@ export default function SharedAnalysis() {
 
                             homeCoachName={data.homeCoach || ''}
                             awayCoachName={data.awayCoach || ''}
+                            homeNoteHtml={data.homeNoteHtml || ''}
+                            awayNoteHtml={data.awayNoteHtml || ''}
 
                             ballPositions={{
                                 homeDef: activeData.homeBallDef || { x: 50, y: 50 },

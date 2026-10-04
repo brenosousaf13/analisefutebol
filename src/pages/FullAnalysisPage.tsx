@@ -653,6 +653,8 @@ function FullAnalysisPage() {
             setHomeOffensiveNotes(d.homeOffensiveNotes || '');
             setAwayDefensiveNotes(d.awayDefensiveNotes || '');
             setAwayOffensiveNotes(d.awayOffensiveNotes || '');
+            setHomeNoteHtml(d.homeNoteHtml || '');
+            setAwayNoteHtml(d.awayNoteHtml || '');
             setEvents(d.events || []);
             if (d.allPlayerNotes) setAllPlayerNotes(d.allPlayerNotes);
             if (d.tags) setTags(d.tags);

@@ -976,15 +976,37 @@ export const analysisService = {
     },
 
     async generateShareLink(id: string): Promise<string> {
-        const { data, error } = await supabase
+        const { data: current, error: currentError } = await supabase
             .from('analyses')
-            .update({ share_token: uuidv4() }) // Ensure uuidv4 is imported or use SQL extension
-            .eq('id', id)
             .select('share_token')
+            .eq('id', id)
             .single();
 
+        if (currentError) throw currentError;
+        if (current?.share_token) return current.share_token;
+
+        const newToken = uuidv4();
+        const { data, error } = await supabase
+            .from('analyses')
+            .update({ share_token: newToken })
+            .eq('id', id)
+            .is('share_token', null)
+            .select('share_token')
+            .maybeSingle();
+
         if (error) throw error;
-        return data.share_token;
+        if (data?.share_token) return data.share_token;
+
+        // Outra aba pode ter criado o link entre a leitura e a atualização.
+        const { data: latest, error: latestError } = await supabase
+            .from('analyses')
+            .select('share_token')
+            .eq('id', id)
+            .single();
+
+        if (latestError) throw latestError;
+        if (latest?.share_token) return latest.share_token;
+        throw new Error('Não foi possível criar o link de compartilhamento.');
     },
 
     async getSharedAnalysis(token: string): Promise<AnalysisData | null> {
