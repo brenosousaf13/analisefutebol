@@ -309,19 +309,29 @@ export const analysisService = {
             // Constraint: Cascade delete on analysis_id works for items, but here we want to keep boards if possible or just replace.
             // Given "saveAnalysis" sends full state, replace is safer to avoid orphans if user deleted a tab.
 
-            // Delete existing boards (cascades to items with board_id)
-            await supabase.from('analysis_boards').delete().eq('analysis_id', analysisId);
+            const deleteAnalysisRows = async (table: string) => {
+                const { error } = await supabase
+                    .from(table)
+                    .delete()
+                    .eq('analysis_id', analysisId);
 
-            // Delete items associated with NULL board_id (Default Board columns) explicitly
-            // because strict cascade from analysis_id might not have cleared them if we didn't delete analysis.
-            // Wait, previous code did: await supabase.from('analysis_players').delete().eq('analysis_id', analysisId);
-            // This deletes ALL items for this analysis, regardless of board_id (since they all point to analysis_id).
-            // So we just need to keep that logic.
+                if (error) throw error;
+            };
 
-            await supabase.from('analysis_players').delete().eq('analysis_id', analysisId);
-            await supabase.from('analysis_arrows').delete().eq('analysis_id', analysisId);
-            await supabase.from('analysis_tags').delete().eq('analysis_id', analysisId);
-            await supabase.from('analysis_rectangles').delete().eq('analysis_id', analysisId);
+            // Delete existing boards (cascades to items with board_id).
+            const { error: boardsDeleteError } = await supabase
+                .from('analysis_boards')
+                .delete()
+                .eq('analysis_id', analysisId);
+            if (boardsDeleteError) throw boardsDeleteError;
+
+            // These tables also contain the legacy/default board rows (board_id = null),
+            // so they must be cleared explicitly. Stop on the first failure: continuing
+            // after a failed delete would make the later insert look like a successful save.
+            await deleteAnalysisRows('analysis_players');
+            await deleteAnalysisRows('analysis_arrows');
+            await deleteAnalysisRows('analysis_tags');
+            await deleteAnalysisRows('analysis_rectangles');
 
             // Insert Boards and get Map of local_id -> db_id
             const boardIdMap = new Map<string, string>(); // 'temp-id' -> 'uuid'
