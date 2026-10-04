@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:sharing": "node --test scripts/shared-analysis.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
@@ -22,6 +23,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.16",
     "@eslint/js": "^9.39.1",
     "@types/html2canvas": "^0.5.35",
     "@types/node": "^24.10.1",

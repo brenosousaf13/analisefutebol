@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
+import { sharedAnalysisFromPayload, type SharedAnalysisPayload } from './sharedAnalysisData';
 
 export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
 export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico' | 'analise_completa';
@@ -1020,170 +1021,12 @@ export const analysisService = {
     },
 
     async getSharedAnalysis(token: string): Promise<AnalysisData | null> {
-        const { data: analysis, error } = await supabase
-            .from('analyses')
-            .select('*')
-            .eq('share_token', token)
-            .single();
-
-        if (error || !analysis) return null;
-
-        const id = analysis.id;
-
-        // Fetch Boards
-        const { data: boardsData } = await supabase
-            .from('analysis_boards')
-            .select('*')
-            .eq('analysis_id', id)
-            .order('order', { ascending: true });
-
-        // Fetch all items
-        const { data: players } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
-        const { data: arrows } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
-        const { data: rectangles } = await supabase.from('analysis_rectangles').select('*').eq('analysis_id', id);
-
-        // Helper to process items for a specific board (or null for default)
-        const processItems = (boardId: string | null) => {
-            const homePlayersDef: Player[] = [];
-            const homePlayersOff: Player[] = [];
-            const awayPlayersDef: Player[] = [];
-            const awayPlayersOff: Player[] = [];
-            const homeSubstitutes: Player[] = [];
-            const awaySubstitutes: Player[] = [];
-
-            players?.filter(p => p.board_id === boardId).forEach(p => {
-                const playerObj: Player = {
-                    id: p.player_id, name: p.name, number: p.number, position: { x: p.x, y: p.y }, note: p.note,
-                    color: p.color // Ensure color is passed if saved
-                };
-                const variant = p.variant || 'defensive';
-                if (p.team === 'home') {
-                    if (p.type === 'field') {
-                        if (variant === 'defensive') homePlayersDef.push(playerObj);
-                        else homePlayersOff.push(playerObj);
-                    } else homeSubstitutes.push(playerObj);
-                } else {
-                    if (p.type === 'field') {
-                        if (variant === 'defensive') awayPlayersDef.push(playerObj);
-                        else awayPlayersOff.push(playerObj);
-                    } else awaySubstitutes.push(playerObj);
-                }
-            });
-
-            const homeArrowsDef: Arrow[] = [];
-            const homeArrowsOff: Arrow[] = [];
-            const awayArrowsDef: Arrow[] = [];
-            const awayArrowsOff: Arrow[] = [];
-
-            arrows?.filter(a => a.board_id === boardId).forEach(a => {
-                const arrowObj: Arrow = {
-                    id: a.id, startX: a.start_x, startY: a.start_y, endX: a.end_x, endY: a.end_y, color: a.color
-                };
-                const variant = a.variant || 'defensive';
-                if (a.team === 'home') {
-                    if (variant === 'defensive') homeArrowsDef.push(arrowObj);
-                    else homeArrowsOff.push(arrowObj);
-                } else {
-                    if (variant === 'defensive') awayArrowsDef.push(arrowObj);
-                    else awayArrowsOff.push(arrowObj);
-                }
-            });
-
-            const homeRectanglesDef: Rectangle[] = [];
-            const homeRectanglesOff: Rectangle[] = [];
-            const awayRectanglesDef: Rectangle[] = [];
-            const awayRectanglesOff: Rectangle[] = [];
-
-            rectangles?.filter(r => r.board_id === boardId).forEach(r => {
-                const rectObj: Rectangle = {
-                    id: r.id, startX: r.start_x, startY: r.start_y, endX: r.end_x, endY: r.end_y, color: r.color, opacity: r.opacity
-                };
-                const variant = r.variant || 'defensive';
-                if (r.team === 'home') {
-                    if (variant === 'defensive') homeRectanglesDef.push(rectObj);
-                    else homeRectanglesOff.push(rectObj);
-                } else {
-                    if (variant === 'defensive') awayRectanglesDef.push(rectObj);
-                    else awayRectanglesOff.push(rectObj);
-                }
-            });
-
-            return {
-                homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-                homeSubstitutes, awaySubstitutes,
-                homeArrowsDef, homeArrowsOff, awayArrowsDef, awayArrowsOff,
-                homeRectanglesDef, homeRectanglesOff, awayRectanglesDef, awayRectanglesOff
-            };
-        };
-
-        // Process Default Board (Legacy/Root items)
-        const defaultBoardItems = processItems(null);
-
-        // Process Additional Boards
-        const boards: AnalysisBoard[] = (boardsData || []).map(b => {
-            const items = processItems(b.id);
-            return {
-                id: b.id,
-                title: b.title,
-                order: b.order,
-                ...items,
-                // Ball positions defaulting to root if not saved per board (future improvement: save per board)
-                homeBallDef: analysis.home_ball_def,
-                homeBallOff: analysis.home_ball_off,
-                awayBallDef: analysis.away_ball_def,
-                awayBallOff: analysis.away_ball_off
-            };
-        });
-
-        return {
-            id: analysis.id,
-            matchId: analysis.fixture_id,
-            matchDate: analysis.match_date,
-            matchTime: analysis.match_time,
-            shareToken: analysis.share_token,
-            competition: analysis.competition ?? undefined,
-            homeNoteHtml: analysis.home_note_html ?? undefined,
-            awayNoteHtml: analysis.away_note_html ?? undefined,
-            titulo: analysis.titulo,
-            descricao: analysis.descricao,
-            tipo: analysis.tipo,
-            status: analysis.status,
-            homeTeam: analysis.home_team_name,
-            awayTeam: analysis.away_team_name,
-            homeTeamLogo: analysis.home_team_logo,
-            awayTeamLogo: analysis.away_team_logo,
-            homeScore: analysis.home_score,
-            awayScore: analysis.away_score,
-
-            notasCasa: analysis.notas_casa || '',
-            notasCasaUpdatedAt: analysis.notas_casa_updated_at,
-            notasVisitante: analysis.notas_visitante || '',
-            notasVisitanteUpdatedAt: analysis.notas_visitante_updated_at,
-
-            homeDefensiveNotes: analysis.home_defensive_notes || '',
-            homeOffensiveNotes: analysis.home_offensive_notes || '',
-            homeBenchNotes: analysis.home_bench_notes || '',
-            awayDefensiveNotes: analysis.away_defensive_notes || '',
-            awayOffensiveNotes: analysis.away_offensive_notes || '',
-            awayBenchNotes: analysis.away_bench_notes || '',
-
-            defensiveNotes: analysis.defensive_notes || '',
-            offensiveNotes: analysis.offensive_notes || '',
-            homeTeamColor: analysis.home_team_color || '#EF4444',
-            awayTeamColor: analysis.away_team_color || '#3B82F6',
-            homeTeamBgColor: analysis.home_team_bg_color || '#090909',
-            awayTeamBgColor: analysis.away_team_bg_color || '#090909',
-
-            // Spread default board items to root
-            ...defaultBoardItems,
-
-            // Include boards array
-            boards,
-
-            events: analysis.events || [],
-            homeCoach: analysis.home_coach,
-            awayCoach: analysis.away_coach,
-            tags: []
-        };
+        // Reject malformed UUIDs before calling the public token reader.
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
+            return null;
+        }
+        const { data, error } = await supabase.rpc('get_shared_analysis_v1', { p_token: token });
+        if (error) throw error;
+        return sharedAnalysisFromPayload(data as SharedAnalysisPayload | null, token);
     }
 };
