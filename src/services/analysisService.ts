@@ -4,6 +4,7 @@ import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
 import { sharedAnalysisFromPayload, type SharedAnalysisPayload } from './sharedAnalysisData';
+import { normalizeAnalysisPlayers } from '../utils/uniquePlayers.ts';
 
 export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
 export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico' | 'analise_completa';
@@ -206,8 +207,7 @@ export interface AnalysisFilters {
 export const analysisService = {
     async saveAnalysis(data: AnalysisData): Promise<string> {
         try {
-
-
+            data = normalizeAnalysisPlayers(data);
             let analysisId = data.id;
 
             // Generate titulo if not provided
@@ -758,7 +758,7 @@ export const analysisService = {
             };
         });
 
-        return {
+        return normalizeAnalysisPlayers({
             id: analysis.id,
             matchId: analysis.fixture_id,
             matchDate: analysis.match_date,
@@ -806,7 +806,7 @@ export const analysisService = {
             tags: analysis.tags || [],
 
             boards
-        };
+        });
     },
 
     async deleteAnalysis(id: string): Promise<void> {

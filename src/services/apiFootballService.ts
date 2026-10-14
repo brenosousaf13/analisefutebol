@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { uniquePlayersById } from '../utils/uniquePlayers.ts';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
@@ -260,7 +261,7 @@ export const apiFootballService = {
 
             if (response.data.response && response.data.response.length > 0) {
                 console.log(`[API] /players/squads success: ${response.data.response[0].players.length} players found.`);
-                return response.data.response[0].players;
+                return uniquePlayersById(response.data.response[0].players);
             }
             console.warn(`[API] /players/squads returned empty for team ${teamId}.`);
         } catch (error) {
@@ -279,14 +280,14 @@ export const apiFootballService = {
                     console.log(`[API] Success: Found ${players.length} players in season ${season}.`);
 
                     // Map ApiPlayer to ApiSquadPlayer
-                    return players.map(p => ({
+                    return uniquePlayersById(players.map(p => ({
                         id: p.player.id,
                         name: p.player.name,
                         age: p.player.age,
                         number: p.statistics[0]?.games.number || null,
                         position: p.statistics[0]?.games.position || 'Unknown',
                         photo: p.player.photo
-                    }));
+                    })));
                 }
                 console.warn(`[API] Season ${season} returned 0 players.`);
             } catch (err) {

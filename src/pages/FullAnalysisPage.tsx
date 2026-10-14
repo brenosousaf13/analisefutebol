@@ -28,6 +28,7 @@ import IconButton from '../components/analysis/IconButton';
 import { Download, Share2, Save } from 'lucide-react';
 import { downloadFieldImage, fieldFileName } from '../utils/captureField';
 import { apiFootballService } from '../services/apiFootballService';
+import { normalizeAnalysisPlayers, normalizePlayerGroups } from '../utils/uniquePlayers.ts';
 
 function FullAnalysisPage() {
     const navigate = useNavigate();
@@ -621,7 +622,7 @@ function FullAnalysisPage() {
         const raw = localStorage.getItem(draftKey);
         if (!raw) return;
         try {
-            const d = JSON.parse(raw);
+            const d = normalizeAnalysisPlayers(JSON.parse(raw));
             setHomePlayersDef(d.homePlayersDef || []);
             setHomePlayersOff(d.homePlayersOff || []);
             setAwayPlayersDef(d.awayPlayersDef || []);
@@ -637,7 +638,7 @@ function FullAnalysisPage() {
             setHomeRectangles(d.homeRectangles || { 'full_home': [] });
             setAwayRectangles(d.awayRectangles || { 'full_away': [] });
             setBoards(d.boards || []);
-            if (d.defaultBoardSnapshot) defaultBoardRef.current = d.defaultBoardSnapshot;
+            if (d.defaultBoardSnapshot) defaultBoardRef.current = normalizePlayerGroups(d.defaultBoardSnapshot);
             setActiveBoardId(d.activeBoardId ?? null);
             setHomeScore(d.homeScore || 0);
             setAwayScore(d.awayScore || 0);

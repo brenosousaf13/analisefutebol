@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:sharing": "node --test scripts/shared-analysis.test.mjs"
+    "test:sharing": "node --test scripts/shared-analysis.test.mjs",
+    "test:players": "node --test scripts/duplicate-players.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",

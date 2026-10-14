@@ -2,6 +2,7 @@ import type { AnalysisData, AnalysisBoard } from './analysisService';
 import type { Player } from '../types/Player';
 import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
+import { normalizeAnalysisPlayers } from '../utils/uniquePlayers.ts';
 
 type Phase = 'defensive' | 'offensive';
 type Team = 'home' | 'away';
@@ -150,7 +151,7 @@ export function sharedAnalysisFromPayload(
         id: b.id, title: b.title, order: b.order, ...processBoard(b.id),
     }));
 
-    return {
+    return normalizeAnalysisPlayers({
         id: analysis.id, matchId: analysis.fixture_id,
         matchDate: analysis.match_date, matchTime: analysis.match_time,
         shareToken: token,
@@ -181,5 +182,5 @@ export function sharedAnalysisFromPayload(
         events: analysis.events || [],
         homeCoach: analysis.home_coach, awayCoach: analysis.away_coach,
         tags: analysis.tags || [],
-    };
+    });
 }
