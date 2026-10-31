@@ -9,6 +9,7 @@ import SearchDropdown from '../components/home/SearchDropdown';
 import { analysisService } from '../services/analysisService';
 import type { SavedAnalysisSummary } from '../services/analysisService';
 import { apiFootballService } from '../services/apiFootballService';
+import { FootballApiError } from '../services/footballRequestQueue';
 import { createAnalysisFromFixture } from '../services/fixtureAnalysisService';
 import { searchAnalyses } from '../services/searchService';
 import { supabase } from '../lib/supabase';
@@ -46,7 +47,7 @@ const Home: React.FC = () => {
 
     const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
     const [loadingFixtures, setLoadingFixtures] = useState(true);
-    const [fixturesError, setFixturesError] = useState(false);
+    const [fixturesError, setFixturesError] = useState<string | null>(null);
     const [fixturesRetry, setFixturesRetry] = useState(0);
     const [creatingFixtureId, setCreatingFixtureId] = useState<number | null>(null);
 
@@ -89,10 +90,14 @@ const Home: React.FC = () => {
                 const list = await apiFootballService.getTodayFixtures();
                 if (!cancelled) {
                     setFixtures(list);
-                    setFixturesError(false);
+                    setFixturesError(null);
                 }
-            } catch {
-                if (!cancelled) setFixturesError(true);
+            } catch (error) {
+                if (!cancelled) {
+                    setFixturesError(error instanceof FootballApiError && error.dailyLimit
+                        ? error.message
+                        : 'Não foi possível carregar a agenda.');
+                }
             } finally {
                 fetching = false;
                 if (!cancelled) setLoadingFixtures(false);

@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { uniquePlayersById } from '../utils/uniquePlayers.ts';
-import { hasConfirmedLineups, hasStartingEleven, type LineupConfirmation } from '../utils/fixtureStatus';
+import { hasConfirmedLineups, hasStartingEleven, isFixtureFinished, isFixtureLive, isFixtureStartingSoon, type LineupConfirmation } from '../utils/fixtureStatus';
 import { createFootballRequestQueue } from './footballRequestQueue';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
 
@@ -39,17 +39,26 @@ const TODAY_LEAGUES = new Set<number>([
 
 // Invalida o cache anterior, que incluía todas as ligas da API.
 const TODAY_CACHE_KEY = 'zona14_today_fixtures_v3';
-const TODAY_TTL_MS = 60 * 1000;
+// A cota gratuita é de 100 consultas por dia: atualiza rápido só quando algo está acontecendo.
+const TODAY_ACTIVE_TTL_MS = 2 * 60 * 1000;
+const TODAY_IDLE_TTL_MS = 15 * 60 * 1000;
+const LINEUP_RECHECK_MS = 5 * 60 * 1000;
 const LINEUP_CACHE_PREFIX = 'zona14_lineup_confirmation_v2_';
 const LINEUP_DATA_PREFIX = 'zona14_lineup_data_v1_';
 const CONFIRMED_TTL_MS = 24 * 60 * 60 * 1000;
-const lineupRequests = new Map<number, { promise: Promise<ApiLineup[]>; consumers: Set<AbortSignal | undefined> }>();
+interface LineupConsumer { signal?: AbortSignal; canRequest?: () => boolean }
+const lineupRequests = new Map<number, { promise: Promise<ApiLineup[]>; consumers: Set<LineupConsumer> }>();
 let todayRequest: { date: string; promise: Promise<ApiFixture[]> } | undefined;
 
-function lineupCacheTtl(fixture: ApiFixture, status: LineupConfirmation): number {
-    if (status === 'confirmed') return CONFIRMED_TTL_MS;
-    const untilLineupWindow = Date.parse(fixture.fixture.date) - Date.now() - 2 * 60 * 60 * 1000;
-    return untilLineupWindow > 0 ? Math.min(30 * 60 * 1000, untilLineupWindow) : TODAY_TTL_MS;
+function todayCacheTtl(fixtures: ApiFixture[]): number {
+    const now = Date.now();
+    const active = fixtures.some(f => isFixtureLive(f)
+        || (!isFixtureFinished(f) && Math.abs(Date.parse(f.fixture.date) - now) <= 60 * 60 * 1000));
+    return active ? TODAY_ACTIVE_TTL_MS : TODAY_IDLE_TTL_MS;
+}
+
+function lineupCacheTtl(status: LineupConfirmation): number {
+    return status === 'confirmed' ? CONFIRMED_TTL_MS : LINEUP_RECHECK_MS;
 }
 
 const FIXTURE_CACHE_PREFIX = 'zona14_fixture_';
@@ -70,26 +79,28 @@ const apiClient = {
 };
 
 /** A agenda e o editor compartilham os mesmos dados e a mesma consulta em andamento. */
-async function fetchLineups(fixtureId: number, signal?: AbortSignal): Promise<ApiLineup[]> {
-    if (signal?.aborted) throw new DOMException('Consulta cancelada', 'AbortError');
+async function fetchLineups(fixtureId: number, signal?: AbortSignal, canRequest?: () => boolean): Promise<ApiLineup[]> {
+    const consumer: LineupConsumer = { signal, canRequest };
+    const isActive = (entry: LineupConsumer) => !entry.signal?.aborted && (entry.canRequest?.() ?? true);
+    if (!isActive(consumer)) throw new DOMException('Consulta cancelada', 'AbortError');
     try {
         const cached = JSON.parse(localStorage.getItem(`${LINEUP_DATA_PREFIX}${fixtureId}`) ?? 'null') as
             { data: ApiLineup[]; ts: number } | null;
         if (cached && Array.isArray(cached.data)) {
             const complete = new Set(cached.data.filter(hasStartingEleven).map(lineup => lineup.team.id)).size >= 2;
-            if (Date.now() - cached.ts < (complete ? CONFIRMED_TTL_MS : TODAY_TTL_MS)) return cached.data;
+            if (Date.now() - cached.ts < (complete ? CONFIRMED_TTL_MS : LINEUP_RECHECK_MS)) return cached.data;
         }
     } catch { /* cache inválido */ }
     const existing = lineupRequests.get(fixtureId);
     if (existing) {
-        existing.consumers.add(signal);
+        existing.consumers.add(consumer);
         return existing.promise;
     }
-    const consumers = new Set([signal]);
+    const consumers = new Set([consumer]);
     const promise = (async () => {
         const response = await apiClient.get<ApiFootballResponse<ApiLineup>>('/fixtures/lineups', {
             params: { fixture: fixtureId }, timeout: 20000,
-        }, () => [...consumers].every(consumer => consumer?.aborted));
+        }, () => ![...consumers].some(isActive));
         if (!Array.isArray(response.data.response)) throw new Error('Resposta de escalação inválida.');
         const data = response.data.response;
         try {
@@ -151,11 +162,13 @@ export const apiFootballService = {
         }).format(new Date()); // en-CA ja formata como YYYY-MM-DD
 
         const cacheKey = `${TODAY_CACHE_KEY}_${today}`;
+        let stale: ApiFixture[] | undefined;
         try {
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 const { data, ts } = JSON.parse(cached) as { data: ApiFixture[]; ts: number };
-                if (Date.now() - ts < TODAY_TTL_MS) return data;
+                if (Date.now() - ts < todayCacheTtl(data)) return data;
+                stale = data;
             }
         } catch { /* cache invalido */ }
 
@@ -176,16 +189,22 @@ export const apiFootballService = {
             } catch { /* storage cheio */ }
             return sorted;
         })();
-        todayRequest = { date: today, promise };
+        // Se a API falhar ou a cota acabar, mantém a última lista do dia em vez de esvaziar a tela.
+        const guarded = promise.catch(error => {
+            if (stale) return stale;
+            throw error;
+        });
+        todayRequest = { date: today, promise: guarded };
         try {
-            return await promise;
+            return await guarded;
         } finally {
-            if (todayRequest?.promise === promise) todayRequest = undefined;
+            if (todayRequest?.promise === guarded) todayRequest = undefined;
         }
     },
 
     /**
-     * Consulta só os cards próximos à área visível. O endpoint de escalações
+     * Consulta apenas jogos ainda não iniciados que começam na próxima hora.
+     * A interface limita também aos cards visíveis. O endpoint de escalações
      * funciona também no plano gratuito, que não permite fixtures por ids.
      * Não reutiliza o cache de placar de 6h: escalações novas precisam aparecer.
      */
@@ -193,6 +212,7 @@ export const apiFootballService = {
         const result = new Map<number, LineupConfirmation>();
         const requests: Promise<void>[] = [];
         for (const fixture of new Map(fixtures.map(f => [f.fixture.id, f])).values()) {
+            if (!isFixtureStartingSoon(fixture)) continue;
             const id = fixture.fixture.id;
             try {
                 // Dados já carregados no editor prevalecem sobre a tag antiga.
@@ -212,7 +232,7 @@ export const apiFootballService = {
                 }
                 const cached = JSON.parse(localStorage.getItem(`${LINEUP_CACHE_PREFIX}${id}`) ?? 'null') as
                     { status: LineupConfirmation; ts: number } | null;
-                const ttl = cached ? lineupCacheTtl(fixture, cached.status) : 0;
+                const ttl = cached ? lineupCacheTtl(cached.status) : 0;
                 if (cached && ['confirmed', 'unconfirmed'].includes(cached.status)
                     && Date.now() - cached.ts < ttl) {
                     result.set(id, cached.status);
@@ -221,14 +241,15 @@ export const apiFootballService = {
             } catch { /* cache indisponível */ }
             requests.push((async () => {
                 try {
-                    const lineups = await fetchLineups(id, signal);
+                    const lineups = await fetchLineups(id, signal, () => isFixtureStartingSoon(fixture));
+                    if (signal?.aborted || !isFixtureStartingSoon(fixture)) return;
                     const status = hasConfirmedLineups({ ...fixture, lineups }) ? 'confirmed' : 'unconfirmed';
                     result.set(id, status);
                     try {
                         localStorage.setItem(`${LINEUP_CACHE_PREFIX}${id}`, JSON.stringify({ status, ts: Date.now() }));
                     } catch { /* storage cheio */ }
                 } catch {
-                    if (!signal?.aborted) result.set(id, 'pending');
+                    if (!signal?.aborted && isFixtureStartingSoon(fixture)) result.set(id, 'pending');
                 }
             })());
         }

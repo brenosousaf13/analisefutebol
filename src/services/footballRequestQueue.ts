@@ -18,8 +18,15 @@ interface StorageLike {
 
 export class FootballApiError extends Error {
     readonly retryAt?: number;
-    constructor(message: string, retryAt?: number) { super(message); this.retryAt = retryAt; }
+    readonly dailyLimit: boolean;
+    constructor(message: string, retryAt?: number, dailyLimit = false) {
+        super(message);
+        this.retryAt = retryAt;
+        this.dailyLimit = dailyLimit;
+    }
 }
+
+const DAILY_LIMIT_MESSAGE = 'O limite diário de consultas da API de futebol foi atingido. A agenda volta quando a cota renovar, às 21h (Brasília).';
 
 const WINDOW_MS = 61000;
 const BUDGET_KEY = 'zona14_football_request_budget_v1';
@@ -32,23 +39,27 @@ export function createFootballRequestQueue(options: {
 } = {}) {
     const now = options.now ?? (() => Date.now());
     const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
-    let storage = options.storage;
-    try { storage ??= typeof localStorage === 'undefined' ? undefined : localStorage; } catch { /* storage bloqueado */ }
+    const getStorage = (): StorageLike | undefined => {
+        if (options.storage) return options.storage;
+        try { return typeof localStorage === 'undefined' ? undefined : localStorage; } catch { return undefined; }
+    };
     let budget: Budget = { limit: 10, remaining: 10, resetAt: now() + WINDOW_MS, dayResetAt: 0 };
     let tail: Promise<unknown> = Promise.resolve();
 
     const save = () => {
-        try { storage?.setItem(BUDGET_KEY, JSON.stringify(budget)); } catch { /* storage indisponível */ }
+        try { getStorage()?.setItem(BUDGET_KEY, JSON.stringify(budget)); } catch { /* storage indisponível */ }
     };
     const read = () => {
         try {
-            const saved = JSON.parse(storage?.getItem(BUDGET_KEY) ?? 'null') as Budget | null;
+            const saved = JSON.parse(getStorage()?.getItem(BUDGET_KEY) ?? 'null') as Budget | null;
             if (saved && Number.isFinite(saved.limit) && saved.limit > 0
                 && Number.isFinite(saved.remaining) && saved.remaining >= 0
                 && saved.resetAt > now() && saved.resetAt <= now() + 3 * WINDOW_MS) {
                 budget = saved;
             } else if (saved?.dayResetAt && saved.dayResetAt > now()) {
                 budget.dayResetAt = saved.dayResetAt;
+            } else if (getStorage()) {
+                budget.dayResetAt = 0;
             }
         } catch { /* cache inválido */ }
         if (now() >= budget.resetAt) {
@@ -72,13 +83,16 @@ export function createFootballRequestQueue(options: {
             budget.remaining = Math.min(budget.remaining, remaining);
         }
         if (numberHeader(response, 'x-ratelimit-requests-remaining') === 0) {
-            const midnight = new Date(now());
-            midnight.setUTCHours(24, 0, 0, 0);
-            budget.dayResetAt = midnight.getTime();
+            budget.dayResetAt = nextUtcMidnight();
         }
         save();
     };
     const cancelled = () => new DOMException('Consulta cancelada', 'AbortError');
+    const nextUtcMidnight = () => {
+        const midnight = new Date(now());
+        midnight.setUTCHours(24, 0, 0, 0);
+        return midnight.getTime();
+    };
 
     return {
         run<T extends ApiResponse>(task: () => Promise<T>, isCancelled: () => boolean = () => false): Promise<T> {
@@ -87,7 +101,7 @@ export function createFootballRequestQueue(options: {
                     if (isCancelled()) throw cancelled();
                     read();
                     if (budget.dayResetAt > now()) {
-                        throw new FootballApiError('Limite diário de consultas atingido.', budget.dayResetAt);
+                        throw new FootballApiError(DAILY_LIMIT_MESSAGE, budget.dayResetAt, true);
                     }
                     if (budget.remaining <= 0) {
                         await sleep(Math.max(1, budget.resetAt - now()));
@@ -100,6 +114,12 @@ export function createFootballRequestQueue(options: {
                         observe(response);
                         const body = response.data as { errors?: Record<string, unknown> } | undefined;
                         if (body?.errors && Object.keys(body.errors).length > 0) {
+                            // A API devolve HTTP 200 com errors.requests quando a cota do dia acabou.
+                            if (Object.keys(body.errors).some(key => key.toLowerCase() === 'requests')) {
+                                budget.dayResetAt = nextUtcMidnight();
+                                save();
+                                throw new FootballApiError(DAILY_LIMIT_MESSAGE, budget.dayResetAt, true);
+                            }
                             if (Object.keys(body.errors).some(key => key.toLowerCase() === 'ratelimit')) {
                                 throw { response: { ...response, status: 429 } };
                             }

@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, ListFilter, Check } from 'lucide-react';
 import TeamLogoImage from '../TeamLogoImage';
 import type { ApiFixture } from '../../types/api-football';
-import { fixtureTimeLabel, isFixtureFinished, isFixtureLive } from '../../utils/fixtureStatus';
+import { fixtureTimeLabel, isFixtureFinished, isFixtureLive, isFixtureStartingSoon } from '../../utils/fixtureStatus';
 import LeagueFlag from './LeagueFlag';
 import { useFixtureLineups } from '../../hooks/useFixtureLineups';
 
 interface Props {
     fixtures: ApiFixture[];
     loading: boolean;
-    error?: boolean;
+    error?: string | null;
     onRetry?: () => void;
     /** Id do jogo cuja analise esta sendo criada agora. */
     creatingFixtureId: number | null;
@@ -24,18 +24,19 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const leagues = useMemo(() => {
-        const map = new Map<number, string>();
+        const map = new Map<number, ApiFixture['league']>();
         for (const f of fixtures) {
-            if (f.league?.id && !map.has(f.league.id)) map.set(f.league.id, f.league.name);
+            if (f.league?.id && !map.has(f.league.id)) map.set(f.league.id, f.league);
         }
-        return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
+        return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, 'pt-BR')
+            || a[1].country.localeCompare(b[1].country, 'pt-BR'));
     }, [fixtures]);
 
     const visible = useMemo(
         () => (selected === null ? fixtures : fixtures.filter(f => selected.has(f.league?.id))),
         [fixtures, selected],
     );
-    const lineupStatuses = useFixtureLineups(visible, scrollRef);
+    const { statuses: lineupStatuses, now } = useFixtureLineups(visible, scrollRef);
 
     useEffect(() => {
         if (!filterOpen) return;
@@ -99,7 +100,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
                                     Mostrar todos
                                 </button>
                                 <div className="my-1 h-px bg-line-subtle" />
-                                {leagues.map(([id, label]) => {
+                                {leagues.map(([id, league]) => {
                                     const checked = selected === null || selected.has(id);
                                     return (
                                         <button
@@ -112,7 +113,8 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
                                             <span className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${checked ? 'border-brand-primary bg-brand-primary text-nav-dark' : 'border-line'}`}>
                                                 {checked && <Check size={11} strokeWidth={3} />}
                                             </span>
-                                            <span className="min-w-0 flex-1 truncate">{label}</span>
+                                            <LeagueFlag flag={league.flag} country={league.country} />
+                                            <span className="min-w-0 flex-1 truncate" title={`${league.name} — ${league.country}`}>{league.name}</span>
                                         </button>
                                     );
                                 })}
@@ -124,7 +126,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
 
             {error && (
                 <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 px-4 pb-3 text-xs text-amber-300 sm:px-5">
-                    <span>{fixtures.length > 0 ? 'Não foi possível atualizar a agenda.' : 'Não foi possível carregar a agenda.'}</span>
+                    <span>{fixtures.length > 0 ? 'Não foi possível atualizar a agenda.' : error}</span>
                     <button onClick={onRetry} className="font-semibold underline">Tentar novamente</button>
                 </div>
             )}
@@ -155,12 +157,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
                             const creating = creatingFixtureId === f.fixture.id;
                             const finished = isFixtureFinished(f);
                             const live = isFixtureLive(f);
-                            const lineupStatus = lineupStatuses.get(f.fixture.id);
-                            const confirmed = lineupStatus === 'confirmed';
-                            const lineupLabel = confirmed ? 'Escalações confirmadas'
-                                : lineupStatus === 'unconfirmed' ? 'Escalações não confirmadas'
-                                    : lineupStatus === 'pending' ? 'Verificação pendente'
-                                        : 'Consultando escalações…';
+                            const confirmed = isFixtureStartingSoon(f, now) && lineupStatuses.get(f.fixture.id) === 'confirmed';
 
                             return (
                                 <li
@@ -207,12 +204,12 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
                                         </button>
                                     </div>
 
-                                    <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold leading-4">
-                                        {finished && <span className="rounded-md bg-yellow-400/15 px-2 py-0.5 text-yellow-300">Encerrada</span>}
-                                        <span className={`rounded-md px-2 py-0.5 ${confirmed ? 'bg-emerald-400/15 text-emerald-300' : 'bg-slate-400/15 text-slate-300'}`}>
-                                            {lineupLabel}
-                                        </span>
-                                    </div>
+                                    {(finished || confirmed) && (
+                                        <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold leading-4">
+                                            {finished && <span className="rounded-md bg-yellow-400/15 px-2 py-0.5 text-yellow-300">Encerrada</span>}
+                                            {confirmed && <span className="rounded-md bg-emerald-400/15 px-2 py-0.5 text-emerald-300">Escalações confirmadas</span>}
+                                        </div>
+                                    )}
                                 </li>
                             );
                         })}

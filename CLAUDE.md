@@ -179,23 +179,30 @@ Landing pós-login. Dois blocos numa grade **60/40**
   O painel ocupa a altura disponível da janela, com cabeçalho e filtro fora da
   rolagem interna. Exibe bandeira antes da liga, tag amarela "Encerrada", placar
   com "AGORA" durante o jogo e tags verde/cinza para as escalações.
-  `useFixtureLineups` consulta `/fixtures/lineups` apenas para cards visíveis,
-  atualiza cada card separadamente e verifica novamente os pendentes a cada 15s.
-  Sair da área visível cancela consultas ainda na fila. Não usa `ids`,
-  indisponível no plano gratuito atual. Verde exige onze titulares publicados
-  para cada time; jogadores sem ID podem ser reconhecidos pelo nome.
-  Falha de consulta vira "Verificação pendente", sem cache de erro e sem ser
-  confundida com ausência de escalação. Negativos antigos de 6h e erros antigos
-  de 5 min são ignorados; confirmações antigas ainda válidas são preservadas.
-  Agenda e editor compartilham os dados completos de `getLineups` e consultas
-  em andamento. Cache completo: 24h com dois times publicados; 1 min se incompleto.
-  Metadados confirmados: 24h; negativos: 1 min para jogos iniciados/encerrados,
-  até 30 min para jogos distantes. Dados completos confirmados vencem negativos.
-  `footballRequestQueue` controla todas as consultas deste serviço usando os
-  headers de limite da API. Serializa chamadas, compartilha o orçamento entre
-  abas (Web Locks quando disponíveis) e espera/reexecuta bloqueios HTTP 429 ou
-  `errors.rateLimit`, com tentativas limitadas. Cota diária esgotada não gera
-  novas chamadas até a renovação. Testes incluem erros, cache, fila e recuperação.
+  Só a tag verde `Escalações confirmadas` existe para escalação: não há tag
+  cinza, pendente ou de erro. Ela só aparece antes do início do jogo. Jogo
+  iniciado, ao vivo, encerrado, adiado ou cancelado nunca mostra a tag, mesmo
+  se a API ainda não tiver atualizado o status.
+  `useFixtureLineups` consulta `/fixtures/lineups` somente de jogos `NS`
+  que começam em até 60 min (`isFixtureStartingSoon`), e apenas para cards
+  visíveis. Ao rolar ou abrir a Home, não gasta consulta com jogos distantes.
+  Agenda a revalidação para o instante em que o jogo entra na janela de 1h e
+  para o horário de início. Verde exige onze titulares publicados para cada
+  time; jogadores sem ID podem ser reconhecidos pelo nome. Falhas não são
+  gravadas como ausência de escalação: tentam de novo após 1 min; negativos
+  após 5 min. Agenda e editor compartilham os dados completos de
+  `getLineups` (cache 24h quando os dois times têm onze; 5 min caso contrário).
+  Consultas na fila são canceladas ao sair da área visível ou do início do jogo.
+  O filtro de campeonatos mostra a bandeira de cada liga e diferencia ligas de
+  mesmo nome por ID (ex.: Serie A do Brasil e da Itália).
+  **Cota da API-Football: o plano gratuito tem 100 consultas por dia.** A
+  lista do dia tem cache de 2 min quando há jogo ao vivo ou perto do início e
+  de 15 min nos outros horários. Se a cota acabar (HTTP 200 com
+  `errors.requests`), `footballRequestQueue` interrompe novas chamadas até
+  00:00 UTC (21h de Brasília), mantém a última lista em cache e, sem cache,
+  explica o motivo na tela. `footballRequestQueue` também serializa chamadas,
+  compartilha o orçamento por minuto entre abas (Web Locks quando
+  disponíveis) e trata HTTP 429/`errors.rateLimit` com tentativas limitadas.
   Bandeiras usam o código da API via FlagCDN, com fallback para o proxy da API;
   competições internacionais sem país usam um globo. Imagens são lazy-loaded.
 

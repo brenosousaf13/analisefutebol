@@ -73,6 +73,16 @@ test('does not keep retrying after the daily quota is exhausted', async () => {
     assert.equal(h.waits.length, 0);
 });
 
+test('treats the API daily-limit body error as a final quota error, even with HTTP 200', async () => {
+    const h = harness();
+    let calls = 0;
+    const task = async () => { calls++; return reply(9, { requests: 'You have reached the request limit for the day' }); };
+    await assert.rejects(h.queue.run(task), error => error instanceof FootballApiError && error.dailyLimit && error.retryAt > h.now());
+    await assert.rejects(h.queue.run(task), error => error.dailyLimit === true);
+    assert.equal(calls, 1);
+    assert.equal(h.waits.length, 0);
+});
+
 test('a new tab reuses the known provider budget', async () => {
     const data = new Map();
     const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };

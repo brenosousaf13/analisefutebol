@@ -2,6 +2,13 @@ import type { ApiFixture, ApiLineup } from '../types/api-football';
 
 export type LineupConfirmation = 'confirmed' | 'unconfirmed' | 'pending';
 
+/** Só consulta escalações na hora anterior ao início, sem incluir jogos já iniciados. */
+export function isFixtureStartingSoon(fixture: ApiFixture, now = Date.now()): boolean {
+    if (fixture.fixture.status.short !== 'NS') return false;
+    const untilKickoff = Date.parse(fixture.fixture.date) - now;
+    return untilKickoff > 0 && untilKickoff <= 60 * 60 * 1000;
+}
+
 export function hasStartingEleven(lineup: ApiLineup): boolean {
     return lineup.startXI?.length >= 11
         && lineup.startXI.every(({ player }) => !!(player?.id || player?.name?.trim()));
