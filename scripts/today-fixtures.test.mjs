@@ -30,7 +30,7 @@ globalThis.localStorage = {
     setItem: (key, value) => storage.set(key, value),
 };
 const reply = (response, errors = []) => ({ data: { response, errors } });
-const fixture = (id, status = 'NS', date = '2026-10-31T23:30:00-03:00', league = 999) => ({
+const fixture = (id, status = 'NS', date = '2026-10-31T23:30:00-03:00', league = 39) => ({
     fixture: { id, date, timestamp: Date.parse(date) / 1000, status: { short: status } },
     league: { id: league, name: `Liga ${league}` },
     teams: { home: { id: id * 2 }, away: { id: id * 2 + 1 } },
@@ -44,9 +44,16 @@ beforeEach(() => {
 });
 afterEach(() => mock.timers.reset());
 
-test('keeps every league, sorts by kickoff, includes late Brasília games, and ignores the old filtered cache', async () => {
-    storage.set('zona14_today_fixtures_2026-10-31', JSON.stringify({ data: [fixture(1)], ts: Date.now() }));
-    const all = [fixture(1, 'NS', '2026-10-31T23:30:00-03:00', 71), fixture(2, 'FT', '2026-10-31T09:00:00-03:00', 999), fixture(3, 'NS', '2026-10-31T20:00:00-03:00', 1000)];
+test('restricts leagues, sorts by kickoff, includes late Brasília games, and ignores the previous unrestricted cache', async () => {
+    storage.set('zona14_today_fixtures_v2_2026-10-31', JSON.stringify({ data: [fixture(4, 'NS', undefined, 999)], ts: Date.now() }));
+    const all = [
+        fixture(1, 'NS', '2026-10-31T23:30:00-03:00', 71),
+        fixture(2, 'FT', '2026-10-31T09:00:00-03:00', 140),
+        fixture(3, 'NS', '2026-10-31T20:00:00-03:00', 39),
+        fixture(4, 'NS', '2026-10-31T11:00:00-03:00', 999),
+        fixture(5, 'NS', '2026-10-31T08:00:00-03:00', 73),
+        fixture(6, 'NS', '2026-10-31T22:00:00-03:00', 2),
+    ];
     let calls = 0;
     globalThis.agendaApi = async (path, { params }) => {
         calls++;
@@ -60,6 +67,19 @@ test('keeps every league, sorts by kickoff, includes late Brasília games, and i
     mock.timers.tick(60001);
     await apiFootballService.getTodayFixtures();
     assert.equal(calls, 2);
+});
+
+test('includes the 25 requested leagues, with both Paraguay phases and country-specific ids', async () => {
+    const ids = [39, 140, 135, 78, 61, 94, 88, 71, 72, 75, 144, 203, 128, 307, 253, 262, 235, 333, 239, 265, 268, 242, 250, 252, 281, 218];
+    const allowed = ids.map((id, i) => fixture(i + 1, 'NS', undefined, id));
+    const excluded = [40, 73, 76, 145, 204, 129, 308, 254, 263, 236, 334, 240, 266, 269, 243, 251, 282, 219];
+    globalThis.agendaApi = async () => reply([...allowed, ...excluded.map((id, i) => fixture(i + 100, 'NS', undefined, id))]);
+    assert.deepEqual((await apiFootballService.getTodayFixtures()).map(f => f.league.id), ids);
+});
+
+test('returns no games when only unlisted leagues have matches, without falling back to all leagues', async () => {
+    globalThis.agendaApi = async () => reply([fixture(1, 'NS', undefined, 73), fixture(2, 'FT', undefined, 2)]);
+    assert.deepEqual(await apiFootballService.getTodayFixtures(), []);
 });
 
 test('rolls the agenda date over at midnight in Brasília', async () => {

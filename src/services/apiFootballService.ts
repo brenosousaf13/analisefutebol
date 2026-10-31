@@ -6,8 +6,38 @@ import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, Ap
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
-// Nova versão invalida o cache antigo, que continha só ligas prioritárias.
-const TODAY_CACHE_KEY = 'zona14_today_fixtures_v2';
+/** Ligas escolhidas para a agenda. Os IDs distinguem nomes iguais em países diferentes. */
+const TODAY_LEAGUES = new Set<number>([
+    39,  // Premier League — Inglaterra
+    140, // La Liga — Espanha
+    135, // Serie A — Itália
+    78,  // Bundesliga — Alemanha
+    61,  // Ligue 1 — França
+    94,  // Primeira Liga — Portugal
+    88,  // Eredivisie — Países Baixos
+    71,  // Série A — Brasil
+    72,  // Série B — Brasil
+    75,  // Série C — Brasil
+    144, // Pro League — Bélgica
+    203, // Süper Lig — Turquia
+    128, // Liga Profesional — Argentina
+    307, // Saudi Pro League — Arábia Saudita
+    253, // MLS — EUA/Canadá
+    262, // Liga MX — México
+    235, // Premier League — Rússia
+    333, // Premier League — Ucrânia
+    239, // Primera A — Colômbia
+    265, // Primera División — Chile
+    268, // Primera División — Uruguai
+    242, // Serie A — Equador
+    250, // Primera División — Paraguai (Apertura)
+    252, // Primera División — Paraguai (Clausura)
+    281, // Liga 1 — Peru
+    218, // Bundesliga — Áustria
+]);
+
+// Invalida o cache anterior, que incluía todas as ligas da API.
+const TODAY_CACHE_KEY = 'zona14_today_fixtures_v3';
 const TODAY_TTL_MS = 60 * 1000;
 const LINEUP_CACHE_PREFIX = 'zona14_lineup_confirmation_';
 const lineupRequests = new Map<number, Promise<Map<number, LineupConfirmation>>>();
@@ -74,8 +104,8 @@ export const apiFootballService = {
     /**
      * Jogos de hoje no fuso de Brasilia (UTC-3).
      *
-     * Retorna todas as ligas. Data e timezone devem ir juntos para incluir
-     * também os jogos da noite que já caem no dia seguinte em UTC.
+     * Retorna todas as partidas das 25 ligas acompanhadas. Data e timezone
+     * vão juntos para incluir jogos da noite que já caem no dia seguinte UTC.
      */
     async getTodayFixtures(): Promise<ApiFixture[]> {
         const today = new Intl.DateTimeFormat('en-CA', {
@@ -101,7 +131,7 @@ export const apiFootballService = {
             if (Object.keys(response.data.errors ?? {}).length > 0) {
                 throw new Error('Não foi possível consultar a agenda.');
             }
-            const sorted = [...(response.data.response ?? [])].sort(
+            const sorted = (response.data.response ?? []).filter(f => TODAY_LEAGUES.has(f.league?.id)).sort(
                 (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0),
             );
             try {

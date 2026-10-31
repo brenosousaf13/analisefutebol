@@ -139,7 +139,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
 
                 {!loading && !error && fixtures.length === 0 && (
                     <p className="py-10 text-center text-sm text-content-muted">
-                        Nenhuma partida encontrada para hoje.
+                        Nenhuma partida hoje nas ligas acompanhadas.
                     </p>
                 )}
 

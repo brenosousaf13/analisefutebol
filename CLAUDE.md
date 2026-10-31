@@ -168,8 +168,12 @@ Landing pós-login. Dois blocos numa grade **60/40**
   Análises novas usam a anotação única em HTML; as antigas caem nos campos de
   fase ofensiva/defensiva, que ainda não foram migrados.
 - **Agenda do dia** ([TodayFixturesPanel](src/components/home/TodayFixturesPanel.tsx)) —
-  todas as partidas disponibilizadas pela API para a data de Brasília, sem lista
-  fixa de ligas. Envia `date` e `timezone: America/Sao_Paulo` juntos, incluindo
+  todas as partidas das 25 ligas escolhidas por Lucas, definidas por ID em
+  `TODAY_LEAGUES` no `apiFootballService` (26 IDs: a liga do Paraguai é separada
+  pela API em Apertura e Clausura, ambos incluídos). Outras competições não aparecem, mesmo
+  se nenhuma das acompanhadas tiver jogos. Cache `zona14_today_fixtures_v3`
+  invalida a lista anterior, que incluía todas as ligas da API.
+  Envia `date` e `timezone: America/Sao_Paulo` juntos, incluindo
   jogos noturnos que caem no dia seguinte em UTC. Cache de 1 minuto, renovado
   enquanto a Home está visível. Falhas mantêm a lista anterior e permitem retry.
   O painel ocupa a altura disponível da janela, com cabeçalho e filtro fora da
