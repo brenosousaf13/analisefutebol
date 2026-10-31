@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:sharing": "node --test scripts/shared-analysis.test.mjs",
-    "test:players": "node --test scripts/duplicate-players.test.mjs"
+    "test:players": "node --test scripts/duplicate-players.test.mjs",
+    "test:admin": "node --test scripts/admin-access.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
