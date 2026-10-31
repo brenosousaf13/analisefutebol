@@ -23,7 +23,7 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT 
+  SELECT
     au.id,
     au.email::varchar,
     (au.raw_user_meta_data->>'full_name')::text as full_name,
@@ -38,4 +38,3 @@ BEGIN
   ORDER BY au.created_at DESC;
 END;
 $function$
-
