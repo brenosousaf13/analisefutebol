@@ -1,6 +1,11 @@
-import type { ApiFixture } from '../types/api-football';
+import type { ApiFixture, ApiLineup } from '../types/api-football';
 
-export type LineupConfirmation = 'confirmed' | 'unconfirmed' | 'unavailable';
+export type LineupConfirmation = 'confirmed' | 'unconfirmed' | 'pending';
+
+export function hasStartingEleven(lineup: ApiLineup): boolean {
+    return lineup.startXI?.length >= 11
+        && lineup.startXI.every(({ player }) => !!(player?.id || player?.name?.trim()));
+}
 
 export function isFixtureFinished(fixture: ApiFixture): boolean {
     return ['FT', 'AET', 'PEN'].includes(fixture.fixture.status.short);
@@ -13,9 +18,7 @@ export function isFixtureLive(fixture: ApiFixture): boolean {
 /** Só confirma quando os dois times têm os onze titulares publicados. */
 export function hasConfirmedLineups(fixture: ApiFixture): boolean {
     return [fixture.teams.home.id, fixture.teams.away.id].every(teamId =>
-        fixture.lineups?.some(lineup => lineup.team?.id === teamId
-            && lineup.startXI?.length >= 11
-            && lineup.startXI.every(({ player }) => !!player?.id)),
+        fixture.lineups?.some(lineup => lineup.team?.id === teamId && hasStartingEleven(lineup)),
     );
 }
 

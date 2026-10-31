@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import { uniquePlayersById } from '../utils/uniquePlayers.ts';
-import { hasConfirmedLineups, isFixtureFinished, type LineupConfirmation } from '../utils/fixtureStatus';
+import { hasConfirmedLineups, hasStartingEleven, type LineupConfirmation } from '../utils/fixtureStatus';
+import { createFootballRequestQueue } from './footballRequestQueue';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
@@ -39,16 +40,14 @@ const TODAY_LEAGUES = new Set<number>([
 // Invalida o cache anterior, que incluía todas as ligas da API.
 const TODAY_CACHE_KEY = 'zona14_today_fixtures_v3';
 const TODAY_TTL_MS = 60 * 1000;
-const LINEUP_CACHE_PREFIX = 'zona14_lineup_confirmation_';
-const lineupRequests = new Map<number, Promise<Map<number, LineupConfirmation>>>();
+const LINEUP_CACHE_PREFIX = 'zona14_lineup_confirmation_v2_';
+const LINEUP_DATA_PREFIX = 'zona14_lineup_data_v1_';
+const CONFIRMED_TTL_MS = 24 * 60 * 60 * 1000;
+const lineupRequests = new Map<number, { promise: Promise<ApiLineup[]>; consumers: Set<AbortSignal | undefined> }>();
 let todayRequest: { date: string; promise: Promise<ApiFixture[]> } | undefined;
 
 function lineupCacheTtl(fixture: ApiFixture, status: LineupConfirmation): number {
-    if (status === 'confirmed') return 24 * 60 * 60 * 1000;
-    if (status === 'unavailable') return 5 * 60 * 1000;
-    if (isFixtureFinished(fixture) || ['PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(fixture.fixture.status.short)) {
-        return 6 * 60 * 60 * 1000;
-    }
+    if (status === 'confirmed') return CONFIRMED_TTL_MS;
     const untilLineupWindow = Date.parse(fixture.fixture.date) - Date.now() - 2 * 60 * 60 * 1000;
     return untilLineupWindow > 0 ? Math.min(30 * 60 * 1000, untilLineupWindow) : TODAY_TTL_MS;
 }
@@ -56,13 +55,51 @@ function lineupCacheTtl(fixture: ApiFixture, status: LineupConfirmation): number
 const FIXTURE_CACHE_PREFIX = 'zona14_fixture_';
 const FIXTURE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — placar de jogo encerrado nao muda
 
-const apiClient = axios.create({
+const apiTransport = axios.create({
     baseURL: BASE_URL,
+    timeout: 20000,
     headers: {
         'x-rapidapi-key': API_KEY,
         'x-rapidapi-host': 'v3.football.api-sports.io'
     }
 });
+const footballRequests = createFootballRequestQueue();
+const apiClient = {
+    get: <T>(path: string, config?: AxiosRequestConfig, isCancelled?: () => boolean) =>
+        footballRequests.run(() => apiTransport.get<T>(path, config), isCancelled),
+};
+
+/** A agenda e o editor compartilham os mesmos dados e a mesma consulta em andamento. */
+async function fetchLineups(fixtureId: number, signal?: AbortSignal): Promise<ApiLineup[]> {
+    if (signal?.aborted) throw new DOMException('Consulta cancelada', 'AbortError');
+    try {
+        const cached = JSON.parse(localStorage.getItem(`${LINEUP_DATA_PREFIX}${fixtureId}`) ?? 'null') as
+            { data: ApiLineup[]; ts: number } | null;
+        if (cached && Array.isArray(cached.data)) {
+            const complete = new Set(cached.data.filter(hasStartingEleven).map(lineup => lineup.team.id)).size >= 2;
+            if (Date.now() - cached.ts < (complete ? CONFIRMED_TTL_MS : TODAY_TTL_MS)) return cached.data;
+        }
+    } catch { /* cache inválido */ }
+    const existing = lineupRequests.get(fixtureId);
+    if (existing) {
+        existing.consumers.add(signal);
+        return existing.promise;
+    }
+    const consumers = new Set([signal]);
+    const promise = (async () => {
+        const response = await apiClient.get<ApiFootballResponse<ApiLineup>>('/fixtures/lineups', {
+            params: { fixture: fixtureId }, timeout: 20000,
+        }, () => [...consumers].every(consumer => consumer?.aborted));
+        if (!Array.isArray(response.data.response)) throw new Error('Resposta de escalação inválida.');
+        const data = response.data.response;
+        try {
+            localStorage.setItem(`${LINEUP_DATA_PREFIX}${fixtureId}`, JSON.stringify({ data, ts: Date.now() }));
+        } catch { /* storage cheio */ }
+        return data;
+    })();
+    lineupRequests.set(fixtureId, { promise, consumers });
+    try { return await promise; } finally { lineupRequests.delete(fixtureId); }
+}
 
 export const apiFootballService = {
     /**
@@ -152,54 +189,50 @@ export const apiFootballService = {
      * funciona também no plano gratuito, que não permite fixtures por ids.
      * Não reutiliza o cache de placar de 6h: escalações novas precisam aparecer.
      */
-    async getLineupConfirmations(fixtures: ApiFixture[]): Promise<Map<number, LineupConfirmation>> {
+    async getLineupConfirmations(fixtures: ApiFixture[], signal?: AbortSignal): Promise<Map<number, LineupConfirmation>> {
         const result = new Map<number, LineupConfirmation>();
-        const pending: ApiFixture[] = [];
-        const requests = new Set<Promise<Map<number, LineupConfirmation>>>();
+        const requests: Promise<void>[] = [];
         for (const fixture of new Map(fixtures.map(f => [f.fixture.id, f])).values()) {
             const id = fixture.fixture.id;
             try {
+                // Dados já carregados no editor prevalecem sobre a tag antiga.
+                const saved = JSON.parse(localStorage.getItem(`${LINEUP_DATA_PREFIX}${id}`) ?? 'null') as
+                    { data: ApiLineup[]; ts: number } | null;
+                if (saved && Date.now() - saved.ts < CONFIRMED_TTL_MS
+                    && hasConfirmedLineups({ ...fixture, lineups: saved.data })) {
+                    result.set(id, 'confirmed');
+                    continue;
+                }
+                // Preserva só confirmações da versão anterior, nunca seus erros ou negativos antigos.
+                const previous = JSON.parse(localStorage.getItem(`zona14_lineup_confirmation_${id}`) ?? 'null') as
+                    { status: string; ts: number } | null;
+                if (previous?.status === 'confirmed' && Date.now() - previous.ts < CONFIRMED_TTL_MS) {
+                    result.set(id, 'confirmed');
+                    continue;
+                }
                 const cached = JSON.parse(localStorage.getItem(`${LINEUP_CACHE_PREFIX}${id}`) ?? 'null') as
                     { status: LineupConfirmation; ts: number } | null;
                 const ttl = cached ? lineupCacheTtl(fixture, cached.status) : 0;
-                if (cached && ['confirmed', 'unconfirmed', 'unavailable'].includes(cached.status)
+                if (cached && ['confirmed', 'unconfirmed'].includes(cached.status)
                     && Date.now() - cached.ts < ttl) {
                     result.set(id, cached.status);
                     continue;
                 }
             } catch { /* cache indisponível */ }
-            const request = lineupRequests.get(id);
-            if (request) requests.add(request);
-            else pending.push(fixture);
-        }
-        for (const fixture of pending) {
-            const id = fixture.fixture.id;
-            const request = (async () => {
-                const statuses = new Map<number, LineupConfirmation>();
-                let status: LineupConfirmation;
+            requests.push((async () => {
                 try {
-                    const response = await apiClient.get<ApiFootballResponse<ApiLineup>>('/fixtures/lineups', {
-                        params: { fixture: id },
-                        timeout: 20000,
-                    });
-                    if (Object.keys(response.data.errors ?? {}).length > 0) throw new Error('Lineups unavailable');
-                    status = hasConfirmedLineups({ ...fixture, lineups: response.data.response }) ? 'confirmed' : 'unconfirmed';
+                    const lineups = await fetchLineups(id, signal);
+                    const status = hasConfirmedLineups({ ...fixture, lineups }) ? 'confirmed' : 'unconfirmed';
+                    result.set(id, status);
+                    try {
+                        localStorage.setItem(`${LINEUP_CACHE_PREFIX}${id}`, JSON.stringify({ status, ts: Date.now() }));
+                    } catch { /* storage cheio */ }
                 } catch {
-                    status = 'unavailable';
+                    if (!signal?.aborted) result.set(id, 'pending');
                 }
-                statuses.set(id, status);
-                try {
-                    localStorage.setItem(`${LINEUP_CACHE_PREFIX}${id}`, JSON.stringify({ status, ts: Date.now() }));
-                } catch { /* storage cheio */ }
-                return statuses;
-            })();
-            lineupRequests.set(id, request);
-            requests.add(request);
-            void request.finally(() => { lineupRequests.delete(id); });
+            })());
         }
-        for (const statuses of await Promise.all(requests)) {
-            for (const [id, status] of statuses) result.set(id, status);
-        }
+        await Promise.all(requests);
         return result;
     },
 
@@ -276,15 +309,7 @@ export const apiFootballService = {
      * Get lineups for a fixture
      */
     async getLineups(fixtureId: number): Promise<ApiLineup[]> {
-        try {
-            const response = await apiClient.get<ApiFootballResponse<ApiLineup>>('/fixtures/lineups', {
-                params: { fixture: fixtureId }
-            });
-            return response.data.response;
-        } catch (error) {
-            console.error('Error fetching lineups:', error);
-            throw error;
-        }
+        return fetchLineups(fixtureId);
     },
 
     /**

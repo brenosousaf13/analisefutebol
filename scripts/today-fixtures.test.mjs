@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test, beforeEach, afterEach, mock } from 'node:test';
 import { registerHooks } from 'node:module';
 import { readFileSync } from 'node:fs';
+import { setImmediate as flushTasks } from 'node:timers/promises';
 import { fixtureTimeLabel, hasConfirmedLineups, isFixtureFinished, isFixtureLive } from '../src/utils/fixtureStatus.ts';
 
 const serviceUrl = new URL('../src/services/apiFootballService.ts', import.meta.url).href;
@@ -29,7 +30,10 @@ globalThis.localStorage = {
     getItem: key => storage.get(key) ?? null,
     setItem: (key, value) => storage.set(key, value),
 };
-const reply = (response, errors = []) => ({ data: { response, errors } });
+const reply = (response, errors = []) => ({
+    data: { response, errors },
+    headers: { 'x-ratelimit-limit': '10000', 'x-ratelimit-remaining': '10000' },
+});
 const fixture = (id, status = 'NS', date = '2026-10-31T23:30:00-03:00', league = 39) => ({
     fixture: { id, date, timestamp: Date.parse(date) / 1000, status: { short: status } },
     league: { id: league, name: `Liga ${league}` },
@@ -96,6 +100,7 @@ test('deduplicates concurrent agenda reads', async () => {
     globalThis.agendaApi = () => { calls++; return new Promise(r => { resolve = r; }); };
     const first = apiFootballService.getTodayFixtures();
     const second = apiFootballService.getTodayFixtures();
+    await flushTasks();
     resolve(reply([fixture(1)]));
     await Promise.all([first, second]);
     assert.equal(calls, 1);
@@ -150,7 +155,9 @@ test('reuses in-flight lineup requests for overlapping visible cards', async () 
     globalThis.agendaApi = () => { calls++; return new Promise(r => { resolvers.push(r); }); };
     const first = apiFootballService.getLineupConfirmations([fixture(100), fixture(101)]);
     const second = apiFootballService.getLineupConfirmations([fixture(101)]);
+    await flushTasks();
     resolvers[0](reply(confirmed(fixture(100)).lineups));
+    await flushTasks();
     resolvers[1](reply([]));
     assert.equal((await first).get(100), 'confirmed');
     assert.equal((await second).get(101), 'unconfirmed');
@@ -164,13 +171,77 @@ test('rechecks unconfirmed lineups and distinguishes missing data and failures',
     };
     let statuses = await apiFootballService.getLineupConfirmations([fixture(1), fixture(2)]);
     assert.equal(statuses.get(1), 'unconfirmed');
-    assert.equal(statuses.get(2), 'unavailable');
+    assert.equal(statuses.get(2), 'pending');
     mock.timers.tick(60001);
     globalThis.agendaApi = async () => reply(confirmed(fixture(1)).lineups);
     assert.equal((await apiFootballService.getLineupConfirmations([fixture(1)])).get(1), 'confirmed');
-    globalThis.agendaApi = async () => reply([], { rateLimit: 'Exceeded' });
+    globalThis.agendaApi = async () => reply([], { requests: 'Exceeded' });
     statuses = await apiFootballService.getLineupConfirmations([fixture(3)]);
-    assert.equal(statuses.get(3), 'unavailable');
+    assert.equal(statuses.get(3), 'pending');
+});
+
+test('ignores old cached failures and stale negatives and immediately recovers official lineups', async () => {
+    storage.set('zona14_lineup_confirmation_400', JSON.stringify({ status: 'unavailable', ts: Date.now() }));
+    storage.set('zona14_lineup_confirmation_401', JSON.stringify({ status: 'unconfirmed', ts: Date.now() }));
+    globalThis.agendaApi = async (_, { params }) => reply(confirmed(fixture(params.fixture)).lineups);
+    const statuses = await apiFootballService.getLineupConfirmations([fixture(400), fixture(401)]);
+    assert.equal(statuses.get(400), 'confirmed');
+    assert.equal(statuses.get(401), 'confirmed');
+});
+
+test('does not cache network errors and shares full lineups between the agenda and analysis editor', async () => {
+    let calls = 0;
+    globalThis.agendaApi = async (_, { params }) => {
+        calls++;
+        if (calls === 1) throw new Error('offline');
+        return reply(confirmed(fixture(params.fixture)).lineups);
+    };
+    assert.equal((await apiFootballService.getLineupConfirmations([fixture(500)])).get(500), 'pending');
+    assert.equal((await apiFootballService.getLineupConfirmations([fixture(500)])).get(500), 'confirmed');
+    assert.equal((await apiFootballService.getLineups(500)).length, 2);
+    await apiFootballService.getLineups(501);
+    assert.equal((await apiFootballService.getLineupConfirmations([fixture(501)])).get(501), 'confirmed');
+    assert.equal(calls, 3);
+});
+
+test('refreshes a finished match whose starters were published after the initial empty response', async () => {
+    let published = false;
+    const f = fixture(600, 'FT');
+    globalThis.agendaApi = async () => reply(published ? confirmed(f).lineups : []);
+    assert.equal((await apiFootballService.getLineupConfirmations([f])).get(600), 'unconfirmed');
+    published = true;
+    mock.timers.tick(60001);
+    assert.equal((await apiFootballService.getLineupConfirmations([f])).get(600), 'confirmed');
+});
+
+test('does not request cards cancelled before reaching the queue', async () => {
+    let calls = 0;
+    globalThis.agendaApi = async () => { calls++; return reply([]); };
+    const controller = new AbortController();
+    const pending = apiFootballService.getLineupConfirmations([fixture(700)], controller.signal);
+    controller.abort();
+    assert.equal((await pending).size, 0);
+    assert.equal(calls, 0);
+});
+
+test('an editor request reuses queued lineups even after the agenda subscriber leaves', async () => {
+    let calls = 0;
+    globalThis.agendaApi = async () => { calls++; return reply(confirmed(fixture(710)).lineups); };
+    const controller = new AbortController();
+    const agenda = apiFootballService.getLineupConfirmations([fixture(710)], controller.signal);
+    controller.abort();
+    const editor = apiFootballService.getLineups(710);
+    assert.equal((await editor).length, 2);
+    await agenda;
+    assert.equal(calls, 1);
+});
+
+test('accepts published starters identified by name when the provider has no player id', () => {
+    const f = confirmed(fixture(800));
+    for (const l of f.lineups) l.startXI.forEach(({ player }, i) => { player.id = null; player.name = `Jogador ${i}`; });
+    assert.equal(hasConfirmedLineups(f), true);
+    f.lineups[0].startXI[0].player.name = '';
+    assert.equal(hasConfirmedLineups(f), false);
 });
 
 test('classifies live, finished and exceptional statuses and formats Brasília kickoff', () => {

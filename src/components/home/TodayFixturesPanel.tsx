@@ -159,7 +159,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry
                             const confirmed = lineupStatus === 'confirmed';
                             const lineupLabel = confirmed ? 'Escalações confirmadas'
                                 : lineupStatus === 'unconfirmed' ? 'Escalações não confirmadas'
-                                    : lineupStatus === 'unavailable' ? 'Escalações indisponíveis'
+                                    : lineupStatus === 'pending' ? 'Verificação pendente'
                                         : 'Consultando escalações…';
 
                             return (
