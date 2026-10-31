@@ -9,6 +9,7 @@ npm run dev       # Start Vite dev server with HMR
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint across all files
 npm run preview   # Serve production build locally
+npm run test:agenda # Agenda, fuso de Brasília, status e confirmação de escalações
 ```
 
 No test framework is configured.
@@ -166,10 +167,21 @@ Landing pós-login. Dois blocos numa grade **60/40**
   (`getAnalysis`) e mostra a anotação do time, com switcher entre os dois.
   Análises novas usam a anotação única em HTML; as antigas caem nos campos de
   fase ofensiva/defensiva, que ainda não foram migrados.
-- **Jogos do dia** ([TodayFixturesPanel](src/components/home/TodayFixturesPanel.tsx)) —
-  jogos de hoje com horário em `America/Sao_Paulo` (UTC-3) independente do fuso
-  da máquina, botão "Analisar" por jogo e filtro de campeonatos em dropdown com
-  checkbox. Jogo encerrado mostra placar no lugar do horário.
+- **Agenda do dia** ([TodayFixturesPanel](src/components/home/TodayFixturesPanel.tsx)) —
+  todas as partidas disponibilizadas pela API para a data de Brasília, sem lista
+  fixa de ligas. Envia `date` e `timezone: America/Sao_Paulo` juntos, incluindo
+  jogos noturnos que caem no dia seguinte em UTC. Cache de 1 minuto, renovado
+  enquanto a Home está visível. Falhas mantêm a lista anterior e permitem retry.
+  O painel ocupa a altura disponível da janela, com cabeçalho e filtro fora da
+  rolagem interna. Exibe bandeira antes da liga, tag amarela "Encerrada", placar
+  com "AGORA" durante o jogo e tags verde/cinza para as escalações.
+  `useFixtureLineups` consulta `/fixtures/lineups` apenas para cards visíveis;
+  não usa `ids`, indisponível no plano gratuito atual. Verde exige os onze
+  titulares dos dois times. Falha de consulta aparece como indisponível, sem
+  inventar confirmação. Cache confirmado: 24h; pendente: 1 min perto do jogo,
+  até 30 min para jogos distantes e 6h para encerrados; erro: 5 min.
+  Bandeiras usam o código da API via FlagCDN, com fallback para o proxy da API;
+  competições internacionais sem país usam um globo. Imagens são lazy-loaded.
 
 **Placar e campeonato reais** vêm de `apiFootballService.getFixturesByIds()`:
 uma **única** chamada em lote para todas as análises visíveis que têm

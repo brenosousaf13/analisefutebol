@@ -1,37 +1,27 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, ListFilter, Check, Play } from 'lucide-react';
+import { Loader2, ListFilter, Check } from 'lucide-react';
 import TeamLogoImage from '../TeamLogoImage';
 import type { ApiFixture } from '../../types/api-football';
+import { fixtureTimeLabel, isFixtureFinished, isFixtureLive } from '../../utils/fixtureStatus';
+import LeagueFlag from './LeagueFlag';
+import { useFixtureLineups } from '../../hooks/useFixtureLineups';
 
 interface Props {
     fixtures: ApiFixture[];
     loading: boolean;
+    error?: boolean;
+    onRetry?: () => void;
     /** Id do jogo cuja analise esta sendo criada agora. */
     creatingFixtureId: number | null;
     onCreate: (fixture: ApiFixture) => void;
 }
 
-/** Horario do jogo no fuso de Brasilia (UTC-3), independente do fuso do usuario. */
-function kickoffTime(iso: string): string {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '--:--';
-    return d.toLocaleTimeString('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-}
-
-/** Jogo ja encerrado tem placar; o resto mostra o horario. */
-function isFinished(f: ApiFixture): boolean {
-    return ['FT', 'AET', 'PEN'].includes(f.fixture?.status?.short ?? '');
-}
-
-const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtureId, onCreate }) => {
+const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, error, onRetry, creatingFixtureId, onCreate }) => {
     const [filterOpen, setFilterOpen] = useState(false);
     // null = nenhum filtro aplicado (mostra tudo). Set vazio = nada marcado.
     const [selected, setSelected] = useState<Set<number> | null>(null);
     const filterRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const leagues = useMemo(() => {
         const map = new Map<number, string>();
@@ -45,6 +35,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
         () => (selected === null ? fixtures : fixtures.filter(f => selected.has(f.league?.id))),
         [fixtures, selected],
     );
+    const lineupStatuses = useFixtureLineups(visible, scrollRef);
 
     useEffect(() => {
         if (!filterOpen) return;
@@ -72,9 +63,16 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
     const activeFilterCount = selected === null ? 0 : selected.size;
 
     return (
-        <section className="flex flex-col rounded-card border border-line bg-surface-raised shadow-card">
-            <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5">
-                <h2 className="text-xl font-bold tracking-tight text-content-primary">Agenda do dia</h2>
+        <section aria-labelledby="today-fixtures-title" className="flex h-[calc(100dvh-7rem)] min-h-0 flex-col rounded-card border border-line bg-surface-raised shadow-card lg:h-[calc(100dvh-8rem)] xl:sticky xl:top-24">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-5 sm:px-5">
+                <div>
+                    <h2 id="today-fixtures-title" className="text-xl font-bold tracking-tight text-content-primary">Agenda do dia</h2>
+                    {!loading && fixtures.length > 0 && (
+                        <p className="mt-1 text-[11px] text-content-muted" aria-live="polite">
+                            {selected === null ? fixtures.length : `${visible.length} de ${fixtures.length}`} partidas · Brasília
+                        </p>
+                    )}
+                </div>
 
                 {leagues.length > 0 && (
                     <div ref={filterRef} className="relative">
@@ -93,7 +91,7 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
                         </button>
 
                         {filterOpen && (
-                            <div className="absolute right-0 top-[calc(100%+6px)] z-30 max-h-72 w-64 overflow-y-auto rounded-control border border-line bg-surface-raised p-1 shadow-pop">
+                            <div className="absolute right-0 top-[calc(100%+6px)] z-30 max-h-[min(18rem,60dvh)] w-64 overflow-y-auto overscroll-contain rounded-control border border-line bg-surface-raised p-1 shadow-pop">
                                 <button
                                     onClick={() => setSelected(null)}
                                     className="w-full rounded px-2.5 py-1.5 text-left text-xs font-semibold text-content-secondary transition-colors hover:bg-surface-hover hover:text-content-primary"
@@ -124,7 +122,14 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
                 )}
             </div>
 
-            <div className="px-5 pb-5">
+            {error && (
+                <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 px-4 pb-3 text-xs text-amber-300 sm:px-5">
+                    <span>{fixtures.length > 0 ? 'Não foi possível atualizar a agenda.' : 'Não foi possível carregar a agenda.'}</span>
+                    <button onClick={onRetry} className="font-semibold underline">Tentar novamente</button>
+                </div>
+            )}
+
+            <div ref={scrollRef} role="region" aria-label="Partidas do dia" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-primary/50 sm:px-5">
                 {loading && (
                     <div className="flex items-center gap-2 py-10 text-sm text-content-muted">
                         <Loader2 size={16} className="animate-spin" />
@@ -132,9 +137,9 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
                     </div>
                 )}
 
-                {!loading && fixtures.length === 0 && (
+                {!loading && !error && fixtures.length === 0 && (
                     <p className="py-10 text-center text-sm text-content-muted">
-                        Nenhum jogo hoje nos campeonatos acompanhados.
+                        Nenhuma partida encontrada para hoje.
                     </p>
                 )}
 
@@ -148,42 +153,66 @@ const TodayFixturesPanel: React.FC<Props> = ({ fixtures, loading, creatingFixtur
                     <ul className="flex flex-col gap-2">
                         {visible.map(f => {
                             const creating = creatingFixtureId === f.fixture.id;
-                            const finished = isFinished(f);
+                            const finished = isFixtureFinished(f);
+                            const live = isFixtureLive(f);
+                            const lineupStatus = lineupStatuses.get(f.fixture.id);
+                            const confirmed = lineupStatus === 'confirmed';
+                            const lineupLabel = confirmed ? 'Escalações confirmadas'
+                                : lineupStatus === 'unconfirmed' ? 'Escalações não confirmadas'
+                                    : lineupStatus === 'unavailable' ? 'Escalações indisponíveis'
+                                        : 'Consultando escalações…';
 
                             return (
                                 <li
                                     key={f.fixture.id}
-                                    className="flex items-center gap-3 rounded-control border border-line bg-surface-overlay px-3 py-2.5"
+                                    data-fixture-id={f.fixture.id}
+                                    className="rounded-control border border-line bg-surface-overlay px-3 py-3"
                                 >
-                                    <span className="w-12 shrink-0 text-center text-xs font-bold tabular-nums text-content-primary">
-                                        {finished
-                                            ? `${f.goals?.home ?? 0}-${f.goals?.away ?? 0}`
-                                            : kickoffTime(f.fixture.date)}
-                                    </span>
+                                    <div className="mb-2 flex min-w-0 items-center gap-1.5 text-[11px] text-content-secondary">
+                                        <LeagueFlag key={f.league?.flag} flag={f.league?.flag} country={f.league?.country} />
+                                        <span className="truncate" title={f.league?.name}>{f.league?.name}</span>
+                                    </div>
 
-                                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                                        <span className="truncate text-[11px] text-content-muted">
-                                            {f.league?.name}
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="flex w-14 shrink-0 flex-col items-center gap-1.5 text-center text-xs font-bold tabular-nums text-content-primary">
+                                            <span>{finished || live
+                                                ? `${f.goals?.home ?? '–'}–${f.goals?.away ?? '–'}`
+                                                : fixtureTimeLabel(f)}</span>
+                                            {live && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-red-300">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" />AGORA
+                                                </span>
+                                            )}
                                         </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <TeamLogoImage logoUrl={f.teams.home.logo} teamName={f.teams.home.name} className="h-4 w-4 shrink-0" />
-                                            <span className="min-w-0 flex-1 truncate text-xs text-content-primary">{f.teams.home.name}</span>
-                                        </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <TeamLogoImage logoUrl={f.teams.away.logo} teamName={f.teams.away.name} className="h-4 w-4 shrink-0" />
-                                            <span className="min-w-0 flex-1 truncate text-xs text-content-primary">{f.teams.away.name}</span>
-                                        </span>
-                                    </span>
 
-                                    <button
-                                        onClick={() => onCreate(f)}
-                                        disabled={creatingFixtureId !== null}
-                                        title="Criar análise deste jogo"
-                                        className="flex shrink-0 items-center gap-1 rounded-control bg-brand-primary px-2.5 py-1.5 text-xs font-bold text-nav-dark transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {creating ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} className="fill-current" />}
-                                        Analisar
-                                    </button>
+                                        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                            <span className="flex items-center gap-1.5">
+                                                <TeamLogoImage logoUrl={f.teams.home.logo} teamName={f.teams.home.name} className="h-4 w-4 shrink-0" />
+                                                <span className="min-w-0 flex-1 truncate text-xs text-content-primary">{f.teams.home.name}</span>
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <TeamLogoImage logoUrl={f.teams.away.logo} teamName={f.teams.away.name} className="h-4 w-4 shrink-0" />
+                                                <span className="min-w-0 flex-1 truncate text-xs text-content-primary">{f.teams.away.name}</span>
+                                            </span>
+                                        </span>
+
+                                        <button
+                                            onClick={() => onCreate(f)}
+                                            disabled={creatingFixtureId !== null}
+                                            title="Criar análise deste jogo"
+                                            className="flex shrink-0 items-center gap-1 rounded-control bg-brand-primary px-2.5 py-1.5 text-xs font-bold text-nav-dark transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {creating && <Loader2 size={13} className="animate-spin" />}
+                                            Analisar
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold leading-4">
+                                        {finished && <span className="rounded-md bg-yellow-400/15 px-2 py-0.5 text-yellow-300">Encerrada</span>}
+                                        <span className={`rounded-md px-2 py-0.5 ${confirmed ? 'bg-emerald-400/15 text-emerald-300' : 'bg-slate-400/15 text-slate-300'}`}>
+                                            {lineupLabel}
+                                        </span>
+                                    </div>
                                 </li>
                             );
                         })}

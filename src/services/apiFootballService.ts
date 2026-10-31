@@ -1,31 +1,27 @@
 import axios from 'axios';
 import { uniquePlayersById } from '../utils/uniquePlayers.ts';
+import { hasConfirmedLineups, isFixtureFinished, type LineupConfirmation } from '../utils/fixtureStatus';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
-/**
- * Ligas priorizadas no painel "Jogos do dia" da Home.
- * Editar aqui para mudar o que aparece — os IDs sao os da API-Football.
- */
-const PRIORITY_LEAGUES = new Set<number>([
-    71,  // Brasileirao Serie A
-    72,  // Brasileirao Serie B
-    73,  // Copa do Brasil
-    13,  // Libertadores
-    11,  // Sul-Americana
-    2,   // Champions League
-    3,   // Europa League
-    39,  // Premier League
-    140, // La Liga
-    135, // Serie A (ITA)
-    78,  // Bundesliga
-    61,  // Ligue 1
-]);
+// Nova versão invalida o cache antigo, que continha só ligas prioritárias.
+const TODAY_CACHE_KEY = 'zona14_today_fixtures_v2';
+const TODAY_TTL_MS = 60 * 1000;
+const LINEUP_CACHE_PREFIX = 'zona14_lineup_confirmation_';
+const lineupRequests = new Map<number, Promise<Map<number, LineupConfirmation>>>();
+let todayRequest: { date: string; promise: Promise<ApiFixture[]> } | undefined;
 
-const TODAY_CACHE_KEY = 'zona14_today_fixtures';
-const TODAY_TTL_MS = 10 * 60 * 1000; // 10 min — placar do dia muda durante os jogos
+function lineupCacheTtl(fixture: ApiFixture, status: LineupConfirmation): number {
+    if (status === 'confirmed') return 24 * 60 * 60 * 1000;
+    if (status === 'unavailable') return 5 * 60 * 1000;
+    if (isFixtureFinished(fixture) || ['PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(fixture.fixture.status.short)) {
+        return 6 * 60 * 60 * 1000;
+    }
+    const untilLineupWindow = Date.parse(fixture.fixture.date) - Date.now() - 2 * 60 * 60 * 1000;
+    return untilLineupWindow > 0 ? Math.min(30 * 60 * 1000, untilLineupWindow) : TODAY_TTL_MS;
+}
 
 const FIXTURE_CACHE_PREFIX = 'zona14_fixture_';
 const FIXTURE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — placar de jogo encerrado nao muda
@@ -78,9 +74,8 @@ export const apiFootballService = {
     /**
      * Jogos de hoje no fuso de Brasilia (UTC-3).
      *
-     * A API espera a data em YYYY-MM-DD e devolve os horarios em UTC; a
-     * formatacao para UTC-3 e feita na interface. Filtra por PRIORITY_LEAGUES,
-     * caindo para a lista completa quando o filtro zera.
+     * Retorna todas as ligas. Data e timezone devem ir juntos para incluir
+     * também os jogos da noite que já caem no dia seguinte em UTC.
      */
     async getTodayFixtures(): Promise<ApiFixture[]> {
         const today = new Intl.DateTimeFormat('en-CA', {
@@ -97,27 +92,85 @@ export const apiFootballService = {
             }
         } catch { /* cache invalido */ }
 
-        try {
+        if (todayRequest?.date === today) return todayRequest.promise;
+        const promise = (async () => {
             const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', {
-                params: { date: today },
+                params: { date: today, timezone: 'America/Sao_Paulo' },
+                timeout: 20000,
             });
-            const all = response.data.response ?? [];
-
-            const preferred = all.filter(f => PRIORITY_LEAGUES.has(f.league?.id));
-            const chosen = preferred.length > 0 ? preferred : all;
-            const sorted = [...chosen].sort(
-                (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0)
+            if (Object.keys(response.data.errors ?? {}).length > 0) {
+                throw new Error('Não foi possível consultar a agenda.');
+            }
+            const sorted = [...(response.data.response ?? [])].sort(
+                (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0),
             );
-
             try {
                 localStorage.setItem(cacheKey, JSON.stringify({ data: sorted, ts: Date.now() }));
             } catch { /* storage cheio */ }
-
             return sorted;
-        } catch (error) {
-            console.error('Error fetching today fixtures:', error);
-            return [];
+        })();
+        todayRequest = { date: today, promise };
+        try {
+            return await promise;
+        } finally {
+            if (todayRequest?.promise === promise) todayRequest = undefined;
         }
+    },
+
+    /**
+     * Consulta só os cards próximos à área visível. O endpoint de escalações
+     * funciona também no plano gratuito, que não permite fixtures por ids.
+     * Não reutiliza o cache de placar de 6h: escalações novas precisam aparecer.
+     */
+    async getLineupConfirmations(fixtures: ApiFixture[]): Promise<Map<number, LineupConfirmation>> {
+        const result = new Map<number, LineupConfirmation>();
+        const pending: ApiFixture[] = [];
+        const requests = new Set<Promise<Map<number, LineupConfirmation>>>();
+        for (const fixture of new Map(fixtures.map(f => [f.fixture.id, f])).values()) {
+            const id = fixture.fixture.id;
+            try {
+                const cached = JSON.parse(localStorage.getItem(`${LINEUP_CACHE_PREFIX}${id}`) ?? 'null') as
+                    { status: LineupConfirmation; ts: number } | null;
+                const ttl = cached ? lineupCacheTtl(fixture, cached.status) : 0;
+                if (cached && ['confirmed', 'unconfirmed', 'unavailable'].includes(cached.status)
+                    && Date.now() - cached.ts < ttl) {
+                    result.set(id, cached.status);
+                    continue;
+                }
+            } catch { /* cache indisponível */ }
+            const request = lineupRequests.get(id);
+            if (request) requests.add(request);
+            else pending.push(fixture);
+        }
+        for (const fixture of pending) {
+            const id = fixture.fixture.id;
+            const request = (async () => {
+                const statuses = new Map<number, LineupConfirmation>();
+                let status: LineupConfirmation;
+                try {
+                    const response = await apiClient.get<ApiFootballResponse<ApiLineup>>('/fixtures/lineups', {
+                        params: { fixture: id },
+                        timeout: 20000,
+                    });
+                    if (Object.keys(response.data.errors ?? {}).length > 0) throw new Error('Lineups unavailable');
+                    status = hasConfirmedLineups({ ...fixture, lineups: response.data.response }) ? 'confirmed' : 'unconfirmed';
+                } catch {
+                    status = 'unavailable';
+                }
+                statuses.set(id, status);
+                try {
+                    localStorage.setItem(`${LINEUP_CACHE_PREFIX}${id}`, JSON.stringify({ status, ts: Date.now() }));
+                } catch { /* storage cheio */ }
+                return statuses;
+            })();
+            lineupRequests.set(id, request);
+            requests.add(request);
+            void request.finally(() => { lineupRequests.delete(id); });
+        }
+        for (const statuses of await Promise.all(requests)) {
+            for (const [id, status] of statuses) result.set(id, status);
+        }
+        return result;
     },
 
     /**

@@ -32,6 +32,8 @@ export default function TeamLogoImage({ logoUrl, teamName, className = 'w-16 h-1
         <img
             src={proxied}
             alt={teamName}
+            loading="lazy"
+            decoding="async"
             className={`${className} object-contain`}
             onError={() => setFailed(true)}
         />

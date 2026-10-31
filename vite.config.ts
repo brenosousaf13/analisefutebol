@@ -23,8 +23,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       proxy: {
-        '/api-football': withApiKey('https://v3.football.api-sports.io', '/api-football'),
-        '/api-football-media': withApiKey('https://media.api-sports.io', '/api-football-media')
+        // O prefixo mais específico precisa vir primeiro.
+        '/api-football-media': withApiKey('https://media.api-sports.io', '/api-football-media'),
+        '/api-football': withApiKey('https://v3.football.api-sports.io', '/api-football')
       }
     }
   }

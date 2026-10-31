@@ -46,6 +46,8 @@ const Home: React.FC = () => {
 
     const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
     const [loadingFixtures, setLoadingFixtures] = useState(true);
+    const [fixturesError, setFixturesError] = useState(false);
+    const [fixturesRetry, setFixturesRetry] = useState(0);
     const [creatingFixtureId, setCreatingFixtureId] = useState<number | null>(null);
 
     const [search, setSearch] = useState('');
@@ -79,14 +81,34 @@ const Home: React.FC = () => {
 
     useEffect(() => {
         let cancelled = false;
-
-        apiFootballService.getTodayFixtures()
-            .then(list => { if (!cancelled) setFixtures(list); })
-            .catch(() => { if (!cancelled) setFixtures([]); })
-            .finally(() => { if (!cancelled) setLoadingFixtures(false); });
-
-        return () => { cancelled = true; };
-    }, []);
+        let fetching = false;
+        const refresh = async () => {
+            if (fetching || document.hidden) return;
+            fetching = true;
+            try {
+                const list = await apiFootballService.getTodayFixtures();
+                if (!cancelled) {
+                    setFixtures(list);
+                    setFixturesError(false);
+                }
+            } catch {
+                if (!cancelled) setFixturesError(true);
+            } finally {
+                fetching = false;
+                if (!cancelled) setLoadingFixtures(false);
+            }
+        };
+        void refresh();
+        const interval = window.setInterval(() => { void refresh(); }, 60000);
+        document.addEventListener('visibilitychange', refresh);
+        window.addEventListener('focus', refresh);
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+            document.removeEventListener('visibilitychange', refresh);
+            window.removeEventListener('focus', refresh);
+        };
+    }, [fixturesRetry]);
 
     // Placar e campeonato das analises que nasceram de um jogo real. Uma unica
     // chamada em lote para todas elas, em vez de uma por linha.
@@ -271,6 +293,8 @@ const Home: React.FC = () => {
                 <TodayFixturesPanel
                     fixtures={fixtures}
                     loading={loadingFixtures}
+                    error={fixturesError}
+                    onRetry={() => setFixturesRetry(value => value + 1)}
                     creatingFixtureId={creatingFixtureId}
                     onCreate={handleCreateFromFixture}
                 />

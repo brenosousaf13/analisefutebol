@@ -112,6 +112,8 @@ export interface ApiPlayer {
 }
 
 export interface ApiFixture {
+    /** Incluídas pela API nas consultas por id/ids, não na consulta por data. */
+    lineups?: ApiLineup[];
     fixture: {
         id: number;
         referee: string;

@@ -11,7 +11,8 @@
     "test:sharing": "node --test scripts/shared-analysis.test.mjs",
     "test:players": "node --test scripts/duplicate-players.test.mjs",
     "test:admin": "node --test scripts/admin-access.test.mjs",
-    "test:saving": "node --test scripts/atomic-save.test.mjs"
+    "test:saving": "node --test scripts/atomic-save.test.mjs",
+    "test:agenda": "node --test scripts/today-fixtures.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
