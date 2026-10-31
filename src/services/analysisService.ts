@@ -5,6 +5,7 @@ import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
 import { sharedAnalysisFromPayload, type SharedAnalysisPayload } from './sharedAnalysisData';
 import { normalizeAnalysisPlayers } from '../utils/uniquePlayers.ts';
+import { buildAnalysisSavePayload } from './analysisSavePayload';
 
 export type AnalysisStatus = 'rascunho' | 'em_andamento' | 'finalizada';
 export type AnalysisType = 'partida' | 'treino' | 'adversario' | 'modelo_tatico' | 'analise_completa';
@@ -155,13 +156,6 @@ export interface SavedAnalysisSummary {
  */
 let competitionColumn: 'unknown' | 'present' | 'absent' = 'unknown';
 
-/**
- * Mesma ideia para as colunas de anotacao com formatacao (migration 20260801),
- * mas detectadas de outro jeito: getAnalysis usa `select('*')`, entao a
- * presenca da chave na linha ja diz se a coluna existe. Enquanto nao rodar, o
- * app segue salvando todo o resto normalmente.
- */
-let noteHtmlColumns: 'unknown' | 'present' | 'absent' = 'unknown';
 
 function isMissingCompetitionError(error: { message?: string } | null): boolean {
     if (!error) return false;
@@ -206,298 +200,15 @@ export interface AnalysisFilters {
 
 export const analysisService = {
     async saveAnalysis(data: AnalysisData): Promise<string> {
-        try {
-            data = normalizeAnalysisPlayers(data);
-            let analysisId = data.id;
-
-            // Generate titulo if not provided
-            const titulo = data.titulo || `${data.homeTeam} vs ${data.awayTeam}`;
-
-            // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) throw new Error("Usuário não autenticado");
-
-            const analysisPayload = {
-                user_id: user.id,
-                fixture_id: data.matchId || null,
-                match_date: data.matchDate,
-                match_time: data.matchTime,
-                titulo,
-                descricao: data.descricao,
-                tipo: data.tipo || 'partida',
-                status: data.status || 'em_andamento',
-                home_team_name: data.homeTeam,
-                away_team_name: data.awayTeam,
-                home_team_logo: data.homeTeamLogo,
-                away_team_logo: data.awayTeamLogo,
-                home_score: data.homeScore,
-                away_score: data.awayScore,
-                home_team_color: data.homeTeamColor, // Added missing field
-                away_team_color: data.awayTeamColor, // Added missing field
-                home_team_bg_color: data.homeTeamBgColor,
-                away_team_bg_color: data.awayTeamBgColor,
-
-                // Só envia `competition` quando ja confirmamos que a coluna existe.
-                // Se a migration ainda nao rodou, omitir evita quebrar o insert inteiro.
-                ...(competitionColumn === 'present' && data.competition !== undefined
-                    ? { competition: data.competition }
-                    : {}),
-
-                // Old notes
-                notas_casa: data.notasCasa,
-                notas_casa_updated_at: data.notasCasaUpdatedAt,
-                notas_visitante: data.notasVisitante,
-                notas_visitante_updated_at: data.notasVisitanteUpdatedAt,
-
-                // New Team Specific Fields
-                home_defensive_notes: data.homeDefensiveNotes,
-                home_offensive_notes: data.homeOffensiveNotes,
-                home_bench_notes: data.homeBenchNotes,
-
-                away_defensive_notes: data.awayDefensiveNotes,
-                away_offensive_notes: data.awayOffensiveNotes,
-                away_bench_notes: data.awayBenchNotes,
-
-                // Anotacao unica com formatacao — so quando a migration 20260801
-                // ja rodou, pelo mesmo motivo do `competition` acima.
-                ...(noteHtmlColumns === 'present'
-                    ? {
-                        home_note_html: data.homeNoteHtml ?? null,
-                        away_note_html: data.awayNoteHtml ?? null,
-                    }
-                    : {}),
-
-                // Legacy global fields
-                defensive_notes: data.defensiveNotes || '',
-                offensive_notes: data.offensiveNotes || '',
-
-                home_coach: data.homeCoach,
-                away_coach: data.awayCoach,
-
-                // Ball Positions
-                home_ball_def: data.homeBallDef,
-                home_ball_off: data.homeBallOff,
-                away_ball_def: data.awayBallDef,
-                away_ball_off: data.awayBallOff,
-
-                events: data.events || [],
-                tags: data.tags || [],
-                updated_at: new Date().toISOString()
-            };
-
-            if (analysisId) {
-                const { error } = await supabase
-                    .from('analyses')
-                    .update(analysisPayload)
-                    .eq('id', analysisId);
-                if (error) throw error;
-            } else {
-                const { data: inserted, error } = await supabase
-                    .from('analyses')
-                    .insert(analysisPayload)
-                    .select()
-                    .single();
-                if (error) throw error;
-                analysisId = inserted.id;
-            }
-
-            if (!analysisId) throw new Error("Failed to get analysis ID");
-
-            // --- Manage Boards ---
-            // 1. Delete existing boards? Or upsert?
-            // Strategy: Delete and Re-create is simplest for full state sync, like items.
-            // Constraint: Cascade delete on analysis_id works for items, but here we want to keep boards if possible or just replace.
-            // Given "saveAnalysis" sends full state, replace is safer to avoid orphans if user deleted a tab.
-
-            const deleteAnalysisRows = async (table: string) => {
-                const { error } = await supabase
-                    .from(table)
-                    .delete()
-                    .eq('analysis_id', analysisId);
-
-                if (error) throw error;
-            };
-
-            // Delete existing boards (cascades to items with board_id).
-            const { error: boardsDeleteError } = await supabase
-                .from('analysis_boards')
-                .delete()
-                .eq('analysis_id', analysisId);
-            if (boardsDeleteError) throw boardsDeleteError;
-
-            // These tables also contain the legacy/default board rows (board_id = null),
-            // so they must be cleared explicitly. Stop on the first failure: continuing
-            // after a failed delete would make the later insert look like a successful save.
-            await deleteAnalysisRows('analysis_players');
-            await deleteAnalysisRows('analysis_arrows');
-            await deleteAnalysisRows('analysis_tags');
-            await deleteAnalysisRows('analysis_rectangles');
-
-            // Insert Boards and get Map of local_id -> db_id
-            const boardIdMap = new Map<string, string>(); // 'temp-id' -> 'uuid'
-
-            if (data.boards && data.boards.length > 0) {
-                const boardsToInsert = data.boards.map(b => ({
-                    analysis_id: analysisId,
-                    title: b.title,
-                    order: b.order
-                }));
-
-                const { data: insertedBoards, error: boardsError } = await supabase
-                    .from('analysis_boards')
-                    .insert(boardsToInsert)
-                    .select();
-
-                if (boardsError) throw boardsError;
-
-                // Map back to original data to insert items with correct board_id
-                // Problem: How to map if I bulk inserted? Order should be preserved?
-                // Yes, Postgres usually preserves order in simple inserts, but let's be safe.
-                // We can't rely on ID mapping easily unless we generated UUIDs client side.
-                // Let's assume order matches. 
-                // data.boards[i] corresponds to insertedBoards[i]
-
-                insertedBoards?.forEach((ib, index) => {
-                    const sourceBoard = data.boards![index];
-                    // We need a way to know which items belong to this board.
-                    // The sourceBoard HAS the items in it (nested).
-                    // So we just iterate source data and use `ib.id`.
-                    boardIdMap.set(sourceBoard.id, ib.id || ''); // Use legacy ID or Index? 
-                    // Actually, we process items BY iterating the source boards and using the NEW ib.id
-                });
-            }
-
-            // --- Helper to prepare items ---
-            const preparePlayers = (players: Player[], team: 'home' | 'away', type: 'field' | 'bench', variant: 'defensive' | 'offensive', boardId: string | null) => {
-                return players.map(p => ({
-                    analysis_id: analysisId,
-                    board_id: boardId,
-                    player_id: p.id,
-                    name: p.name,
-                    number: p.number,
-                    team: team,
-                    type: type,
-                    variant: variant,
-                    x: p.position.x,
-                    y: p.position.y,
-                    note: p.note || null,
-                    is_manual: false
-                }));
-            };
-
-            const prepareArrows = (arrows: Arrow[], team: 'home' | 'away', variant: 'defensive' | 'offensive', boardId: string | null) => {
-                return arrows.map(a => ({
-                    analysis_id: analysisId,
-                    board_id: boardId,
-                    team: team,
-                    variant: variant,
-                    start_x: a.startX,
-                    start_y: a.startY,
-                    end_x: a.endX,
-                    end_y: a.endY,
-                    color: a.color,
-                    type: 'arrow'
-                }));
-            };
-
-            const prepareRectangles = (rects: Rectangle[], team: 'home' | 'away', variant: 'defensive' | 'offensive', boardId: string | null) => {
-                return rects.map(r => ({
-                    analysis_id: analysisId,
-                    board_id: boardId,
-                    team: team,
-                    variant: variant,
-                    start_x: r.startX,
-                    start_y: r.startY,
-                    end_x: r.endX,
-                    end_y: r.endY,
-                    color: r.color,
-                    opacity: r.opacity
-                }));
-            };
-
-            let allPlayers: any[] = [];
-            let allArrows: any[] = [];
-            let allRectangles: any[] = [];
-
-            // 1. Process Default Board Items (Legacy/Root)
-            allPlayers.push(...preparePlayers(data.homePlayersDef, 'home', 'field', 'defensive', null));
-            allPlayers.push(...preparePlayers(data.homePlayersOff, 'home', 'field', 'offensive', null));
-            allPlayers.push(...preparePlayers(data.awayPlayersDef, 'away', 'field', 'defensive', null));
-            allPlayers.push(...preparePlayers(data.awayPlayersOff, 'away', 'field', 'offensive', null));
-            allPlayers.push(...preparePlayers(data.homeSubstitutes, 'home', 'bench', 'defensive', null));
-            allPlayers.push(...preparePlayers(data.awaySubstitutes, 'away', 'bench', 'defensive', null));
-
-            allArrows.push(...prepareArrows(data.homeArrowsDef, 'home', 'defensive', null));
-            allArrows.push(...prepareArrows(data.homeArrowsOff, 'home', 'offensive', null));
-            allArrows.push(...prepareArrows(data.awayArrowsDef, 'away', 'defensive', null));
-            allArrows.push(...prepareArrows(data.awayArrowsOff, 'away', 'offensive', null));
-
-            allRectangles.push(...prepareRectangles(data.homeRectanglesDef, 'home', 'defensive', null));
-            allRectangles.push(...prepareRectangles(data.homeRectanglesOff, 'home', 'offensive', null));
-            allRectangles.push(...prepareRectangles(data.awayRectanglesDef, 'away', 'defensive', null));
-            allRectangles.push(...prepareRectangles(data.awayRectanglesOff, 'away', 'offensive', null));
-
-            // 2. Process Additional Boards
-            // We need to re-fetch the inserted boards to map them accurately if we used the index trick,
-            // but we already have insertedBoards from the previous step.
-
-            if (data.boards && data.boards.length > 0) {
-                // Fetch latest boards to ensure we have IDs? We already got them from .insert().select().
-                // We re-query only if we didn't trust the return.
-                const { data: currentBoards } = await supabase.from('analysis_boards').select('id, title').eq('analysis_id', analysisId).order('order');
-                // Match by index or title? Title might not be unique. Order should be.
-                // Let's rely on the order we inserted.
-
-                data.boards.forEach((board, index) => {
-                    // Find the corresponding DB ID.
-                    // If we deleted all boards, then inserted, the order matches `data.boards`.
-                    const dbBoard = currentBoards ? currentBoards[index] : null;
-                    const boardId = dbBoard?.id || null;
-
-                    if (boardId) {
-                        allPlayers.push(...preparePlayers(board.homePlayersDef, 'home', 'field', 'defensive', boardId));
-                        allPlayers.push(...preparePlayers(board.homePlayersOff, 'home', 'field', 'offensive', boardId));
-                        allPlayers.push(...preparePlayers(board.awayPlayersDef, 'away', 'field', 'defensive', boardId));
-                        allPlayers.push(...preparePlayers(board.awayPlayersOff, 'away', 'field', 'offensive', boardId));
-                        allPlayers.push(...preparePlayers(board.homeSubstitutes, 'home', 'bench', 'defensive', boardId));
-                        allPlayers.push(...preparePlayers(board.awaySubstitutes, 'away', 'bench', 'defensive', boardId));
-
-                        allArrows.push(...prepareArrows(board.homeArrowsDef, 'home', 'defensive', boardId));
-                        allArrows.push(...prepareArrows(board.homeArrowsOff, 'home', 'offensive', boardId));
-                        allArrows.push(...prepareArrows(board.awayArrowsDef, 'away', 'defensive', boardId));
-                        allArrows.push(...prepareArrows(board.awayArrowsOff, 'away', 'offensive', boardId));
-
-                        allRectangles.push(...prepareRectangles(board.homeRectanglesDef, 'home', 'defensive', boardId));
-                        allRectangles.push(...prepareRectangles(board.homeRectanglesOff, 'home', 'offensive', boardId));
-                        allRectangles.push(...prepareRectangles(board.awayRectanglesDef, 'away', 'defensive', boardId));
-                        allRectangles.push(...prepareRectangles(board.awayRectanglesOff, 'away', 'offensive', boardId));
-                    }
-                });
-            }
-
-            // Bulk Inserts
-            if (allPlayers.length > 0) {
-                const { error } = await supabase.from('analysis_players').insert(allPlayers);
-                if (error) throw error;
-            }
-
-            if (allArrows.length > 0) {
-                const { error } = await supabase.from('analysis_arrows').insert(allArrows);
-                if (error) throw error;
-            }
-
-            if (allRectangles.length > 0) {
-                const { error } = await supabase.from('analysis_rectangles').insert(allRectangles);
-                if (error) throw error;
-            }
-
-            return analysisId;
-
-        } catch (error) {
-
-            throw error;
-        }
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!user) throw new Error('Usuário não autenticado');
+        const payload = buildAnalysisSavePayload(data);
+        const { data: savedId, error } = await supabase.rpc('save_analysis_v1', { p_payload: payload });
+        // Never fall back to the old sequence of independent deletes/inserts.
+        if (error) throw error;
+        if (savedId !== payload.id) throw new Error('O banco não confirmou o salvamento da análise.');
+        return savedId;
     },
 
     async getMyAnalyses(filters?: AnalysisFilters): Promise<SavedAnalysisSummary[]> {
@@ -625,13 +336,8 @@ export const analysisService = {
             .eq('id', id)
             .single();
 
-        if (error || !analysis) return null;
-
-        // `select('*')` traz o que existir: a presenca da chave na linha diz se
-        // a migration 20260801 ja rodou, sem precisar de uma consulta de sonda.
-        if (noteHtmlColumns === 'unknown') {
-            noteHtmlColumns = 'home_note_html' in analysis ? 'present' : 'absent';
-        }
+        if (error) throw error;
+        if (!analysis) return null;
 
         await supabase
             .from('analyses')
@@ -639,15 +345,19 @@ export const analysisService = {
             .eq('id', id);
 
         // Fetch Boards
-        const { data: boardsData } = await supabase
+        const { data: boardsData, error: boardsError } = await supabase
             .from('analysis_boards')
             .select('*')
             .eq('analysis_id', id)
             .order('order', { ascending: true });
+        if (boardsError) throw boardsError;
 
-        const { data: players } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
-        const { data: arrows } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
-        const { data: rectangles } = await supabase.from('analysis_rectangles').select('*').eq('analysis_id', id);
+        const { data: players, error: playersError } = await supabase.from('analysis_players').select('*').eq('analysis_id', id);
+        if (playersError) throw playersError;
+        const { data: arrows, error: arrowsError } = await supabase.from('analysis_arrows').select('*').eq('analysis_id', id);
+        if (arrowsError) throw arrowsError;
+        const { data: rectangles, error: rectanglesError } = await supabase.from('analysis_rectangles').select('*').eq('analysis_id', id);
+        if (rectanglesError) throw rectanglesError;
 
         // Helper to process items for a specific board (or null for default)
         const processItems = (boardId: string | null) => {

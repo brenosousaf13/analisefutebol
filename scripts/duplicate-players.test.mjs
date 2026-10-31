@@ -38,6 +38,18 @@ function createDatabase() {
     return {
         tables,
         auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) },
+        async rpc(name, { p_payload: payload }) {
+            assert.equal(name, 'save_analysis_v1');
+            const metadata = JSON.parse(JSON.stringify(payload.analysis));
+            const existing = tables.analyses.find(row => row.id === payload.id);
+            if (existing) Object.assign(existing, metadata);
+            else tables.analyses.push({ id: payload.id, user_id: 'owner', ...metadata });
+            for (const [key, table] of Object.entries({ boards: 'analysis_boards', players: 'analysis_players', arrows: 'analysis_arrows', rectangles: 'analysis_rectangles' })) {
+                tables[table] = tables[table].filter(row => row.analysis_id !== payload.id);
+                tables[table].push(...payload[key].map(row => ({ ...row, id: row.id ?? `row-${++id}`, analysis_id: payload.id })));
+            }
+            return { data: payload.id, error: null };
+        },
         from(table) {
             let op = 'select', values, field, value, order, single = false;
             const query = {
@@ -123,9 +135,6 @@ test('squad endpoint and paginated fallback return one record per player', async
 test('loading old duplicates and saving repeatedly keeps each roster unique', async () => {
     globalThis.playerTestDb = createDatabase();
     const { analysisService } = await import(serviceUrl);
-    // Like the editor, first detect the columns supported by the saved schema.
-    globalThis.playerTestDb.tables.analyses.push({ id: 'schema-fixture', home_note_html: null, away_note_html: null });
-    await analysisService.getAnalysis('schema-fixture');
     const p = player(41169, 'Léo Jardim', 'Nota individual');
     const data = {
         ...roster(), homeTeam: 'Boca', awayTeam: 'Vasco', homeTeamColor: '#EF4444', awayTeamColor: '#3B82F6',

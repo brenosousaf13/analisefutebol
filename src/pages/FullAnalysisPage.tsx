@@ -305,9 +305,12 @@ function FullAnalysisPage() {
                         }
                     }
                 }
+            }).catch(() => {
+                toast.error('Não foi possível carregar a análise inteira. Tente abrir novamente.');
+                navigate('/biblioteca', { replace: true });
             }).finally(() => setLoading(false));
         }
-    }, [routeAnalysisId]);
+    }, [routeAnalysisId, navigate]);
 
     // --- Board Management ---
 
