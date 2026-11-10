@@ -2,41 +2,14 @@ import axios, { type AxiosRequestConfig } from 'axios';
 import { uniquePlayersById } from '../utils/uniquePlayers.ts';
 import { hasConfirmedLineups, hasStartingEleven, isFixtureFinished, isFixtureLive, isFixtureSettled, isFixtureStartingSoon, type LineupConfirmation } from '../utils/fixtureStatus';
 import { todayInBrasilia } from '../utils/agendaDates';
+import { normalizeTeamText, rankTeams, teamNameMatches, teamSearchAliases } from '../utils/teamSearch';
+import { TRACKED_LEAGUE_IDS } from '../data/trackedLeagues';
+import type { TeamOption } from '../types/teamOption';
 import { createFootballRequestQueue, FootballPlanError, planWindowError } from './footballRequestQueue';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
-
-/** Ligas escolhidas para a agenda. Os IDs distinguem nomes iguais em países diferentes. */
-const TODAY_LEAGUES = new Set<number>([
-    39,  // Premier League — Inglaterra
-    140, // La Liga — Espanha
-    135, // Serie A — Itália
-    78,  // Bundesliga — Alemanha
-    61,  // Ligue 1 — França
-    94,  // Primeira Liga — Portugal
-    88,  // Eredivisie — Países Baixos
-    71,  // Série A — Brasil
-    72,  // Série B — Brasil
-    75,  // Série C — Brasil
-    144, // Pro League — Bélgica
-    203, // Süper Lig — Turquia
-    128, // Liga Profesional — Argentina
-    307, // Saudi Pro League — Arábia Saudita
-    253, // MLS — EUA/Canadá
-    262, // Liga MX — México
-    235, // Premier League — Rússia
-    333, // Premier League — Ucrânia
-    239, // Primera A — Colômbia
-    265, // Primera División — Chile
-    268, // Primera División — Uruguai
-    242, // Serie A — Equador
-    250, // Primera División — Paraguai (Apertura)
-    252, // Primera División — Paraguai (Clausura)
-    281, // Liga 1 — Peru
-    218, // Bundesliga — Áustria
-]);
 
 // Cada dia consultado guarda a resposta COMPLETA da API (todas as ligas). A agenda filtra
 // pelas ligas acompanhadas e o "Criar partida" usa o resto — uma consulta serve às duas telas.
@@ -59,6 +32,15 @@ interface LineupConsumer { signal?: AbortSignal; canRequest?: () => boolean }
 const lineupRequests = new Map<number, { promise: Promise<ApiLineup[]>; consumers: Set<LineupConsumer> }>();
 const dayRequests = new Map<string, Promise<ApiFixture[]>>();
 
+// Busca de times ("Criar partida") e elencos: mudam pouco, então ficam guardados por muito tempo.
+const TEAM_SEARCH_PREFIX = 'zona14_team_search_v2_';
+const TEAM_SEARCH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SQUAD_CACHE_PREFIX = 'zona14_squad_v1_';
+const SQUAD_TTL_MS = 24 * 60 * 60 * 1000;
+const SQUAD_CACHE_MAX_ENTRIES = 30;
+const teamSearchMemory = new Map<string, TeamOption[]>();
+const teamSearchRequests = new Map<string, Promise<TeamOption[]>>();
+
 function todayCacheTtl(fixtures: ApiFixture[]): number {
     const now = Date.now();
     const active = fixtures.some(f => isFixtureLive(f)
@@ -66,7 +48,7 @@ function todayCacheTtl(fixtures: ApiFixture[]): number {
     return active ? TODAY_ACTIVE_TTL_MS : TODAY_IDLE_TTL_MS;
 }
 
-const isTrackedLeague = (fixture: ApiFixture) => TODAY_LEAGUES.has(fixture.league?.id);
+const isTrackedLeague = (fixture: ApiFixture) => TRACKED_LEAGUE_IDS.has(fixture.league?.id);
 
 function dayCacheTtl(date: string, today: string, all: ApiFixture[]): number {
     if (date === today) return todayCacheTtl(all.filter(isTrackedLeague));
@@ -219,6 +201,76 @@ async function fetchLineups(fixtureId: number, signal?: AbortSignal, canRequest?
     })();
     lineupRequests.set(fixtureId, { promise, consumers });
     try { return await promise; } finally { lineupRequests.delete(fixtureId); }
+}
+
+function pruneSquadCache() {
+    try {
+        const keys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith(SQUAD_CACHE_PREFIX)) keys.push(key);
+        }
+        if (keys.length <= SQUAD_CACHE_MAX_ENTRIES) return;
+        const stamped = keys.map(key => {
+            try { return { key, ts: (JSON.parse(localStorage.getItem(key) ?? 'null') as { ts: number } | null)?.ts ?? 0 }; }
+            catch { return { key, ts: 0 }; }
+        }).sort((a, b) => a.ts - b.ts);
+        for (const { key } of stamped.slice(0, keys.length - SQUAD_CACHE_MAX_ENTRIES)) localStorage.removeItem(key);
+    } catch { /* storage indisponível */ }
+}
+
+/** Times de um termo mais curto, já pesquisado, que contêm todos os deste (ou undefined). */
+function coveredByShorterTerm(term: string, remember = true): TeamOption[] | undefined {
+    for (const [shorter, teams] of teamSearchMemory) {
+        if (shorter.length >= 3 && shorter !== term && term.startsWith(shorter)) {
+            const subset = teams.filter(team => teamNameMatches(team, term));
+            if (remember) teamSearchMemory.set(term, subset);
+            return subset;
+        }
+    }
+    return undefined;
+}
+
+/** Resultado de um termo já normalizado: memória → cache → termo mais curto já pesquisado → API. */
+async function searchTeamsByTerm(term: string, signal?: AbortSignal): Promise<TeamOption[]> {
+    const memory = teamSearchMemory.get(term);
+    if (memory) return memory;
+
+    const key = `${TEAM_SEARCH_PREFIX}${term}`;
+    try {
+        const cached = JSON.parse(localStorage.getItem(key) ?? 'null') as { data: TeamOption[]; ts: number } | null;
+        if (cached && Array.isArray(cached.data) && Date.now() - cached.ts < TEAM_SEARCH_TTL_MS) {
+            teamSearchMemory.set(term, cached.data);
+            return cached.data;
+        }
+    } catch { /* cache inválido */ }
+
+    const covered = coveredByShorterTerm(term);
+    if (covered) return covered;
+
+    const running = teamSearchRequests.get(term);
+    if (running) return running;
+    const promise = (async () => {
+        let response;
+        try {
+            // Se enquanto esperava na fila chegou o resultado de um termo mais curto, nem consulta.
+            response = await apiClient.get<ApiFootballResponse<ApiTeam>>('/teams', {
+                params: { search: term }, timeout: 20000,
+            }, () => !!signal?.aborted || coveredByShorterTerm(term, false) !== undefined);
+        } catch (error) {
+            const covered = coveredByShorterTerm(term);
+            if (covered && !signal?.aborted) return covered;
+            throw error;
+        }
+        const teams: TeamOption[] = (response.data.response ?? [])
+            .map(({ team }) => ({ id: team.id, name: team.name, country: team.country, national: !!team.national, logo: team.logo }))
+            .filter(team => teamNameMatches(team, term));
+        teamSearchMemory.set(term, teams);
+        try { localStorage.setItem(key, JSON.stringify({ data: teams, ts: Date.now() })); } catch { /* storage cheio */ }
+        return teams;
+    })();
+    teamSearchRequests.set(term, promise);
+    try { return await promise; } finally { teamSearchRequests.delete(term); }
 }
 
 export const apiFootballService = {
@@ -459,6 +511,25 @@ export const apiFootballService = {
      * Get full squad for a team
      */
     async getSquad(teamId: number): Promise<ApiSquadPlayer[]> {
+        const cacheKey = `${SQUAD_CACHE_PREFIX}${teamId}`;
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey) ?? 'null') as { data: ApiSquadPlayer[]; ts: number } | null;
+            if (cached && Array.isArray(cached.data) && cached.data.length > 0 && Date.now() - cached.ts < SQUAD_TTL_MS) {
+                return cached.data;
+            }
+        } catch { /* cache inválido */ }
+
+        const squad = await apiFootballService.getSquadUncached(teamId);
+        if (squad.length > 0) {
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ data: squad, ts: Date.now() }));
+                pruneSquadCache();
+            } catch { /* storage cheio */ }
+        }
+        return squad;
+    },
+
+    async getSquadUncached(teamId: number): Promise<ApiSquadPlayer[]> {
         console.log(`[API] Getting squad for team ${teamId} (Strategy: Squad Endpoint -> Seasons 2026-2023)`);
 
         // 1. Try /players/squads Endpoint
@@ -550,6 +621,24 @@ export const apiFootballService = {
             if (players.length > 0) return players;
             return [];
         }
+    },
+
+    /**
+     * Busca times pelo nome (mínimo 3 letras) para o "Criar partida".
+     *
+     * Poucas consultas: o resultado de um termo serve a todo termo mais longo que o contenha
+     * ("fla" já responde "flamen"), então só as 3 primeiras letras custam uma consulta. Cada
+     * termo fica guardado por 7 dias. A API também procura pelo país; aqui só contam times
+     * cujo NOME contém o termo. Escrever "Brasil" procura também por "Brazil".
+     */
+    async searchTeamOptions(term: string, signal?: AbortSignal): Promise<TeamOption[]> {
+        const needle = normalizeTeamText(term);
+        if (needle.length < 3) return [];
+        const terms = [needle, ...teamSearchAliases(needle)];
+        const lists = await Promise.all(terms.map(item => searchTeamsByTerm(item, signal)));
+        const unique = new Map<number, TeamOption>();
+        for (const team of lists.flat()) unique.set(team.id, team);
+        return rankTeams([...unique.values()], needle);
     },
 
     /**

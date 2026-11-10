@@ -113,6 +113,13 @@ export interface AgendaBounds {
     max: string;
 }
 
+/**
+ * Navegação de datas da tela inicial (setas e calendário). Desligada enquanto o plano da
+ * API-Football for o gratuito, que só libera as partidas de hoje (ver CLAUDE.md). Com um plano
+ * pago, basta trocar para `true` — o restante da navegação já está pronto e testado.
+ */
+export const AGENDA_DATE_NAVIGATION_ENABLED = false;
+
 /** Quanto o usuário pode recuar na tela inicial. */
 export const AGENDA_DAYS_BACK = 7;
 export const AGENDA_MONTHS_BACK = 6;

@@ -92,6 +92,7 @@ test('translates rounds and shows one only when the whole league shares it', () 
     assert.equal(roundLabel('League Stage - 4'), 'Fase de liga · Rodada 4');
     assert.equal(roundLabel('Quarter-finals'), 'Quartas de final');
     assert.equal(roundLabel('Clausura - 18'), 'Clausura · Rodada 18');
+    assert.equal(roundLabel('1/128-finals'), '1/128 de final');
     assert.equal(roundLabel(''), undefined);
     const mixed = groupFixturesByLeague([
         fixture(1, { league: 71, round: 'Regular Season - 34' }),

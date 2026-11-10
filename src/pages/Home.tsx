@@ -13,7 +13,7 @@ import { useFixtureLineups } from '../hooks/useFixtureLineups';
 import { apiFootballService } from '../services/apiFootballService';
 import { createAnalysisFromFixture } from '../services/fixtureAnalysisService';
 import type { ApiFixture } from '../types/api-football';
-import { agendaBounds, clampDate, formatLongDate, todayInBrasilia } from '../utils/agendaDates';
+import { AGENDA_DATE_NAVIGATION_ENABLED, agendaBounds, clampDate, formatLongDate, todayInBrasilia } from '../utils/agendaDates';
 import { matchesSearch } from '../utils/leagueDisplay';
 
 const Home: React.FC = () => {
@@ -36,7 +36,10 @@ const Home: React.FC = () => {
     // null = acompanhando "hoje". Assim a tela vira o dia sozinha se ficar aberta de madrugada.
     const [picked, setPicked] = useState<string | null>(null);
     const bounds = useMemo(() => agendaBounds(today), [today]);
-    const date = picked === null ? today : clampDate(picked, bounds.calendarMin, bounds.max);
+    // Sem navegação de datas (plano gratuito da API), a tela mostra sempre hoje.
+    const date = AGENDA_DATE_NAVIGATION_ENABLED && picked !== null
+        ? clampDate(picked, bounds.calendarMin, bounds.max)
+        : today;
 
     const [query, setQuery] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
@@ -104,14 +107,16 @@ const Home: React.FC = () => {
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <DateNavigator
-                        value={date}
-                        today={today}
-                        arrowMin={bounds.arrowMin}
-                        calendarMin={bounds.calendarMin}
-                        max={bounds.max}
-                        onChange={changeDate}
-                    />
+                    {AGENDA_DATE_NAVIGATION_ENABLED && (
+                        <DateNavigator
+                            value={date}
+                            today={today}
+                            arrowMin={bounds.arrowMin}
+                            calendarMin={bounds.calendarMin}
+                            max={bounds.max}
+                            onChange={changeDate}
+                        />
+                    )}
                     <SearchField value={query} onChange={setQuery} placeholder="Pesquisar equipe" />
                 </div>
 
@@ -140,21 +145,30 @@ const Home: React.FC = () => {
                 )}
 
                 {!loading && error === null && fixtures.length === 0 && (
-                    <p className="py-16 text-center text-sm text-content-muted">
-                        Nenhuma partida {date === today ? 'hoje' : 'neste dia'} nas ligas acompanhadas.
-                        {' '}
-                        <button type="button" onClick={() => setModalOpen(true)} className="font-semibold text-brand-primary hover:underline">
-                            Procurar outra partida
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center">
+                        <p className="text-base font-semibold text-content-primary">
+                            {date === today ? 'Não há nenhum jogo hoje.' : 'Não há nenhum jogo neste dia.'}
+                        </p>
+                        <p className="text-sm text-content-secondary">
+                            Nenhuma das competições acompanhadas tem partida marcada. Que tal criar uma partida e começar uma análise?
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setModalOpen(true)}
+                            className="mt-1 inline-flex items-center gap-2 rounded-control bg-brand-primary px-4 py-2.5 text-sm font-bold text-nav-dark transition-opacity hover:opacity-90"
+                        >
+                            <Plus size={16} strokeWidth={3} />
+                            Criar partida
                         </button>
-                    </p>
+                    </div>
                 )}
 
                 {!loading && fixtures.length > 0 && matchCount === 0 && (
                     <p className="py-16 text-center text-sm text-content-muted">
-                        Nenhuma equipe encontrada para “{query.trim()}” neste dia.
+                        Nenhuma equipe encontrada para “{query.trim()}” {date === today ? 'hoje' : 'neste dia'}.
                         {' '}
                         <button type="button" onClick={() => setModalOpen(true)} className="font-semibold text-brand-primary hover:underline">
-                            Procurar em todas as partidas
+                            Criar partida
                         </button>
                     </p>
                 )}
@@ -176,8 +190,6 @@ const Home: React.FC = () => {
                 open={modalOpen}
                 onClose={() => setModalOpen(false)}
                 today={today}
-                creatingFixtureId={creatingFixtureId}
-                onSelect={handleSelect}
             />
 
             <Toaster position="bottom-right" />

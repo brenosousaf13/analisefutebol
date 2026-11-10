@@ -12,7 +12,7 @@
     "test:players": "node --test scripts/duplicate-players.test.mjs",
     "test:admin": "node --test scripts/admin-access.test.mjs",
     "test:saving": "node --test scripts/atomic-save.test.mjs",
-    "test:agenda": "node --test scripts/today-fixtures.test.mjs scripts/football-request-queue.test.mjs scripts/agenda-navigation.test.mjs"
+    "test:agenda": "node --test scripts/today-fixtures.test.mjs scripts/football-request-queue.test.mjs scripts/agenda-navigation.test.mjs scripts/create-match.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",

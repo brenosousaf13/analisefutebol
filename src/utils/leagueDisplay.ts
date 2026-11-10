@@ -1,17 +1,13 @@
 import type { ApiFixture } from '../types/api-football';
+import { TRACKED_LEAGUES } from '../data/trackedLeagues.ts';
 
-/** A API chama o Brasileirão de "Serie A"/"Serie B"/"Serie C", igual à Itália. */
-const LEAGUE_NAMES: Record<number, string> = {
-    71: 'Brasileirão Série A',
-    72: 'Brasileirão Série B',
-    75: 'Brasileirão Série C',
-};
-
-/** Ordem das ligas acompanhadas: as brasileiras primeiro, depois as demais. */
-const LEAGUE_ORDER = [
-    71, 72, 75,
-    39, 140, 135, 78, 61, 94, 88, 144, 203, 128, 307, 253, 262, 235, 333, 239, 265, 268, 242, 250, 252, 281, 218,
-];
+/**
+ * Nome em português e ordem das competições vêm de TRACKED_LEAGUES. (A API chama o Brasileirão
+ * de "Serie A", igual à Itália; aqui ele vira "Brasileirão Série A".) Competições fora da lista
+ * mantêm o nome da API e vão depois das acompanhadas.
+ */
+const LEAGUE_NAMES = new Map<number, string>(TRACKED_LEAGUES.map(league => [league.id, league.name]));
+const LEAGUE_ORDER = TRACKED_LEAGUES.map(league => league.id);
 
 const COUNTRIES: Record<string, string> = {
     Brazil: 'Brasil', England: 'Inglaterra', Spain: 'Espanha', Italy: 'Itália', Germany: 'Alemanha',
@@ -40,7 +36,7 @@ const PHASES: Record<string, string> = {
 };
 
 export function leagueDisplayName(league: { id?: number; name: string }): string {
-    return (league.id !== undefined && LEAGUE_NAMES[league.id]) || league.name;
+    return (league.id !== undefined && LEAGUE_NAMES.get(league.id)) || league.name;
 }
 
 export function leagueOrder(leagueId: number | undefined): number {
@@ -58,6 +54,9 @@ export function roundLabel(round?: string): string | undefined {
     const text = round?.trim();
     if (!text) return undefined;
     if (KNOCKOUT_ROUNDS[text]) return KNOCKOUT_ROUNDS[text];
+    // Fases iniciais das copas nacionais: "1/128-finals" → "1/128 de final".
+    const fraction = /^1\/(\d+)-finals$/.exec(text);
+    if (fraction) return `1/${fraction[1]} de final`;
     const numbered = /^(.+?)\s+-\s+(\d+)$/.exec(text);
     if (numbered) {
         const phase = numbered[1] in PHASES ? PHASES[numbered[1]] : numbered[1];

@@ -182,7 +182,7 @@ const TeamColumn: React.FC<{
                     emptyLabel="Nenhum jogador em campo."
                 />
                 <RosterList
-                    title="Suplentes"
+                    title={players.length === 0 && substitutes.length > 0 ? 'Elenco · clique para escalar' : 'Suplentes'}
                     players={substitutes}
                     teamColor={color}
                     teamBgColor={bgColor}

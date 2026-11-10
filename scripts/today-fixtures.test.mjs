@@ -56,8 +56,8 @@ test('restricts leagues, sorts by kickoff, includes late Brasília games, and ig
         fixture(2, 'FT', '2026-10-31T09:00:00-03:00', 140),
         fixture(3, 'NS', '2026-10-31T20:00:00-03:00', 39),
         fixture(4, 'NS', '2026-10-31T11:00:00-03:00', 999),
-        fixture(5, 'NS', '2026-10-31T08:00:00-03:00', 73),
-        fixture(6, 'NS', '2026-10-31T22:00:00-03:00', 2),
+        fixture(5, 'NS', '2026-10-31T08:00:00-03:00', 75),
+        fixture(6, 'NS', '2026-10-31T22:00:00-03:00', 94),
     ];
     let calls = 0;
     globalThis.agendaApi = async (path, { params }) => {
@@ -103,16 +103,18 @@ test('keeps the last agenda when the daily API quota is exhausted, and explains 
     assert.equal(calls, before);
 });
 
-test('includes the 25 requested leagues, with both Paraguay phases and country-specific ids', async () => {
-    const ids = [39, 140, 135, 78, 61, 94, 88, 71, 72, 75, 144, 203, 128, 307, 253, 262, 235, 333, 239, 265, 268, 242, 250, 252, 281, 218];
+test('includes exactly the competitions from the Zona 14 spreadsheet, with country-specific ids', async () => {
+    const ids = [71, 72, 73, 13, 11, 541, 2, 3, 848, 531, 15, 39, 45, 48, 140, 143, 135, 137, 78, 81, 61, 66, 128, 130,
+        1, 34, 32, 29, 30, 31, 33, 37, 10, 4, 5, 9, 22, 6, 7, 806, 913];
     const allowed = ids.map((id, i) => fixture(i + 1, 'NS', undefined, id));
-    const excluded = [40, 73, 76, 145, 204, 129, 308, 254, 263, 236, 334, 240, 266, 269, 243, 251, 282, 219];
+    // Ligas da lista antiga que não estão na planilha, e homônimas de outros países.
+    const excluded = [75, 94, 88, 144, 203, 307, 253, 262, 235, 333, 239, 265, 268, 242, 250, 252, 281, 218, 40, 667, 666, 36, 960];
     globalThis.agendaApi = async () => reply([...allowed, ...excluded.map((id, i) => fixture(i + 100, 'NS', undefined, id))]);
     assert.deepEqual((await apiFootballService.getTodayFixtures()).map(f => f.league.id), ids);
 });
 
 test('returns no games when only unlisted leagues have matches, without falling back to all leagues', async () => {
-    globalThis.agendaApi = async () => reply([fixture(1, 'NS', undefined, 73), fixture(2, 'FT', undefined, 2)]);
+    globalThis.agendaApi = async () => reply([fixture(1, 'NS', undefined, 75), fixture(2, 'FT', undefined, 94)]);
     assert.deepEqual(await apiFootballService.getTodayFixtures(), []);
 });
 

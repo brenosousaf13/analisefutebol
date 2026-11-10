@@ -167,18 +167,33 @@ componentes `AnalysisAccordionRow` e `SearchDropdown` ficaram sem uso). A tela u
 De cima para baixo ([Home.tsx](src/pages/Home.tsx)):
 
 - **Título e botão "Criar partida"**
-  ([CreateMatchModal](src/components/home/CreateMatchModal.tsx)). O modal lista as
-  partidas de um dia de **todas** as ligas (não só as acompanhadas), com navegação de
-  data (6 meses atrás até 30 dias à frente) e busca por equipe **ou campeonato**.
-  Clicar numa partida cria a análise, igual ao card da Home. O rodapé leva a
-  `/nova-analise` ("Montar partida manualmente") para confrontos que a API não lista.
-- **Filtro de data** ([DateNavigator](src/components/home/DateNavigator.tsx)). Começa em
-  "Hoje" (calendário de Brasília). As setas recuam até **7 dias** e o texto do meio vira
-  a data ("seg, 02/11"); a seta da direita volta até hoje, nunca além. Clicar no texto
-  abre um calendário próprio (sem dependência) com datas de até **6 meses atrás**.
-  Os limites ficam em `agendaBounds()` ([agendaDates.ts](src/utils/agendaDates.ts)).
-  A seleção é `null` enquanto segue "hoje", então a tela vira o dia sozinha à meia-noite.
-  Datas são sempre texto `AAAA-MM-DD`; some/subtraia só com `addDays`/`addMonths`.
+  ([CreateMatchModal](src/components/home/CreateMatchModal.tsx)). Janela com **dois times**
+  ([TeamPicker](src/components/home/TeamPicker.tsx), busca com resultado imediato), a
+  **competição** (lista de `TRACKED_LEAGUES` agrupada + "Outra competição…" com texto livre),
+  **data** e horário opcional. "Criar análise" chama `createAnalysisFromTeams`
+  ([customMatchService.ts](src/services/customMatchService.ts)): análise `analise_completa` com
+  `matchId: null`, **campo vazio** (`homePlayersDef/Off` e `away…` = `[]`) e o **elenco completo**
+  de cada time em `homeSubstitutes`/`awaySubstitutes` ([squadToBench](src/utils/squadToBench.ts):
+  goleiros → defensores → meias → atacantes, depois pelo número). O usuário escolhe os titulares
+  clicando no jogador (o editor o põe no centro do campo). Enquanto o campo está vazio, a lista
+  se chama "Elenco · clique para escalar" em vez de "Suplentes" (`FullAnalysisMode`). Se a API
+  não devolver o elenco de um time, a análise nasce assim mesmo, com aviso.
+  **Busca de times**: [useTeamSearch](src/hooks/useTeamSearch.ts) espera 250 ms e exige 3 letras;
+  `apiFootballService.searchTeamOptions` custa **uma consulta nas 3 primeiras letras** e reaproveita
+  o resultado para qualquer termo mais longo ("fla" responde "flamen"), com cache de 7 dias. Só
+  contam times cujo **nome** contém o termo (a API também casa pelo país: "bra" devolvia 1777).
+  "Brasil", "Alemanha" etc. também pesquisam o nome em inglês (`teamSearchAliases`). Ordem:
+  começa com o termo, time principal antes de base/feminino, países prioritários, nome curto.
+  Elencos ficam em cache por 24 h (`getSquad`).
+- **Filtro de data** ([DateNavigator](src/components/home/DateNavigator.tsx)).
+  ⚠️ **Está oculto**: `AGENDA_DATE_NAVIGATION_ENABLED = false` em
+  [agendaDates.ts](src/utils/agendaDates.ts) enquanto o plano da API-Football for o gratuito
+  (só libera hoje; ver "Plano gratuito" abaixo). A Home mostra sempre hoje. Com um plano pago, trocar
+  a constante para `true` religa tudo, já testado: começa em "Hoje" (calendário de Brasília); as setas
+  recuam até **7 dias** e o texto do meio vira a data ("seg, 02/11"); a da direita volta até hoje, nunca
+  além; clicar no texto abre um calendário próprio com até **6 meses atrás**. Limites em
+  `agendaBounds()`. A seleção é `null` enquanto segue "hoje", então a tela vira o dia sozinha à
+  meia-noite. Datas são sempre texto `AAAA-MM-DD`; use só `addDays`/`addMonths`.
 - **Pesquisar equipe** ([SearchField](src/components/home/SearchField.tsx)). Filtro
   **instantâneo e local**: ignora maiúsculas e acentos e casa com mandante ou visitante
   (`matchesSearch`). Não faz consulta nenhuma. O [FixtureGrid](src/components/home/FixtureGrid.tsx)
@@ -194,16 +209,22 @@ De cima para baixo ([Home.tsx](src/pages/Home.tsx)):
   placar à direita; o card inteiro é um botão que cria a análise. Tags: "Encerrada",
   "AGORA · minuto" e "Escalações confirmadas".
 
-**Ligas.** A agenda continua restrita às 26 ligas de `TODAY_LEAGUES` em
-`apiFootballService`. A Champions League, a Libertadores etc. **não** estão nessa lista: para
-vê-las na Home basta acrescentar o ID (Champions = 2). O modal "Criar partida" mostra todas.
+**Ligas.** Só aparecem as competições de [trackedLeagues.ts](src/data/trackedLeagues.ts) — as 41 da
+planilha "ligas zona 14.xlsx" do Lucas (11/2026), com ID da API-Football, nome em português e grupo.
+A **ordem do arquivo é a ordem na tela** (Brasil, CONMEBOL, UEFA, FIFA, ligas europeias, Argentina,
+seleções). Cuidado com os IDs: "Eliminatórias da Copa" são 7 competições (uma por confederação,
+29–34 e 37), "Copa das Nações da Oceania" é 806 (36 é a eliminatória da Copa Africana, fora da lista),
+"Amistosos de seleções" é 10 (667 é amistoso de clubes, fora). A tela de configuração, no futuro, deixa
+o usuário adicionar/remover: o ponto único a trocar é esse arquivo (o serviço guarda o dia **sem**
+filtro, então trocar a lista não custa consulta). Sem nenhum jogo no dia, a tela diz "Não há nenhum
+jogo hoje." e sugere "Criar partida".
 
 **Requisições (o ponto central do desenho).**
 
 - **Uma consulta por dia**: `apiFootballService.getDayFixtures(date, 'tracked' | 'all')` faz
   `/fixtures?date=…&timezone=America/Sao_Paulo` e guarda a resposta **completa** em
-  `zona14_agenda_fixtures_v4_<data>`. A Home lê o recorte `tracked` e o modal o recorte `all`
-  da mesma consulta. Voltar para um dia já visto não gasta nada.
+  `zona14_agenda_fixtures_v4_<data>`. A Home lê o recorte `tracked`; o recorte `all` (todas as
+  ligas) fica disponível para a futura tela de configuração. Voltar para um dia já visto não gasta nada.
 - **TTL por dia**: hoje 2 min (jogo ao vivo/perto de começar, só nas ligas acompanhadas) ou
   15 min; dia futuro 1 h; dia passado **7 dias** quando todas as partidas estão em estado final
   (`isFixtureSettled`), senão 15 min. Só os 6 dias mais próximos de hoje ficam em cache.
@@ -231,7 +252,7 @@ vê-las na Home basta acrescentar o ID (Champions = 2). O modal "Criar partida" 
   e só troca de lista quando algo visível mudou (`sameFixtures`).
 
 **Testes**: `npm run test:agenda` cobre datas/limites, agrupamento, busca, o cache por dia, o
-intervalo do plano e as regras antigas da agenda. Layout e interação foram conferidos no Edge
+intervalo do plano, a lista de competições, a busca de times, o elenco como reservas e as regras antigas da agenda. Layout e interação foram conferidos no Edge
 headless (CDP) com a Home real — veja "Verifique mudança visual com screenshot".
 
 ### Tela de visualização (`ViewAnalysis`)
