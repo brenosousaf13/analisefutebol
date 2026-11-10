@@ -1,202 +1,72 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import AppLayout from '../layouts/AppLayout';
-import AnalysisAccordionRow, { type FixtureEnrichment } from '../components/home/AnalysisAccordionRow';
-import TodayFixturesPanel from '../components/home/TodayFixturesPanel';
-import SearchDropdown from '../components/home/SearchDropdown';
-import { analysisService } from '../services/analysisService';
-import type { SavedAnalysisSummary } from '../services/analysisService';
+import DateNavigator from '../components/home/DateNavigator';
+import SearchField from '../components/home/SearchField';
+import FixtureGrid from '../components/home/FixtureGrid';
+import CreateMatchModal from '../components/home/CreateMatchModal';
+import { AgendaNotice, AgendaSkeleton } from '../components/home/AgendaNotice';
+import { useDayFixtures } from '../hooks/useDayFixtures';
+import { useFixtureLineups } from '../hooks/useFixtureLineups';
 import { apiFootballService } from '../services/apiFootballService';
-import { FootballApiError } from '../services/footballRequestQueue';
 import { createAnalysisFromFixture } from '../services/fixtureAnalysisService';
-import { searchAnalyses } from '../services/searchService';
-import { supabase } from '../lib/supabase';
 import type { ApiFixture } from '../types/api-football';
-import type { SearchResult } from '../types/search';
-
-const LATEST_LIMIT = 8;
-const SEARCH_DEBOUNCE_MS = 300;
-
-/** Card de painel — a moldura padrao das secoes da Home. */
-const Panel: React.FC<{
-    title: string;
-    action?: React.ReactNode;
-    children: React.ReactNode;
-    className?: string;
-}> = ({ title, action, children, className = '' }) => (
-    <section className={`rounded-card border border-line bg-surface-raised shadow-card ${className}`}>
-        <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5">
-            <h2 className="text-xl font-bold tracking-tight text-content-primary">{title}</h2>
-            {action}
-        </div>
-        <div className="px-5 pb-5">{children}</div>
-    </section>
-);
+import { agendaBounds, clampDate, formatLongDate, todayInBrasilia } from '../utils/agendaDates';
+import { matchesSearch } from '../utils/leagueDisplay';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
 
-    const [analyses, setAnalyses] = useState<SavedAnalysisSummary[]>([]);
-    const [loadingAnalyses, setLoadingAnalyses] = useState(true);
-    const [analysesError, setAnalysesError] = useState(false);
-    const [expandedId, setExpandedId] = useState<string | null>(null);
-    // Placar e campeonato reais, por id de jogo da API-Football.
-    const [enrichment, setEnrichment] = useState<Map<number, FixtureEnrichment>>(new Map());
-
-    const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
-    const [loadingFixtures, setLoadingFixtures] = useState(true);
-    const [fixturesError, setFixturesError] = useState<string | null>(null);
-    const [fixturesRetry, setFixturesRetry] = useState(0);
-    const [creatingFixtureId, setCreatingFixtureId] = useState<number | null>(null);
-
-    const [search, setSearch] = useState('');
-    const [searchOpen, setSearchOpen] = useState(false);
-    const [searchLoading, setSearchLoading] = useState(false);
-    const [results, setResults] = useState<SearchResult[]>([]);
-
-    const fetchAnalyses = useCallback(async () => {
-        try {
-            const list = await analysisService.getMyAnalyses({
-                orderBy: 'created_at',
-                orderDirection: 'desc',
-            });
-            setAnalyses(list);
-            setAnalysesError(false);
-        } catch {
-            setAnalysesError(true);
-        } finally {
-            setLoadingAnalyses(false);
-        }
+    // Hoje no calendário de Brasília; confere de novo ao voltar para a aba, para virar à meia-noite.
+    const [today, setToday] = useState(() => todayInBrasilia());
+    useEffect(() => {
+        const sync = () => setToday(todayInBrasilia());
+        const interval = window.setInterval(sync, 60000);
+        document.addEventListener('visibilitychange', sync);
+        window.addEventListener('focus', sync);
+        return () => {
+            window.clearInterval(interval);
+            document.removeEventListener('visibilitychange', sync);
+            window.removeEventListener('focus', sync);
+        };
     }, []);
 
-    useEffect(() => { void fetchAnalyses(); }, [fetchAnalyses]);
+    // null = acompanhando "hoje". Assim a tela vira o dia sozinha se ficar aberta de madrugada.
+    const [picked, setPicked] = useState<string | null>(null);
+    const bounds = useMemo(() => agendaBounds(today), [today]);
+    const date = picked === null ? today : clampDate(picked, bounds.calendarMin, bounds.max);
 
-    // Retry e um evento, entao aqui o setState sincrono e legitimo.
-    const retryAnalyses = () => {
-        setLoadingAnalyses(true);
-        setAnalysesError(false);
-        void fetchAnalyses();
-    };
+    const [query, setQuery] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [creatingFixtureId, setCreatingFixtureId] = useState<number | null>(null);
 
-    useEffect(() => {
-        let cancelled = false;
-        let fetching = false;
-        const refresh = async () => {
-            if (fetching || document.hidden) return;
-            fetching = true;
-            try {
-                const list = await apiFootballService.getTodayFixtures();
-                if (!cancelled) {
-                    setFixtures(list);
-                    setFixturesError(null);
-                }
-            } catch (error) {
-                if (!cancelled) {
-                    setFixturesError(error instanceof FootballApiError && error.dailyLimit
-                        ? error.message
-                        : 'Não foi possível carregar a agenda.');
-                }
-            } finally {
-                fetching = false;
-                if (!cancelled) setLoadingFixtures(false);
-            }
-        };
-        void refresh();
-        const interval = window.setInterval(() => { void refresh(); }, 60000);
-        document.addEventListener('visibilitychange', refresh);
-        window.addEventListener('focus', refresh);
-        return () => {
-            cancelled = true;
-            window.clearInterval(interval);
-            document.removeEventListener('visibilitychange', refresh);
-            window.removeEventListener('focus', refresh);
-        };
-    }, [fixturesRetry]);
+    const { fixtures, loading, error } = useDayFixtures(date, 'tracked', { follow: date === today, refreshKey });
 
-    // Placar e campeonato das analises que nasceram de um jogo real. Uma unica
-    // chamada em lote para todas elas, em vez de uma por linha.
-    const visibleIds = useMemo(
-        () => analyses.slice(0, LATEST_LIMIT).map(a => a.fixtureId).filter((id): id is number => !!id),
-        [analyses],
+    // Escalações confirmadas: só jogos que começam em até 1h e só cards visíveis (ver useFixtureLineups).
+    const gridRef = useRef<HTMLDivElement>(null);
+    const { statuses, now } = useFixtureLineups(fixtures, gridRef);
+    const confirmedIds = useMemo(() => {
+        const ids = new Set<number>();
+        for (const [id, status] of statuses) if (status === 'confirmed') ids.add(id);
+        return ids;
+    }, [statuses]);
+
+    const matchCount = useMemo(
+        () => fixtures.filter(f => matchesSearch(f, query)).length,
+        [fixtures, query],
     );
 
-    useEffect(() => {
-        if (visibleIds.length === 0) return;
-        let cancelled = false;
+    const changeDate = (next: string) => setPicked(next === today ? null : next);
 
-        apiFootballService.getFixturesByIds(visibleIds)
-            .then(map => {
-                if (cancelled) return;
-                const next = new Map<number, FixtureEnrichment>();
-                for (const [id, f] of map) {
-                    next.set(id, {
-                        homeScore: f.goals?.home ?? null,
-                        awayScore: f.goals?.away ?? null,
-                        competition: f.league?.name,
-                    });
-                }
-                setEnrichment(next);
-            })
-            .catch(() => { /* a linha cai no placar salvo */ });
+    const retry = () => {
+        apiFootballService.forgetPlanWindow();
+        setRefreshKey(value => value + 1);
+    };
 
-        return () => { cancelled = true; };
-    }, [visibleIds]);
-
-    // ── Busca AJAX com debounce ──────────────────────────────────────────────
-    const searchSeq = useRef(0);
-
-    useEffect(() => {
-        const term = search.trim();
-        if (term.length < 2) {
-            setResults([]);
-            setSearchLoading(false);
-            return;
-        }
-
-        const seq = ++searchSeq.current;
-        const timer = setTimeout(async () => {
-            setSearchLoading(true);
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                const found = await searchAnalyses('all', term, user.id);
-                // Descarta resposta de uma digitacao que ja foi superada.
-                if (seq === searchSeq.current) setResults(found.slice(0, 12));
-            } catch {
-                if (seq === searchSeq.current) setResults([]);
-            } finally {
-                if (seq === searchSeq.current) setSearchLoading(false);
-            }
-        }, SEARCH_DEBOUNCE_MS);
-
-        return () => clearTimeout(timer);
-    }, [search]);
-
-    // Fecha o dropdown ao clicar fora ou apertar Esc.
-    useEffect(() => {
-        if (!searchOpen) return;
-        const onDown = (e: MouseEvent) => {
-            const el = e.target as HTMLElement;
-            if (!el.closest('[data-search-box]')) setSearchOpen(false);
-        };
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSearchOpen(false); };
-        document.addEventListener('mousedown', onDown);
-        document.addEventListener('keydown', onKey);
-        return () => {
-            document.removeEventListener('mousedown', onDown);
-            document.removeEventListener('keydown', onKey);
-        };
-    }, [searchOpen]);
-
-    const latest = useMemo(() => analyses.slice(0, LATEST_LIMIT), [analyses]);
-
-    // "Abrir" leva para a visualizacao; a edicao fica atras do botao de lapis de la.
-    const handleOpen = (id: string) => navigate(`/ver-analise/${id}`);
-
-    const handleCreateFromFixture = async (fixture: ApiFixture) => {
+    const handleSelect = async (fixture: ApiFixture) => {
         if (creatingFixtureId !== null) return;
 
         setCreatingFixtureId(fixture.fixture.id);
@@ -216,94 +86,99 @@ const Home: React.FC = () => {
         }
     };
 
+    const filtering = query.trim().length > 0;
+
     return (
-        <AppLayout
-            search={{
-                value: search,
-                onChange: v => { setSearch(v); setSearchOpen(true); },
-                onFocus: () => setSearchOpen(true),
-                dropdown: (
-                    <SearchDropdown
-                        open={searchOpen && search.trim().length > 0}
-                        loading={searchLoading}
-                        term={search}
-                        results={results}
-                        onPick={id => { setSearchOpen(false); handleOpen(id); }}
+        <AppLayout bare>
+            <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h1 className="text-2xl font-bold tracking-tight text-content-primary">Análise de partida</h1>
+                    <button
+                        type="button"
+                        onClick={() => setModalOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-control bg-brand-primary px-4 py-2.5 text-sm font-bold text-nav-dark transition-opacity hover:opacity-90"
+                    >
+                        <Plus size={16} strokeWidth={3} />
+                        Criar partida
+                    </button>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <DateNavigator
+                        value={date}
+                        today={today}
+                        arrowMin={bounds.arrowMin}
+                        calendarMin={bounds.calendarMin}
+                        max={bounds.max}
+                        onChange={changeDate}
                     />
-                ),
-            }}
-        >
-            {/* Ultimas analises 60% / Jogos do dia 40% — o bloco da esquerda ficou
-                20% mais estreito e a diferenca foi para o da direita. */}
-            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                <Panel
-                    title="Últimas análises"
-                    action={
-                        <button
-                            onClick={() => navigate('/biblioteca')}
-                            className="shrink-0 text-sm font-medium text-content-secondary transition-colors hover:text-brand-primary"
-                        >
-                            Ver todas
+                    <SearchField value={query} onChange={setQuery} placeholder="Pesquisar equipe" />
+                </div>
+
+                <p className="mb-6 mt-6 text-sm text-content-secondary" aria-live="polite">
+                    {formatLongDate(date)}
+                    {!loading && fixtures.length > 0 && (
+                        <span className="text-content-muted">
+                            {' · '}
+                            {filtering ? `${matchCount} de ${fixtures.length}` : fixtures.length}{' '}
+                            {fixtures.length === 1 ? 'partida' : 'partidas'}
+                        </span>
+                    )}
+                </p>
+
+                {error !== null && fixtures.length > 0 && (
+                    <div role="alert" className="mb-5 flex flex-wrap items-center gap-2 text-xs text-amber-300">
+                        <span>Não foi possível atualizar a agenda.</span>
+                        <button type="button" onClick={retry} className="font-semibold underline">Tentar novamente</button>
+                    </div>
+                )}
+
+                {loading && <AgendaSkeleton count={6} />}
+
+                {!loading && error !== null && fixtures.length === 0 && (
+                    <AgendaNotice error={error} onRetry={retry} onToday={date === today ? undefined : () => changeDate(today)} />
+                )}
+
+                {!loading && error === null && fixtures.length === 0 && (
+                    <p className="py-16 text-center text-sm text-content-muted">
+                        Nenhuma partida {date === today ? 'hoje' : 'neste dia'} nas ligas acompanhadas.
+                        {' '}
+                        <button type="button" onClick={() => setModalOpen(true)} className="font-semibold text-brand-primary hover:underline">
+                            Procurar outra partida
                         </button>
-                    }
-                >
-                    {loadingAnalyses && (
-                        <div className="flex items-center gap-2 py-10 text-sm text-content-muted">
-                            <Loader2 size={16} className="animate-spin" />
-                            Carregando análises…
-                        </div>
-                    )}
+                    </p>
+                )}
 
-                    {analysesError && !loadingAnalyses && (
-                        <div className="py-10 text-center">
-                            <p className="mb-3 text-sm text-red-400">Não foi possível carregar suas análises.</p>
-                            <button
-                                onClick={retryAnalyses}
-                                className="inline-flex items-center gap-2 rounded-control border border-line px-3 py-2 text-sm text-content-secondary transition-colors hover:text-content-primary"
-                            >
-                                <RefreshCw size={14} />
-                                Tentar de novo
-                            </button>
-                        </div>
-                    )}
+                {!loading && fixtures.length > 0 && matchCount === 0 && (
+                    <p className="py-16 text-center text-sm text-content-muted">
+                        Nenhuma equipe encontrada para “{query.trim()}” neste dia.
+                        {' '}
+                        <button type="button" onClick={() => setModalOpen(true)} className="font-semibold text-brand-primary hover:underline">
+                            Procurar em todas as partidas
+                        </button>
+                    </p>
+                )}
 
-                    {!loadingAnalyses && !analysesError && latest.length === 0 && (
-                        <div className="py-10 text-center">
-                            <p className="text-sm text-content-muted">Você ainda não criou nenhuma análise.</p>
-                            <button
-                                onClick={() => navigate('/nova-analise')}
-                                className="mt-3 rounded-control bg-brand-primary px-4 py-2 text-sm font-semibold text-nav-dark transition-opacity hover:opacity-90"
-                            >
-                                Criar primeira análise
-                            </button>
-                        </div>
-                    )}
-
-                    {!loadingAnalyses && !analysesError && latest.length > 0 && (
-                        <div className="-mx-1">
-                            {latest.map(a => (
-                                <AnalysisAccordionRow
-                                    key={a.id}
-                                    analysis={a}
-                                    enrichment={a.fixtureId ? enrichment.get(a.fixtureId) : undefined}
-                                    expanded={expandedId === a.id}
-                                    onToggle={() => setExpandedId(prev => (prev === a.id ? null : a.id))}
-                                    onOpen={handleOpen}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </Panel>
-
-                <TodayFixturesPanel
-                    fixtures={fixtures}
-                    loading={loadingFixtures}
-                    error={fixturesError}
-                    onRetry={() => setFixturesRetry(value => value + 1)}
-                    creatingFixtureId={creatingFixtureId}
-                    onCreate={handleCreateFromFixture}
-                />
+                {!loading && fixtures.length > 0 && (
+                    <FixtureGrid
+                        fixtures={fixtures}
+                        query={query}
+                        confirmedIds={confirmedIds}
+                        now={now}
+                        creatingFixtureId={creatingFixtureId}
+                        onSelect={handleSelect}
+                        containerRef={gridRef}
+                    />
+                )}
             </div>
+
+            <CreateMatchModal
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                today={today}
+                creatingFixtureId={creatingFixtureId}
+                onSelect={handleSelect}
+            />
 
             <Toaster position="bottom-right" />
         </AppLayout>

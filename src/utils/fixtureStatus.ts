@@ -18,6 +18,11 @@ export function isFixtureFinished(fixture: ApiFixture): boolean {
     return ['FT', 'AET', 'PEN'].includes(fixture.fixture.status.short);
 }
 
+/** Estado final: o placar (ou o adiamento) não muda mais sozinho. */
+export function isFixtureSettled(fixture: ApiFixture): boolean {
+    return ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(fixture.fixture.status.short);
+}
+
 export function isFixtureLive(fixture: ApiFixture): boolean {
     return ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT'].includes(fixture.fixture.status.short);
 }

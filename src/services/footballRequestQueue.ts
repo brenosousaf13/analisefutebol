@@ -26,6 +26,37 @@ export class FootballApiError extends Error {
     }
 }
 
+/**
+ * O plano da API não libera a consulta (ex.: datas antigas no plano gratuito).
+ * Quando a API informa o intervalo liberado, ele vem em `from`/`to` (AAAA-MM-DD).
+ */
+export class FootballPlanError extends FootballApiError {
+    readonly from?: string;
+    readonly to?: string;
+    constructor(message: string, from?: string, to?: string) {
+        super(message);
+        this.from = from;
+        this.to = to;
+    }
+}
+
+const dayMonth = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+/** Traduz o erro `plan` da API ("...try from 2026-11-09 to 2026-11-11."). */
+export function planErrorFromApi(text: string): FootballPlanError {
+    const range = /(\d{4}-\d{2}-\d{2})\D+(\d{4}-\d{2}-\d{2})/.exec(text);
+    if (range) return planWindowError(range[1], range[2]);
+    return new FootballPlanError('O plano atual da API-Football não permite esta consulta.');
+}
+
+/** Erro para uma data fora do intervalo que o plano libera. */
+export function planWindowError(from: string, to: string): FootballPlanError {
+    return new FootballPlanError(
+        `O plano atual da API-Football só permite consultar partidas de ${dayMonth(from)} a ${dayMonth(to)}.`,
+        from, to,
+    );
+}
+
 const DAILY_LIMIT_MESSAGE = 'O limite diário de consultas da API de futebol foi atingido. A agenda volta quando a cota renovar, às 21h (Brasília).';
 
 const WINDOW_MS = 61000;
@@ -123,6 +154,8 @@ export function createFootballRequestQueue(options: {
                             if (Object.keys(body.errors).some(key => key.toLowerCase() === 'ratelimit')) {
                                 throw { response: { ...response, status: 429 } };
                             }
+                            const planKey = Object.keys(body.errors).find(key => key.toLowerCase() === 'plan');
+                            if (planKey) throw planErrorFromApi(String(body.errors[planKey]));
                             throw new FootballApiError('Não foi possível consultar os dados da partida.');
                         }
                         return response;

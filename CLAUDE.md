@@ -157,69 +157,82 @@ no catch-all e voltaria para a home, o que confunde.
 
 `AnalysisLayout` + `Header` (antigos) continuam servindo as telas de análise.
 
-### Home (`/`)
+### Home (`/`) — "Análise de partida"
 
-Landing pós-login. Dois blocos numa grade **60/40**
-(`xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]`):
+Refeita em 11/2026 a partir do wireframe do Lucas. O bloco "Últimas análises" e a
+busca da topbar saíram da Home (as análises continuam em `/biblioteca`; os
+componentes `AnalysisAccordionRow` e `SearchDropdown` ficaram sem uso). A tela usa
+`AppLayout bare` e cuida do próprio padding.
 
-- **Últimas análises** — lista accordion. Confronto alinhado à esquerda, com
-  placar, campeonato e data. Expandir carrega a análise **sob demanda**
-  (`getAnalysis`) e mostra a anotação do time, com switcher entre os dois.
-  Análises novas usam a anotação única em HTML; as antigas caem nos campos de
-  fase ofensiva/defensiva, que ainda não foram migrados.
-- **Agenda do dia** ([TodayFixturesPanel](src/components/home/TodayFixturesPanel.tsx)) —
-  todas as partidas das 25 ligas escolhidas por Lucas, definidas por ID em
-  `TODAY_LEAGUES` no `apiFootballService` (26 IDs: a liga do Paraguai é separada
-  pela API em Apertura e Clausura, ambos incluídos). Outras competições não aparecem, mesmo
-  se nenhuma das acompanhadas tiver jogos. Cache `zona14_today_fixtures_v3`
-  invalida a lista anterior, que incluía todas as ligas da API.
-  Envia `date` e `timezone: America/Sao_Paulo` juntos, incluindo
-  jogos noturnos que caem no dia seguinte em UTC. Cache de 1 minuto, renovado
-  enquanto a Home está visível. Falhas mantêm a lista anterior e permitem retry.
-  O painel ocupa a altura disponível da janela, com cabeçalho e filtro fora da
-  rolagem interna. Exibe bandeira antes da liga, tag amarela "Encerrada", placar
-  com "AGORA" durante o jogo e tags verde/cinza para as escalações.
-  Só a tag verde `Escalações confirmadas` existe para escalação: não há tag
-  cinza, pendente ou de erro. Ela só aparece antes do início do jogo. Jogo
-  iniciado, ao vivo, encerrado, adiado ou cancelado nunca mostra a tag, mesmo
-  se a API ainda não tiver atualizado o status.
-  `useFixtureLineups` consulta `/fixtures/lineups` somente de jogos `NS`
-  que começam em até 60 min (`isFixtureStartingSoon`), e apenas para cards
-  visíveis. Ao rolar ou abrir a Home, não gasta consulta com jogos distantes.
-  Agenda a revalidação para o instante em que o jogo entra na janela de 1h e
-  para o horário de início. Verde exige onze titulares publicados para cada
-  time; jogadores sem ID podem ser reconhecidos pelo nome. Falhas não são
-  gravadas como ausência de escalação: tentam de novo após 1 min; negativos
-  após 5 min. Agenda e editor compartilham os dados completos de
-  `getLineups` (cache 24h quando os dois times têm onze; 5 min caso contrário).
-  Consultas na fila são canceladas ao sair da área visível ou do início do jogo.
-  O filtro de campeonatos mostra a bandeira de cada liga e diferencia ligas de
-  mesmo nome por ID (ex.: Serie A do Brasil e da Itália).
-  **Cota da API-Football: o plano gratuito tem 100 consultas por dia.** A
-  lista do dia tem cache de 2 min quando há jogo ao vivo ou perto do início e
-  de 15 min nos outros horários. Se a cota acabar (HTTP 200 com
-  `errors.requests`), `footballRequestQueue` interrompe novas chamadas até
-  00:00 UTC (21h de Brasília), mantém a última lista em cache e, sem cache,
-  explica o motivo na tela. `footballRequestQueue` também serializa chamadas,
-  compartilha o orçamento por minuto entre abas (Web Locks quando
-  disponíveis) e trata HTTP 429/`errors.rateLimit` com tentativas limitadas.
-  Bandeiras usam o código da API via FlagCDN, com fallback para o proxy da API;
-  competições internacionais sem país usam um globo. Imagens são lazy-loaded.
+De cima para baixo ([Home.tsx](src/pages/Home.tsx)):
 
-**Placar e campeonato reais** vêm de `apiFootballService.getFixturesByIds()`:
-uma **única** chamada em lote para todas as análises visíveis que têm
-`fixture_id` (a API aceita 20 ids por requisição), com cache de 6h. Se falhar,
-a linha cai no placar salvo. Não faça uma chamada por linha — a cota é baixa.
+- **Título e botão "Criar partida"**
+  ([CreateMatchModal](src/components/home/CreateMatchModal.tsx)). O modal lista as
+  partidas de um dia de **todas** as ligas (não só as acompanhadas), com navegação de
+  data (6 meses atrás até 30 dias à frente) e busca por equipe **ou campeonato**.
+  Clicar numa partida cria a análise, igual ao card da Home. O rodapé leva a
+  `/nova-analise` ("Montar partida manualmente") para confrontos que a API não lista.
+- **Filtro de data** ([DateNavigator](src/components/home/DateNavigator.tsx)). Começa em
+  "Hoje" (calendário de Brasília). As setas recuam até **7 dias** e o texto do meio vira
+  a data ("seg, 02/11"); a seta da direita volta até hoje, nunca além. Clicar no texto
+  abre um calendário próprio (sem dependência) com datas de até **6 meses atrás**.
+  Os limites ficam em `agendaBounds()` ([agendaDates.ts](src/utils/agendaDates.ts)).
+  A seleção é `null` enquanto segue "hoje", então a tela vira o dia sozinha à meia-noite.
+  Datas são sempre texto `AAAA-MM-DD`; some/subtraia só com `addDays`/`addMonths`.
+- **Pesquisar equipe** ([SearchField](src/components/home/SearchField.tsx)). Filtro
+  **instantâneo e local**: ignora maiúsculas e acentos e casa com mandante ou visitante
+  (`matchesSearch`). Não faz consulta nenhuma. O [FixtureGrid](src/components/home/FixtureGrid.tsx)
+  mantém todos os cards no DOM e só esconde (`hidden`) os que não casam — isso evita
+  refazer o observador de escalações a cada letra.
+- **Grid por campeonato**. [FixtureGrid](src/components/home/FixtureGrid.tsx) agrupa por
+  liga (`groupFixturesByLeague`): logo do campeonato (`league.logo` da API, em fundo claro;
+  cai na bandeira se faltar), nome, país e rodada. Brasileirão primeiro, depois a ordem de
+  `LEAGUE_ORDER` em [leagueDisplay.ts](src/utils/leagueDisplay.ts), que também traduz rodadas
+  ("Regular Season - 34" → "Rodada 34") e países. A API chama o Brasileirão de "Serie A/B/C";
+  `LEAGUE_NAMES` troca por "Brasileirão Série A/B/C". Cards em 1/2/3 colunas (mobile/md/xl).
+  [FixtureCard](src/components/home/FixtureCard.tsx): escudos e nomes à esquerda, horário ou
+  placar à direita; o card inteiro é um botão que cria a análise. Tags: "Encerrada",
+  "AGORA · minuto" e "Escalações confirmadas".
 
-**A busca** ([SearchDropdown](src/components/home/SearchDropdown.tsx)) usa o
-`searchService` que já existia, com debounce de 300ms e resultados em dropdown.
-Respostas fora de ordem são descartadas por número de sequência — sem isso uma
-digitação antiga sobrescreve a atual.
+**Ligas.** A agenda continua restrita às 26 ligas de `TODAY_LEAGUES` em
+`apiFootballService`. A Champions League, a Libertadores etc. **não** estão nessa lista: para
+vê-las na Home basta acrescentar o ID (Champions = 2). O modal "Criar partida" mostra todas.
 
-> ⚠️ **Datas**: use sempre `formatShortDate` de
-> [src/utils/formatDate.ts](src/utils/formatDate.ts). `new Date("2026-08-05")`
-> (colunas `DATE`, como `match_date`) é lido como meia-noite **UTC** e, exibido
-> em UTC-3, volta um dia — `01/01/2026` chegava a virar `31/12/2025`.
+**Requisições (o ponto central do desenho).**
+
+- **Uma consulta por dia**: `apiFootballService.getDayFixtures(date, 'tracked' | 'all')` faz
+  `/fixtures?date=…&timezone=America/Sao_Paulo` e guarda a resposta **completa** em
+  `zona14_agenda_fixtures_v4_<data>`. A Home lê o recorte `tracked` e o modal o recorte `all`
+  da mesma consulta. Voltar para um dia já visto não gasta nada.
+- **TTL por dia**: hoje 2 min (jogo ao vivo/perto de começar, só nas ligas acompanhadas) ou
+  15 min; dia futuro 1 h; dia passado **7 dias** quando todas as partidas estão em estado final
+  (`isFixtureSettled`), senão 15 min. Só os 6 dias mais próximos de hoje ficam em cache.
+- Não há pré-carregamento de dias vizinhos nem consulta ao digitar. A releitura de 1 min só
+  vale para hoje e o cache decide se vira consulta.
+- **Plano gratuito da API (verificado em 09/11/2026, plano Free, 100/dia).** `date` só aceita
+  **de hoje até hoje+2**; qualquer outra data devolve `errors.plan` ("Free plans do not have
+  access to this date, try from … to …"). Também bloqueados: `next`, `last` e `season` atual.
+  Ou seja, **recuar datas na Home só funciona em plano pago**. O erro vira
+  `FootballPlanError` ([footballRequestQueue.ts](src/services/footballRequestQueue.ts)); o
+  intervalo liberado é aprendido uma vez por dia (`zona14_football_plan_window_v1`) e as
+  demais datas fora dele **nem chegam a consultar**. "Tentar novamente" esquece o intervalo
+  (`forgetPlanWindow`), útil depois de trocar de plano. Hoje nunca é barrado de antemão
+  (perto da meia-noite o "dia da API" é UTC). A tela explica o limite e oferece "Voltar para hoje".
+- Escalações confirmadas: `useFixtureLineups` só consulta `/fixtures/lineups` de jogos `NS`
+  que começam em até 60 min e apenas para cards visíveis (observador sem `root`: a rolagem é
+  da página). Falhas tentam de novo após 1 min; negativos após 5 min. A tag só aparece antes
+  do início do jogo. O modal não consulta escalações.
+- **Cota** (100/dia no Free): se acabar (HTTP 200 com `errors.requests`),
+  `footballRequestQueue` interrompe novas chamadas até 00:00 UTC (21h de Brasília), mantém a
+  última lista em cache e, sem cache, explica o motivo na tela. A fila também serializa as
+  chamadas, compartilha o orçamento por minuto entre abas (Web Locks) e trata 429/`rateLimit`.
+- Estado da tela: `useDayFixtures` ([hook](src/hooks/useDayFixtures.ts)) guarda o resultado com a
+  chave `data|escopo|tentativa`; "carregando" é derivado (não há `setState` síncrono no efeito)
+  e só troca de lista quando algo visível mudou (`sameFixtures`).
+
+**Testes**: `npm run test:agenda` cobre datas/limites, agrupamento, busca, o cache por dia, o
+intervalo do plano e as regras antigas da agenda. Layout e interação foram conferidos no Edge
+headless (CDP) com a Home real — veja "Verifique mudança visual com screenshot".
 
 ### Tela de visualização (`ViewAnalysis`)
 

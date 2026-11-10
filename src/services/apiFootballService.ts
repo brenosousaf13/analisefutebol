@@ -1,7 +1,8 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { uniquePlayersById } from '../utils/uniquePlayers.ts';
-import { hasConfirmedLineups, hasStartingEleven, isFixtureFinished, isFixtureLive, isFixtureStartingSoon, type LineupConfirmation } from '../utils/fixtureStatus';
-import { createFootballRequestQueue } from './footballRequestQueue';
+import { hasConfirmedLineups, hasStartingEleven, isFixtureFinished, isFixtureLive, isFixtureSettled, isFixtureStartingSoon, type LineupConfirmation } from '../utils/fixtureStatus';
+import { todayInBrasilia } from '../utils/agendaDates';
+import { createFootballRequestQueue, FootballPlanError, planWindowError } from './footballRequestQueue';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
@@ -37,8 +38,16 @@ const TODAY_LEAGUES = new Set<number>([
     218, // Bundesliga — Áustria
 ]);
 
-// Invalida o cache anterior, que incluía todas as ligas da API.
-const TODAY_CACHE_KEY = 'zona14_today_fixtures_v3';
+// Cada dia consultado guarda a resposta COMPLETA da API (todas as ligas). A agenda filtra
+// pelas ligas acompanhadas e o "Criar partida" usa o resto — uma consulta serve às duas telas.
+const DAY_CACHE_PREFIX = 'zona14_agenda_fixtures_v4_';
+const LEGACY_DAY_CACHE_PREFIX = 'zona14_today_fixtures_v';
+const DAY_CACHE_MAX_ENTRIES = 6;
+const FUTURE_DAY_TTL_MS = 60 * 60 * 1000;
+const PAST_DAY_TTL_MS = 7 * 24 * 60 * 60 * 1000; // placar de dia encerrado não muda
+const PAST_UNSETTLED_TTL_MS = 15 * 60 * 1000;
+// Intervalo de datas que o plano da API libera, aprendido do primeiro erro de plano do dia.
+const PLAN_WINDOW_KEY = 'zona14_football_plan_window_v1';
 // A cota gratuita é de 100 consultas por dia: atualiza rápido só quando algo está acontecendo.
 const TODAY_ACTIVE_TTL_MS = 2 * 60 * 1000;
 const TODAY_IDLE_TTL_MS = 15 * 60 * 1000;
@@ -48,13 +57,113 @@ const LINEUP_DATA_PREFIX = 'zona14_lineup_data_v1_';
 const CONFIRMED_TTL_MS = 24 * 60 * 60 * 1000;
 interface LineupConsumer { signal?: AbortSignal; canRequest?: () => boolean }
 const lineupRequests = new Map<number, { promise: Promise<ApiLineup[]>; consumers: Set<LineupConsumer> }>();
-let todayRequest: { date: string; promise: Promise<ApiFixture[]> } | undefined;
+const dayRequests = new Map<string, Promise<ApiFixture[]>>();
 
 function todayCacheTtl(fixtures: ApiFixture[]): number {
     const now = Date.now();
     const active = fixtures.some(f => isFixtureLive(f)
         || (!isFixtureFinished(f) && Math.abs(Date.parse(f.fixture.date) - now) <= 60 * 60 * 1000));
     return active ? TODAY_ACTIVE_TTL_MS : TODAY_IDLE_TTL_MS;
+}
+
+const isTrackedLeague = (fixture: ApiFixture) => TODAY_LEAGUES.has(fixture.league?.id);
+
+function dayCacheTtl(date: string, today: string, all: ApiFixture[]): number {
+    if (date === today) return todayCacheTtl(all.filter(isTrackedLeague));
+    if (date > today) return FUTURE_DAY_TTL_MS;
+    return all.every(isFixtureSettled) ? PAST_DAY_TTL_MS : PAST_UNSETTLED_TTL_MS;
+}
+
+/** Mantém só os dias mais próximos de hoje e apaga o cache antigo, que ocupava espaço à toa. */
+function pruneDayCache(today: string, keep: number) {
+    try {
+        const keys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key) keys.push(key);
+        }
+        for (const key of keys) if (key.startsWith(LEGACY_DAY_CACHE_PREFIX)) localStorage.removeItem(key);
+        const distance = (key: string) => Math.abs(Date.parse(key.slice(DAY_CACHE_PREFIX.length)) - Date.parse(today));
+        const days = keys.filter(key => key.startsWith(DAY_CACHE_PREFIX)).sort((a, b) => distance(a) - distance(b));
+        for (const key of days.slice(keep)) localStorage.removeItem(key);
+    } catch { /* storage indisponível */ }
+}
+
+interface PlanWindow { from: string; to: string; day: string }
+
+function readPlanWindow(today: string): PlanWindow | null {
+    try {
+        const saved = JSON.parse(localStorage.getItem(PLAN_WINDOW_KEY) ?? 'null') as PlanWindow | null;
+        return saved && saved.day === today && typeof saved.from === 'string' && typeof saved.to === 'string' ? saved : null;
+    } catch { return null; }
+}
+
+function savePlanWindow(error: FootballPlanError, today: string) {
+    if (!error.from || !error.to) return;
+    try { localStorage.setItem(PLAN_WINDOW_KEY, JSON.stringify({ from: error.from, to: error.to, day: today })); } catch { /* storage cheio */ }
+}
+
+/**
+ * Todas as partidas de um dia (todas as ligas), com o mínimo de consultas:
+ * cache por dia, consulta única em andamento e, se o plano já mostrou que a data
+ * está fora do que libera, nem chega a consultar de novo.
+ */
+async function loadDay(date: string): Promise<ApiFixture[]> {
+    const today = todayInBrasilia();
+    const cacheKey = `${DAY_CACHE_PREFIX}${date}`;
+    let stale: ApiFixture[] | undefined;
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            const { data, ts } = JSON.parse(cached) as { data: ApiFixture[]; ts: number };
+            if (Date.now() - ts < dayCacheTtl(date, today, data)) return data;
+            stale = data;
+        }
+    } catch { /* cache invalido */ }
+
+    // Hoje nunca é barrado de antemão: perto da meia-noite a "data da API" (UTC) pode divergir da de Brasília.
+    const planWindow = date === today ? null : readPlanWindow(today);
+    if (planWindow && (date < planWindow.from || date > planWindow.to)) {
+        if (stale) return stale;
+        throw planWindowError(planWindow.from, planWindow.to);
+    }
+
+    const running = dayRequests.get(date);
+    if (running) return running;
+    const promise = (async () => {
+        const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', {
+            params: { date, timezone: 'America/Sao_Paulo' },
+            timeout: 20000,
+        });
+        if (Object.keys(response.data.errors ?? {}).length > 0) {
+            throw new Error('Não foi possível consultar a agenda.');
+        }
+        const sorted = [...(response.data.response ?? [])].sort(
+            (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0),
+        );
+        const entry = JSON.stringify({ data: sorted, ts: Date.now() });
+        try {
+            localStorage.setItem(cacheKey, entry);
+            pruneDayCache(today, DAY_CACHE_MAX_ENTRIES);
+        } catch {
+            // Sem espaço: libera os dias mais distantes e tenta mais uma vez.
+            pruneDayCache(today, 1);
+            try { localStorage.setItem(cacheKey, entry); } catch { /* segue sem cache */ }
+        }
+        return sorted;
+    })();
+    // Se a API falhar ou a cota acabar, mantém a última lista do dia em vez de esvaziar a tela.
+    const guarded = promise.catch(error => {
+        if (error instanceof FootballPlanError) savePlanWindow(error, today);
+        if (stale) return stale;
+        throw error;
+    });
+    dayRequests.set(date, guarded);
+    try {
+        return await guarded;
+    } finally {
+        if (dayRequests.get(date) === guarded) dayRequests.delete(date);
+    }
 }
 
 function lineupCacheTtl(status: LineupConfirmation): number {
@@ -150,56 +259,26 @@ export const apiFootballService = {
     },
 
     /**
-     * Jogos de hoje no fuso de Brasilia (UTC-3).
+     * Partidas de um dia no fuso de Brasília (UTC-3), em ordem de horário.
      *
-     * Retorna todas as partidas das 25 ligas acompanhadas. Data e timezone
-     * vão juntos para incluir jogos da noite que já caem no dia seguinte UTC.
+     * `tracked` devolve só as ligas escolhidas para a agenda; `all` devolve todas
+     * (usado na busca de "Criar partida"). As duas leituras vêm da mesma consulta.
+     * Data e timezone vão juntos para incluir jogos da noite que já caem no dia
+     * seguinte em UTC.
      */
+    async getDayFixtures(date: string, scope: 'tracked' | 'all' = 'tracked'): Promise<ApiFixture[]> {
+        const all = await loadDay(date);
+        return scope === 'all' ? all : all.filter(isTrackedLeague);
+    },
+
+    /** Esquece o intervalo de datas do plano (útil depois de trocar de plano). */
+    forgetPlanWindow() {
+        try { localStorage.setItem(PLAN_WINDOW_KEY, 'null'); } catch { /* storage indisponível */ }
+    },
+
+    /** Jogos de hoje nas ligas acompanhadas. */
     async getTodayFixtures(): Promise<ApiFixture[]> {
-        const today = new Intl.DateTimeFormat('en-CA', {
-            timeZone: 'America/Sao_Paulo',
-            year: 'numeric', month: '2-digit', day: '2-digit',
-        }).format(new Date()); // en-CA ja formata como YYYY-MM-DD
-
-        const cacheKey = `${TODAY_CACHE_KEY}_${today}`;
-        let stale: ApiFixture[] | undefined;
-        try {
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const { data, ts } = JSON.parse(cached) as { data: ApiFixture[]; ts: number };
-                if (Date.now() - ts < todayCacheTtl(data)) return data;
-                stale = data;
-            }
-        } catch { /* cache invalido */ }
-
-        if (todayRequest?.date === today) return todayRequest.promise;
-        const promise = (async () => {
-            const response = await apiClient.get<ApiFootballResponse<ApiFixture>>('/fixtures', {
-                params: { date: today, timezone: 'America/Sao_Paulo' },
-                timeout: 20000,
-            });
-            if (Object.keys(response.data.errors ?? {}).length > 0) {
-                throw new Error('Não foi possível consultar a agenda.');
-            }
-            const sorted = (response.data.response ?? []).filter(f => TODAY_LEAGUES.has(f.league?.id)).sort(
-                (a, b) => (a.fixture?.timestamp ?? 0) - (b.fixture?.timestamp ?? 0),
-            );
-            try {
-                localStorage.setItem(cacheKey, JSON.stringify({ data: sorted, ts: Date.now() }));
-            } catch { /* storage cheio */ }
-            return sorted;
-        })();
-        // Se a API falhar ou a cota acabar, mantém a última lista do dia em vez de esvaziar a tela.
-        const guarded = promise.catch(error => {
-            if (stale) return stale;
-            throw error;
-        });
-        todayRequest = { date: today, promise: guarded };
-        try {
-            return await guarded;
-        } finally {
-            if (todayRequest?.promise === guarded) todayRequest = undefined;
-        }
+        return apiFootballService.getDayFixtures(todayInBrasilia());
     },
 
     /**

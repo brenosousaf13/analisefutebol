@@ -51,7 +51,7 @@ export function useFixtureLineups(fixtures: ApiFixture[], rootRef: RefObject<HTM
                     visible.delete(id);
                 }
             }
-        }, { root });
+        });
         const refresh = () => {
             const current = Date.now();
             setNow(current);
