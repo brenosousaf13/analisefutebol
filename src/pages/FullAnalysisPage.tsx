@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
@@ -26,6 +26,7 @@ import { AnalysisTabs } from '../components/AnalysisTabs';
 import HighlightsModal from '../components/HighlightsModal';
 import { downloadFieldImage, fieldFileName } from '../utils/captureField';
 import { apiFootballService } from '../services/apiFootballService';
+import { readAnalysisMetadata, readCoachNotes, eventsWithMetadata, type CoachNotes } from '../utils/analysisMetadata';
 import { loadAnalysisCoaches } from '../services/analysisCoaches';
 import { normalizeAnalysisPlayers, normalizePlayerGroups } from '../utils/uniquePlayers.ts';
 
@@ -100,6 +101,8 @@ function FullAnalysisPage() {
 
     const [homeCoach, setHomeCoach] = useState('');
     const [awayCoach, setAwayCoach] = useState('');
+    const [coachNotes, setCoachNotes] = useState<CoachNotes>({ home: '', away: '' });
+    const [analysisMetadata, setAnalysisMetadata] = useState<Record<string, unknown>>({});
 
     const [events, setEvents] = useState<MatchEvent[]>([]);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -135,7 +138,6 @@ function FullAnalysisPage() {
 
     const draftKey = `zona14_draft_${routeAnalysisId || 'new'}`;
     const [draftRecovery, setDraftRecovery] = useState<{ savedAt: string } | null>(null);
-    const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Global Player Notes State (Synced across all boards)
     const [allPlayerNotes, setAllPlayerNotes] = useState<Record<number, string>>({});
@@ -261,10 +263,10 @@ function FullAnalysisPage() {
                     if (data.shareToken) setShareToken(data.shareToken);
 
                     const rawEvents = data.events || [];
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const meta = rawEvents.find((e: any) => e.type === '_meta');
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    if (meta?.videoUrl) setVideoUrl(meta.videoUrl as string);
+                    const meta = readAnalysisMetadata(rawEvents);
+                    setAnalysisMetadata(meta);
+                    setCoachNotes(readCoachNotes(meta));
+                    if (typeof meta.videoUrl === 'string') setVideoUrl(meta.videoUrl);
                     setEvents(rawEvents.filter((e: any) => e.type !== '_meta') as MatchEvent[]);
 
                     setHomeTeamColor(data.homeTeamColor || '#EF4444');
@@ -505,41 +507,33 @@ function FullAnalysisPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Auto-save draft to localStorage on every change (1s debounce)
-    useEffect(() => {
-        if (!hasUnsavedChanges) return;
-        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
-        draftTimerRef.current = setTimeout(() => {
-            try {
-                localStorage.setItem(draftKey, JSON.stringify({
-                    savedAt: new Date().toISOString(),
-                    activeBoardId,
-                    defaultBoardSnapshot: defaultBoardRef.current,
-                    homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
-                    homeSubstitutes, awaySubstitutes,
-                    homeBallDef, homeBallOff, awayBallDef, awayBallOff,
-                    homeArrows, awayArrows,
-                    homeRectangles, awayRectangles,
-                    boards,
-                    homeScore, awayScore,
-                    homeCoach, awayCoach,
-                    homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
-                    notasCasa, notasVisitante,
-                    homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
-                    homeNoteHtml, awayNoteHtml,
-                    events,
-                    allPlayerNotes,
-                    tags,
-                }));
-            } catch {
-                // localStorage unavailable (private mode, quota exceeded)
-            }
-        }, 1000);
-        return () => {
-            if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasUnsavedChanges,
+    // A mesma captura serve ao rascunho automatico e ao fechamento imediato.
+    const persistDraft = useCallback(() => {
+        try {
+            localStorage.setItem(draftKey, JSON.stringify({
+                savedAt: new Date().toISOString(),
+                activeBoardId,
+                defaultBoardSnapshot: defaultBoardRef.current,
+                homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
+                homeSubstitutes, awaySubstitutes,
+                homeBallDef, homeBallOff, awayBallDef, awayBallOff,
+                homeArrows, awayArrows,
+                homeRectangles, awayRectangles,
+                boards,
+                homeScore, awayScore,
+                homeCoach, awayCoach, coachNotes, analysisMetadata,
+                homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
+                notasCasa, notasVisitante,
+                homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
+                homeNoteHtml, awayNoteHtml,
+                events,
+                allPlayerNotes,
+                tags,
+            }));
+        } catch {
+            // localStorage unavailable (private mode, quota exceeded)
+        }
+    }, [draftKey,
         homePlayersDef, homePlayersOff, awayPlayersDef, awayPlayersOff,
         homeSubstitutes, awaySubstitutes,
         homeBallDef, homeBallOff, awayBallDef, awayBallOff,
@@ -547,13 +541,24 @@ function FullAnalysisPage() {
         homeRectangles, awayRectangles,
         boards, activeBoardId,
         homeScore, awayScore,
-        homeCoach, awayCoach,
+        homeCoach, awayCoach, coachNotes, analysisMetadata,
         homeTeamColor, awayTeamColor, homeTeamBgColor, awayTeamBgColor,
         notasCasa, notasVisitante,
         homeDefensiveNotes, homeOffensiveNotes, awayDefensiveNotes, awayOffensiveNotes,
         homeNoteHtml, awayNoteHtml,
         events, allPlayerNotes, tags]);
 
+    useEffect(() => {
+        if (!hasUnsavedChanges) return;
+        const timer = setTimeout(persistDraft, 1000);
+        return () => clearTimeout(timer);
+    }, [hasUnsavedChanges, persistDraft]);
+
+    const handleCloseAnalysis = () => {
+        if (hasUnsavedChanges) persistDraft();
+        if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
+        else navigate('/biblioteca', { replace: true });
+    };
 
     const handleAddBoard = () => {
         // Save current first
@@ -668,6 +673,8 @@ function FullAnalysisPage() {
             setHomeNoteHtml(d.homeNoteHtml || '');
             setAwayNoteHtml(d.awayNoteHtml || '');
             setEvents(d.events || []);
+            if (d.coachNotes) setCoachNotes(readCoachNotes({ coachNotes: d.coachNotes }));
+            if (d.analysisMetadata && typeof d.analysisMetadata === 'object') setAnalysisMetadata(d.analysisMetadata);
             if (d.allPlayerNotes) setAllPlayerNotes(d.allPlayerNotes);
             if (d.tags) setTags(d.tags);
             setHasUnsavedChanges(true);
@@ -877,7 +884,7 @@ function FullAnalysisPage() {
                 awayRectanglesDef: activeBoardId === null ? awayRectangles['full_away'] : finalDefaultBoard?.awayRectanglesDef || [],
                 awayRectanglesOff: [],
 
-                events,
+                events: eventsWithMetadata(events, { ...analysisMetadata, ...(videoUrl ? { videoUrl } : {}), coachNotes }),
                 tags: tags || [],
 
                 // NEW: Boards
@@ -1032,6 +1039,7 @@ function FullAnalysisPage() {
             videoUrl={videoUrl}
             onHighlightClick={() => setShowHighlights(true)}
             hideNavigationControls
+            onClose={handleCloseAnalysis}
         >
 
 
@@ -1088,6 +1096,12 @@ function FullAnalysisPage() {
 
                     homeCoachName={homeCoach}
                     awayCoachName={awayCoach}
+                    homeCoachNote={coachNotes.home}
+                    awayCoachNote={coachNotes.away}
+                    onCoachNoteChange={(team, note) => {
+                        setCoachNotes(prev => ({ ...prev, [team]: note }));
+                        setHasUnsavedChanges(true);
+                    }}
 
                     ballPositions={{
                         homeDef: homeBallDef,

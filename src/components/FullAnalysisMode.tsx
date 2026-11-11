@@ -1,4 +1,4 @@
-import React, { useState, useMemo, type ReactNode } from 'react';
+import React, { useState, useMemo, useRef, useCallback, type ReactNode } from 'react';
 import TacticalField from './TacticalField';
 import { type ToolType } from './Toolbar';
 import { FullAnalysisToolbar } from './FullAnalysisToolbar';
@@ -13,7 +13,7 @@ import {
     Download, Share2, Save, Loader2,
     Pencil, Users, Trash2,
 } from 'lucide-react';
-import { CoachNameDisplay } from './CoachNameDisplay';
+import CoachNotesModal from './CoachNotesModal';
 import TeamLogoImage from './TeamLogoImage';
 import RosterList from './analysis/RosterList';
 import RichTextEditor from './analysis/RichTextEditor';
@@ -31,6 +31,9 @@ interface FullAnalysisModeProps {
     /** Vem da escalacao da API-Football; nao e editavel na tela. */
     homeCoachName: string;
     awayCoachName: string;
+    homeCoachNote?: string;
+    awayCoachNote?: string;
+    onCoachNoteChange?: (team: 'home' | 'away', note: string) => void;
 
     ballPositions: {
         homeDef: { x: number; y: number };
@@ -110,6 +113,8 @@ const TeamColumn: React.FC<{
     team: 'home' | 'away';
     align?: 'left' | 'right';
     coachName?: string;
+    coachNote?: string;
+    onCoachClick: () => void;
     isExpandedOnMobile?: boolean;
     onToggleMobileExpansion?: () => void;
     readOnly?: boolean;
@@ -118,7 +123,7 @@ const TeamColumn: React.FC<{
     tallies: Map<string, PlayerTally>;
 }> = ({
     name, logoUrl, players, substitutes, color, bgColor,
-    isVisible, onToggleVisibility, team, align, coachName,
+    isVisible, onToggleVisibility, team, align, coachName, coachNote, onCoachClick,
     isExpandedOnMobile, onToggleMobileExpansion,
     readOnly = false, onBenchPlayerClick, onPlayerDoubleClick, tallies,
 }) => (
@@ -148,20 +153,11 @@ const TeamColumn: React.FC<{
         </div>
 
         <div className={`${isExpandedOnMobile ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-h-0 overflow-hidden`}>
-            <div className="px-4 py-2 bg-[#070d0d]">
-                {/* Sempre readOnly: o nome vem da escalacao da API-Football. */}
-                <CoachNameDisplay
-                    coachName={coachName || ''}
-                    onSave={() => { /* nao editavel */ }}
-                    align={align === 'right' ? 'right' : 'left'}
-                    placeholder="Não informado"
-                    readOnly
-                />
-            </div>
             {/* Duas listas: quem esta em campo e quem esta no banco. */}
             <div className="flex flex-col gap-4 p-2 flex-1 min-h-0 overflow-y-auto">
                 <RosterList
                     title="Em campo"
+                    coach={{ name: coachName || '', note: coachNote, onClick: onCoachClick }}
                     players={players}
                     teamColor={color}
                     teamBgColor={bgColor}
@@ -189,7 +185,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     homeTeamName, awayTeamName,
     homeTeamColor, awayTeamColor,
     homeTeamBgColor = '#090909', awayTeamBgColor = '#090909',
-    homeCoachName, awayCoachName,
+    homeCoachName, awayCoachName, homeCoachNote = '', awayCoachNote = '', onCoachNoteChange,
     homeTeamLogo, awayTeamLogo,
     ballPositions,
     homePlayersDef, homePlayersOff, homeSubstitutes, homeArrows, homeRectangles,
@@ -204,6 +200,26 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     readOnly = false, hideSidePanels = false, tabsSlot, activeBoardId, onDeleteBoard,
 }) => {
     const isMobile = useIsMobile();
+    const centerRef = useRef<HTMLDivElement>(null);
+    const [fieldBounds, setFieldBounds] = useState<{ left: number; width: number }>();
+    const alignControls = useCallback((bounds: { left: number; width: number }) => {
+        if (!centerRef.current) return;
+        const left = bounds.left - centerRef.current.getBoundingClientRect().left;
+        setFieldBounds(prev => prev && Math.abs(prev.left - left) < 0.1 && Math.abs(prev.width - bounds.width) < 0.1
+            ? prev : { left, width: bounds.width });
+    }, []);
+    const [coachNotesTeam, setCoachNotesTeam] = useState<'home' | 'away' | null>(null);
+    const coachNotesModal = coachNotesTeam && (
+        <CoachNotesModal
+            key={coachNotesTeam}
+            coachName={coachNotesTeam === 'home' ? homeCoachName : awayCoachName}
+            teamName={coachNotesTeam === 'home' ? homeTeamName : awayTeamName}
+            note={coachNotesTeam === 'home' ? homeCoachNote : awayCoachNote}
+            readOnly={readOnly || !onCoachNoteChange}
+            onSave={note => { onCoachNoteChange?.(coachNotesTeam, note); setCoachNotesTeam(null); }}
+            onClose={() => setCoachNotesTeam(null)}
+        />
+    );
     const [possession, setPossession] = useState<'home' | 'away'>('home');
     // A toolbar do desktop agora e sempre visivel, entao nao ha mais estado de
     // aberta/fechada. No mobile as ferramentas continuam no bottom sheet.
@@ -314,6 +330,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 
         return (
             <div className="flex flex-col flex-1 min-h-0 bg-[#0b1111] overflow-hidden">
+                {coachNotesModal}
 
                 {/* ── Campo + barra de controles ────────────────────────── */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
@@ -403,6 +420,14 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         awayTeamColor={awayTeamColor}
                         homeSubstitutes={homeSubstitutes}
                         awaySubstitutes={awaySubstitutes}
+                        homePlayers={homePlayersDef}
+                        awayPlayers={awayPlayersDef}
+                        homeCoachName={homeCoachName}
+                        awayCoachName={awayCoachName}
+                        homeCoachNote={homeCoachNote}
+                        awayCoachNote={awayCoachNote}
+                        onCoachClick={setCoachNotesTeam}
+                        tallies={tallies}
                         activePossession={possession}
                         onBenchPlayerClick={onBenchPlayerClick}
                         onPlayerDoubleClick={onPlayerDoubleClick}
@@ -509,6 +534,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     // ── DESKTOP LAYOUT (unchanged) ───────────────────────────────────────────
     return (
         <div className="flex flex-col lg:flex-row flex-1 h-full overflow-y-auto lg:overflow-hidden relative bg-[#0b1111]">
+            {coachNotesModal}
 
             {/* LEFT COLUMN: HOME */}
             {!hideSidePanels && (
@@ -524,6 +550,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 onToggleVisibility={() => setShowHomePlayers(!showHomePlayers)}
                 team="home"
                 coachName={homeCoachName}
+                coachNote={homeCoachNote}
+                onCoachClick={() => setCoachNotesTeam('home')}
                 isExpandedOnMobile={mobileExpandedTeam === 'home'}
                 onToggleMobileExpansion={() => toggleMobileExpansion('home')}
                 readOnly={readOnly}
@@ -533,12 +561,12 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
             )}
 
             {/* CENTER: FIELD */}
-            <div className={`flex flex-col w-full ${hideSidePanels ? '' : 'lg:w-[64%]'} h-auto lg:h-full relative shrink-0 order-1 lg:order-none`}>
+            <div ref={centerRef} className={`flex flex-col w-full ${hideSidePanels ? '' : 'lg:w-[64%]'} h-auto lg:h-full relative shrink-0 order-1 lg:order-none`}>
 
                 {/* Barra do topo: posse de bola a esquerda, ferramentas a direita,
                     sempre visiveis — sem menu escondendo as ferramentas. */}
-                <div className="shrink-0 z-30 flex flex-wrap items-end justify-between gap-x-3 gap-y-2 px-4 pt-3 pb-2">
-                    <div className="flex flex-col gap-1">
+                <div data-field-controls="" className="shrink-0 z-30 flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-3 pb-2" style={{ width: fieldBounds?.width ?? 'calc(100% - 48px)', marginLeft: fieldBounds?.left ?? 24 }}>
+                    <div data-possession-controls="" className="flex flex-col gap-1">
                         <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
                             Posse de Bola
                         </span>
@@ -559,7 +587,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     </div>
 
                     {!readOnly && (
-                        <div className="min-w-0 max-w-full overflow-x-auto no-scrollbar">
+                        <div className="ml-auto min-w-0 max-w-full overflow-x-auto no-scrollbar">
                             <FullAnalysisToolbar
                                 activeTool={activeTool}
                                 onToolChange={onToolChange}
@@ -584,7 +612,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 <div className="flex-1 min-h-0 overflow-y-auto px-4">
                     {/* As abas acompanham o tamanho real do campo, sem folga. */}
                     <div className="h-full py-3" style={{ minHeight: 360 }}>
-                        <TacticalField {...tacticalFieldProps} orientation="horizontal" />
+                        <TacticalField {...tacticalFieldProps} orientation="horizontal" onFieldBoundsChange={alignControls} />
                     </div>
 
                     {/* Tela 2: anotacao unica do time — segue o switcher de posse
@@ -620,6 +648,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                 team="away"
                 align="right"
                 coachName={awayCoachName}
+                coachNote={awayCoachNote}
+                onCoachClick={() => setCoachNotesTeam('away')}
                 isExpandedOnMobile={mobileExpandedTeam === 'away'}
                 onToggleMobileExpansion={() => toggleMobileExpansion('away')}
                 readOnly={readOnly}

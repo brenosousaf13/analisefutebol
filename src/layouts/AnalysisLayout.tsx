@@ -25,6 +25,7 @@ interface AnalysisLayoutProps {
     /** Acoes da analise renderizadas no canto direito do Header. */
     actions?: ReactNode;
     hideNavigationControls?: boolean;
+    onClose?: () => void;
 }
 
 const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
@@ -38,6 +39,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
     onHighlightClick,
     actions,
     hideNavigationControls,
+    onClose,
 }) => {
     useEffect(() => {
         // Lock html/body scroll so the field handles all touch without page scroll.
@@ -76,6 +78,7 @@ const AnalysisLayout: React.FC<AnalysisLayoutProps> = ({
                     onHighlightClick={onHighlightClick}
                     actions={actions}
                     hideNavigationControls={hideNavigationControls}
+                    onClose={onClose}
                 />
 
                 {/* Page Content */}

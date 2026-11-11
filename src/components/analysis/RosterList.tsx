@@ -16,6 +16,7 @@ interface Props {
     /** Clique simples — usado no banco para promover o reserva a titular. */
     onPlayerClick?: (player: Player) => void;
     emptyLabel?: string;
+    coach?: { name: string; note?: string; onClick: () => void };
 }
 
 /**
@@ -27,6 +28,7 @@ interface Props {
 const RosterList: React.FC<Props> = ({
     title, players, teamColor, teamBgColor, tallies, onPlayerDoubleClick, onPlayerClick,
     emptyLabel = 'Ninguém nesta lista.',
+    coach,
 }) => {
     const ordered = sortRoster(players);
 
@@ -38,7 +40,7 @@ const RosterList: React.FC<Props> = ({
                 {title}
             </h4>
 
-            {ordered.length === 0 ? (
+            {ordered.length === 0 && !coach ? (
                 <p className="px-1 text-xs italic text-gray-600">{emptyLabel}</p>
             ) : (
                 <ul className="flex flex-col gap-0.5">
@@ -102,6 +104,19 @@ const RosterList: React.FC<Props> = ({
                             </li>
                         );
                     })}
+                    {coach && (
+                        <li data-coach-row="">
+                            <button
+                                type="button"
+                                onClick={coach.onClick}
+                                title="Anotações do técnico"
+                                className="flex w-full items-center gap-2 rounded px-1 py-1.5 text-left text-xs text-gray-200 transition-colors hover:bg-white/5"
+                            >
+                                <span className="min-w-0 flex-1 truncate">T: {coach.name || 'Não informado'}</span>
+                                {coach.note?.trim() && <Info size={12} className="shrink-0 text-accent-green" aria-label="Tem anotação" />}
+                            </button>
+                        </li>
+                    )}
                 </ul>
             )}
         </div>

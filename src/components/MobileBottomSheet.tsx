@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Player } from '../types/Player';
 import BenchArea from './BenchArea';
+import RosterList from './analysis/RosterList';
+import type { PlayerTally } from '../utils/playerTally';
 import { X } from 'lucide-react';
 
 interface MobileBottomSheetProps {
@@ -11,6 +13,14 @@ interface MobileBottomSheetProps {
     homeSubstitutes: Player[];
     awaySubstitutes: Player[];
     activePossession: 'home' | 'away';
+    homePlayers: Player[];
+    awayPlayers: Player[];
+    homeCoachName: string;
+    awayCoachName: string;
+    homeCoachNote: string;
+    awayCoachNote: string;
+    onCoachClick: (team: 'home' | 'away') => void;
+    tallies: Map<string, PlayerTally>;
     onBenchPlayerClick: (player: Player, team: 'home' | 'away') => void;
     onPlayerDoubleClick: (player: Player) => void;
     onClose: () => void;
@@ -21,7 +31,7 @@ export default function MobileBottomSheet({
     homeTeamName, awayTeamName,
     homeTeamColor, awayTeamColor,
     homeSubstitutes, awaySubstitutes,
-    activePossession,
+    activePossession, homePlayers, awayPlayers, homeCoachName, awayCoachName, homeCoachNote, awayCoachNote, onCoachClick, tallies,
     onBenchPlayerClick, onPlayerDoubleClick,
     onClose,
     readOnly = false,
@@ -105,6 +115,20 @@ export default function MobileBottomSheet({
 
                 {/* Player list */}
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4">
+                    <div className="mb-4">
+                        <RosterList
+                            title="Em campo"
+                            players={activeTab === 'home' ? homePlayers : awayPlayers}
+                            teamColor={activeData.color}
+                            tallies={tallies}
+                            onPlayerDoubleClick={onPlayerDoubleClick}
+                            coach={{
+                                name: activeTab === 'home' ? homeCoachName : awayCoachName,
+                                note: activeTab === 'home' ? homeCoachNote : awayCoachNote,
+                                onClick: () => onCoachClick(activeTab),
+                            }}
+                        />
+                    </div>
                     <BenchArea
                         players={activeData.players}
                         team={activeData.key}

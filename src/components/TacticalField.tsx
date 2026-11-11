@@ -51,6 +51,7 @@ interface TacticalFieldProps {
     onBallMove?: (pos: { x: number, y: number }) => void;
     ballScale?: number;
     tabsSlot?: React.ReactNode;
+    onFieldBoundsChange?: (bounds: { left: number; width: number }) => void;
 }
 
 // ... (FieldLines component logic was updated in previous step via overwrite, but we need to match the previous tool call's expectation or just strictly follow the lines here)
@@ -163,7 +164,8 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     ballPosition,
     onBallMove,
     ballScale = 1,
-    tabsSlot
+    tabsSlot,
+    onFieldBoundsChange,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
@@ -632,6 +634,10 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                     width: newWidth * buffer,
                     height: newHeight * buffer
                 });
+                onFieldBoundsChange?.({
+                    left: parent.getBoundingClientRect().left + parseFloat(style.paddingLeft) + (parentWidth - newWidth * buffer) / 2,
+                    width: newWidth * buffer,
+                });
 
             }
         };
@@ -650,7 +656,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             observer.disconnect();
             window.removeEventListener('resize', updateDimensions);
         };
-    }, [orientation, hasTabs]);
+    }, [orientation, hasTabs, onFieldBoundsChange]);
 
     // Use calculated dimensions or fallback
     const playerSize = getPlayerSize(dimensions.width || 500) * (playerScale || 1);

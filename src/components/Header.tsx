@@ -29,9 +29,10 @@ interface HeaderProps {
     /** Acoes da analise (baixar, compartilhar, salvar) no canto direito. */
     actions?: React.ReactNode;
     hideNavigationControls?: boolean;
+    onClose?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick, actions, hideNavigationControls = false }) => {
+const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick, actions, hideNavigationControls = false, onClose }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
@@ -135,7 +136,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
             )}
 
             {/* Right: Team Switcher (desktop) & Theme Toggle (desktop) */}
-            <div className="ml-auto flex items-center justify-end shrink-0 gap-2 lg:gap-4">
+            <div className="relative ml-auto flex items-center justify-end shrink-0 gap-2 lg:gap-4">
                 {matchInfo && activeTeam && onTeamChange && (
                     <div className="hidden lg:flex bg-gray-800 rounded-lg p-1 items-center">
                         <button
@@ -169,6 +170,11 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
 
                 {/* Theme Toggle — desktop only on analysis pages */}
                 {isAnalysisPage && !hideNavigationControls && <div className="hidden lg:block"><ThemeToggle /></div>}
+                {onClose && (
+                    <button type="button" aria-label="Fechar análise" title="Fechar análise e voltar" onClick={onClose} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
+                        <X className="h-5 w-5" />
+                    </button>
+                )}
             </div>
 
             {/* Sidebar Overlay - Rendered outside the header flow conceptually via fixed positioning */}
