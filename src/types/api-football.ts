@@ -190,6 +190,12 @@ export interface ApiLineupPlayer {
     grid: string | null;
 }
 
+export interface ApiCoach {
+    id: number;
+    name: string;
+    career: Array<{ team: { id: number; name: string }; start: string; end: string | null }>;
+}
+
 export interface ApiLineup {
     team: {
         id: number;

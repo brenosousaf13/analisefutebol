@@ -47,7 +47,7 @@ export const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
     };
 
     return (
-        <div className="flex items-end gap-0.5 overflow-x-auto pt-0.5 lg:pt-2 px-1 lg:px-2 select-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div data-analysis-tabs="" className="flex items-end gap-0.5 overflow-x-auto pt-0.5 lg:pt-2 select-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <style>
                 {`
                 .flex::-webkit-scrollbar {

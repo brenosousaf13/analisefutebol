@@ -594,6 +594,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     // Responsive Sizing Logic
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const hasTabs = Boolean(tabsSlot);
 
     useEffect(() => {
         const updateDimensions = () => {
@@ -649,7 +650,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
             observer.disconnect();
             window.removeEventListener('resize', updateDimensions);
         };
-    }, [orientation]);
+    }, [orientation, hasTabs]);
 
     // Use calculated dimensions or fallback
     const playerSize = getPlayerSize(dimensions.width || 500) * (playerScale || 1);
@@ -680,7 +681,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
     const { theme } = useTheme();
 
     return (
-        <div ref={wrapperRef} className={`w-full h-full flex ${orientation === 'vertical' ? 'items-stretch' : 'items-center'} justify-center overflow-hidden relative ${orientation === 'vertical' ? '' : (tabsSlot ? 'pt-12 p-2' : 'p-2')}`}>
+        <div ref={wrapperRef} className={`w-full h-full flex ${orientation === 'vertical' ? 'items-stretch' : 'items-center'} justify-center overflow-hidden relative ${orientation === 'vertical' ? (tabsSlot ? 'pt-7' : '') : (tabsSlot ? 'pt-12 px-2 pb-2' : 'p-2')}`}>
             <div
                 className="relative flex flex-col items-start justify-center"
                 style={orientation === 'vertical' ? {
@@ -710,7 +711,7 @@ const TacticalField: React.FC<TacticalFieldProps> = ({
                             ? 'bg-[#1a1a1a]'
                             : 'bg-gradient-to-b from-field-green to-[#3d6a4d]'
                         }
-                        rounded-lg shadow-2xl overflow-hidden select-none
+                        rounded-lg ${tabsSlot ? 'rounded-t-none' : ''} shadow-2xl overflow-hidden select-none
                         ${mode === 'draw' || mode === 'rectangle' ? 'cursor-crosshair' : ''}
                         ${isEraserMode ? 'cursor-pointer' : ''}
                         ${mode === 'move' && !isEraserMode ? 'cursor-default' : ''}

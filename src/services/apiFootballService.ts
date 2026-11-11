@@ -6,7 +6,7 @@ import { normalizeTeamText, rankTeams, teamNameMatches, teamSearchAliases } from
 import { isTrackedFixture } from '../utils/trackedFixtures';
 import type { TeamOption } from '../types/teamOption';
 import { createFootballRequestQueue, FootballPlanError, planWindowError } from './footballRequestQueue';
-import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
+import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer, ApiCoach } from '../types/api-football';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
@@ -30,6 +30,7 @@ const LINEUP_DATA_PREFIX = 'zona14_lineup_data_v1_';
 const CONFIRMED_TTL_MS = 24 * 60 * 60 * 1000;
 interface LineupConsumer { signal?: AbortSignal; canRequest?: () => boolean }
 const lineupRequests = new Map<number, { promise: Promise<ApiLineup[]>; consumers: Set<LineupConsumer> }>();
+const coachRequests = new Map<number, Promise<ApiCoach[]>>();
 const dayRequests = new Map<string, Promise<ApiFixture[]>>();
 
 // Busca de times ("Criar partida") e elencos: mudam pouco, então ficam guardados por muito tempo.
@@ -462,6 +463,35 @@ export const apiFootballService = {
      */
     async getLineups(fixtureId: number): Promise<ApiLineup[]> {
         return fetchLineups(fixtureId);
+    },
+
+    /** Tecnicos e historico por equipe; uma consulta por dia, compartilhada entre aberturas. */
+    async getTeamCoaches(teamId: number): Promise<ApiCoach[]> {
+        const key = `zona14_team_coaches_v1_${teamId}`;
+        let stale: ApiCoach[] = [];
+        try {
+            const cached = JSON.parse(localStorage.getItem(key) ?? 'null') as { data: ApiCoach[]; ts: number } | null;
+            if (cached && Array.isArray(cached.data)) {
+                stale = cached.data;
+                if (Date.now() - cached.ts < CONFIRMED_TTL_MS) return stale;
+            }
+        } catch { /* cache indisponivel */ }
+        const running = coachRequests.get(teamId);
+        if (running) return running;
+        const promise = (async () => {
+            const response = await apiClient.get<ApiFootballResponse<ApiCoach>>('/coachs', { params: { team: teamId } });
+            if (Object.keys(response.data.errors ?? {}).length || !Array.isArray(response.data.response)) {
+                throw new Error('Não foi possível consultar o técnico.');
+            }
+            const data = response.data.response;
+            try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch { /* storage cheio */ }
+            return data;
+        })().catch(error => {
+            if (stale.length) return stale;
+            throw error;
+        });
+        coachRequests.set(teamId, promise);
+        try { return await promise; } finally { coachRequests.delete(teamId); }
     },
 
     /**

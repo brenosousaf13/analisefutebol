@@ -5,6 +5,7 @@ interface TeamLogoImageProps {
     logoUrl?: string | null;
     teamName?: string;
     className?: string;
+    bareFallback?: boolean;
 }
 
 function getInitials(name?: string): string {
@@ -14,13 +15,13 @@ function getInitials(name?: string): string {
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
-export default function TeamLogoImage({ logoUrl, teamName, className = 'w-16 h-16' }: TeamLogoImageProps) {
+export default function TeamLogoImage({ logoUrl, teamName, className = 'w-16 h-16', bareFallback = false }: TeamLogoImageProps) {
     const [failed, setFailed] = useState(false);
     const proxied = getProxiedLogoUrl(logoUrl);
 
     if (!proxied || failed) {
         return (
-            <div className={`${className} rounded-full bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0`}>
+            <div className={`${className} ${bareFallback ? '' : 'rounded-full bg-white/10 border border-white/20'} flex items-center justify-center flex-shrink-0`}>
                 <span className="text-white font-bold text-sm leading-none select-none">
                     {getInitials(teamName)}
                 </span>

@@ -3,15 +3,13 @@ import {
     Hand,
     MoveRight,
     Square,
-    Palette,
     Eraser,
-    FileText,
-    Zap,
-    UserPlus,
     Type,
     Circle,
     CircleOff,
-    Tag,
+    Download,
+    Share2,
+    Save,
 } from 'lucide-react';
 import { type ToolType } from './Toolbar';
 import IconButton from './analysis/IconButton';
@@ -19,14 +17,12 @@ import IconButton from './analysis/IconButton';
 interface FullAnalysisToolbarProps {
     activeTool: ToolType;
     onToolChange: (tool: ToolType) => void;
-    onOpenColorPicker: () => void;
-    onOpenAnalysis: () => void;
-    onOpenEvents: () => void;
-    onAddPlayer: () => void;
-
-    /** Nomes dos jogadores no campo. */
-    showLabels?: boolean;
-    onToggleLabels?: () => void;
+    onExport: () => void;
+    onShare: () => void;
+    onSave: () => void;
+    isSaving: boolean;
+    isDownloading: boolean;
+    hasUnsavedChanges: boolean;
     /** Bola no campo — toggle independente dos nomes. */
     showBall?: boolean;
     onToggleBall?: () => void;
@@ -37,22 +33,16 @@ const Divider = () => <div className="mx-1 h-8 w-px shrink-0 bg-white/10" />;
 /**
  * Barra de ferramentas de edicao do campinho.
  *
- * As acoes de sistema (exportar, compartilhar, salvar) NAO ficam mais aqui —
- * subiram para o cabecalho da analise.
+ * Desenho, visibilidade da bola e acoes da analise no mesmo lugar.
  */
 export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
     activeTool,
     onToolChange,
-    onOpenColorPicker,
-    onOpenAnalysis,
-    onOpenEvents,
-    onAddPlayer,
-    showLabels = true,
-    onToggleLabels,
+    onExport, onShare, onSave, isSaving, isDownloading, hasUnsavedChanges,
     showBall = true,
     onToggleBall,
 }) => (
-    <div className="
+    <div role="toolbar" aria-label="Ferramentas da análise" className="
         flex w-max flex-row items-center gap-0.5
         rounded-full border border-white/10 bg-nav-dark/90
         px-2 py-1 shadow-lg backdrop-blur-md
@@ -102,40 +92,28 @@ export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
             onClick={() => onToggleBall?.()}
             tooltipSide="up"
         />
-        <IconButton
-            icon={<Tag className={`h-5 w-5 ${showLabels ? '' : 'opacity-50'}`} />}
-            label={showLabels ? 'Ocultar nome dos jogadores' : 'Mostrar nome dos jogadores'}
-            isActive={!showLabels}
-            onClick={() => onToggleLabels?.()}
-            tooltipSide="up"
-        />
 
         <Divider />
 
-        {/* Estes quatro nao aparecem no wireframe, mas sao funcionalidades ativas
-            hoje — mantidos ate haver uma decisao explicita sobre onde devem morar. */}
         <IconButton
-            icon={<Palette className="h-5 w-5" />}
-            label="Cores"
-            onClick={onOpenColorPicker}
+            icon={<Download className="h-5 w-5" />}
+            label="Baixar imagem do campinho"
+            onClick={onExport}
+            isLoading={isDownloading}
             tooltipSide="up"
         />
         <IconButton
-            icon={<UserPlus className="h-5 w-5" />}
-            label="Adicionar jogador"
-            onClick={onAddPlayer}
+            icon={<Share2 className="h-5 w-5" />}
+            label="Compartilhar análise"
+            onClick={onShare}
             tooltipSide="up"
         />
         <IconButton
-            icon={<FileText className="h-5 w-5" />}
-            label="Análise"
-            onClick={onOpenAnalysis}
-            tooltipSide="up"
-        />
-        <IconButton
-            icon={<Zap className="h-5 w-5" />}
-            label="Eventos"
-            onClick={onOpenEvents}
+            icon={<Save className="h-5 w-5" />}
+            label="Salvar análise"
+            onClick={onSave}
+            isLoading={isSaving}
+            badge={hasUnsavedChanges}
             tooltipSide="up"
         />
     </div>

@@ -9,8 +9,8 @@ import type { Arrow } from '../types/Arrow';
 import type { Rectangle } from '../types/Rectangle';
 import {
     Eye, EyeOff, ChevronDown, ChevronUp,
-    Hand, MoveRight, Square, Palette, Eraser,
-    FileText, Zap, Share2, Save, Loader2, UserPlus,
+    Hand, MoveRight, Square, Eraser, Circle, CircleOff,
+    Download, Share2, Save, Loader2,
     Pencil, Users, Trash2,
 } from 'lucide-react';
 import { CoachNameDisplay } from './CoachNameDisplay';
@@ -65,6 +65,7 @@ interface FullAnalysisModeProps {
     onExport: () => void;
     onAddPlayer: () => void;
     isSaving: boolean;
+    isDownloading?: boolean;
     hasUnsavedChanges: boolean;
     onShare: () => void;
 
@@ -123,26 +124,13 @@ const TeamColumn: React.FC<{
 }) => (
     <div className="flex flex-col border-r border-l border-gray-800 bg-[#070d0d] w-full lg:w-[18%] h-auto lg:h-full shrink-0 order-2 lg:order-none overflow-hidden">
         <div
-            className="p-4 border-b border-gray-700 bg-[#070d0d] cursor-pointer lg:cursor-default"
+            className="px-4 pt-4 pb-1 bg-[#070d0d] cursor-pointer lg:cursor-default"
             onClick={() => {
                 if (onToggleMobileExpansion && window.innerWidth < 1024) onToggleMobileExpansion();
             }}
         >
-            {/* Escudo acima do nome, como na tela de ver partida. O nome nao e
-                mais um link: a anotacao coletiva abre pelo botao de notas da
-                barra de ferramentas. */}
             <div className={`flex items-center justify-between gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
-                <div className={`min-w-0 ${align === 'right' ? 'text-right' : ''}`}>
-                    <div className={`mb-2 grid h-12 w-12 place-items-center overflow-hidden rounded-lg border border-gray-700 bg-black/40 ${align === 'right' ? 'ml-auto' : ''}`}>
-                        <TeamLogoImage logoUrl={logoUrl} teamName={name} className="h-9 w-9" />
-                    </div>
-                    <h3
-                        className={`truncate text-white font-bold uppercase text-sm tracking-wider px-1 border-l-4 ${align === 'right' ? 'border-l-0 border-r-4' : ''}`}
-                        style={{ borderColor: color }}
-                    >
-                        {name}
-                    </h3>
-                </div>
+                <TeamLogoImage logoUrl={logoUrl} teamName={name} className="h-16 w-16 shrink-0" bareFallback />
 
                 <div className="flex shrink-0 items-center gap-1">
                     <button
@@ -160,7 +148,7 @@ const TeamColumn: React.FC<{
         </div>
 
         <div className={`${isExpandedOnMobile ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-h-0 overflow-hidden`}>
-            <div className="px-4 py-2 border-b border-gray-700/50 bg-[#070d0d]">
+            <div className="px-4 py-2 bg-[#070d0d]">
                 {/* Sempre readOnly: o nome vem da escalacao da API-Football. */}
                 <CoachNameDisplay
                     coachName={coachName || ''}
@@ -182,7 +170,7 @@ const TeamColumn: React.FC<{
                     emptyLabel="Nenhum jogador em campo."
                 />
                 <RosterList
-                    title={players.length === 0 && substitutes.length > 0 ? 'Elenco · clique para escalar' : 'Suplentes'}
+                    title={players.length === 0 && substitutes.length > 0 ? 'Elenco' : 'Suplentes'}
                     players={substitutes}
                     teamColor={color}
                     teamBgColor={bgColor}
@@ -207,9 +195,8 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     homePlayersDef, homePlayersOff, homeSubstitutes, homeArrows, homeRectangles,
     awayPlayersDef, awayPlayersOff, awaySubstitutes, awayArrows, awayRectangles,
     onBallMove, onPlayerMove, onBenchPlayerClick, onPlayerClick, onPlayerDoubleClick,
-    activeTool, onToolChange, onOpenColorPicker, onOpenAnalysis, onOpenEvents,
-    // onExport nao e mais usado aqui: a acao de baixar subiu para o cabecalho.
-    onSave, onAddPlayer, isSaving, hasUnsavedChanges, onShare,
+    activeTool, onToolChange,
+    onSave, onExport, isSaving, isDownloading = false, hasUnsavedChanges, onShare,
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
     events,
@@ -225,8 +212,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     const [mobileExpandedTeam, setMobileExpandedTeam] = useState<'home' | 'away' | null>(null);
     const [isBenchSheetOpen, setIsBenchSheetOpen] = useState(false);
     const [isToolsSheetOpen, setIsToolsSheetOpen] = useState(false);
-    const [showLabels, setShowLabels] = useState(true);
-    // Antes um unico toggle escondia nome e bola juntos; agora sao independentes.
+    const showLabels = true;
     const [showBall, setShowBall] = useState(true);
 
     // Gols e assistencias por jogador. Associados por nome porque MatchEvent
@@ -329,13 +315,6 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
         return (
             <div className="flex flex-col flex-1 min-h-0 bg-[#0b1111] overflow-hidden">
 
-                {/* Board tabs — ultra-compact, only when present */}
-                {tabsSlot && (
-                    <div className="shrink-0 border-b border-gray-800/60 bg-[#0b1111]">
-                        {tabsSlot}
-                    </div>
-                )}
-
                 {/* ── Campo + barra de controles ────────────────────────── */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                     {/* Field — fills all available space between tabs and controls bar */}
@@ -343,7 +322,6 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                         <TacticalField
                             {...tacticalFieldProps}
                             orientation="vertical"
-                            tabsSlot={undefined}
                             playerScale={1.5}
                         />
                     </div>
@@ -386,14 +364,14 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                             </button>
                         </div>
 
-                        {/* Toggle labels & ball */}
+                        {/* Visibilidade da bola */}
                         <button
-                            onClick={() => setShowLabels(v => !v)}
-                            className={`w-10 h-10 rounded-2xl flex items-center justify-center border active:scale-95 transition-transform shrink-0 ${!showLabels ? 'border-brand-primary/50 text-brand-primary' : 'border-white/10 text-gray-300'}`}
-                            style={{ background: !showLabels ? 'rgba(39,216,136,0.12)' : 'rgba(0,0,0,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
-                            title={showLabels ? 'Ocultar nomes e bola' : 'Mostrar nomes e bola'}
+                            onClick={() => setShowBall(v => !v)}
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center border active:scale-95 transition-transform shrink-0 ${!showBall ? 'border-brand-primary/50 text-brand-primary' : 'border-white/10 text-gray-300'}`}
+                            style={{ background: !showBall ? 'rgba(39,216,136,0.12)' : 'rgba(0,0,0,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                            title={showBall ? 'Ocultar bola' : 'Mostrar bola'}
                         >
-                            {showLabels ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            {showBall ? <Circle className="w-4 h-4" /> : <CircleOff className="w-4 h-4" />}
                         </button>
 
                         {/* Tools button */}
@@ -474,27 +452,17 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                     ))}
                                 </div>
 
-                                {/* Tool grid — row 2: create/secondary */}
-                                <div className="grid grid-cols-4 gap-2 mb-3">
-                                    {[
-                                        { icon: <Palette className="w-5 h-5" />, label: 'Cor', action: () => { onOpenColorPicker(); setIsToolsSheetOpen(false); } },
-                                        { icon: <UserPlus className="w-5 h-5" />, label: 'Jogador', action: () => { onAddPlayer(); setIsToolsSheetOpen(false); } },
-                                        { icon: <FileText className="w-5 h-5" />, label: 'Notas', action: () => { onOpenAnalysis(); setIsToolsSheetOpen(false); } },
-                                        { icon: <Zap className="w-5 h-5" />, label: 'Eventos', action: () => { onOpenEvents(); setIsToolsSheetOpen(false); } },
-                                    ].map(({ icon, label, action }) => (
-                                        <button
-                                            key={label}
-                                            onClick={action}
-                                            className="flex flex-col items-center justify-center h-16 rounded-xl gap-1.5 bg-gray-800/70 border border-gray-700/40 text-gray-300 hover:text-white transition-all active:scale-95"
-                                        >
-                                            {icon}
-                                            <span className="text-[10px] font-medium">{label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Save + Share row */}
+                                {/* Baixar, compartilhar e salvar */}
                                 <div className="flex gap-2">
+                                    <button
+                                        onClick={onExport}
+                                        disabled={isDownloading}
+                                        aria-label="Baixar imagem do campinho"
+                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-gray-800/80 border border-gray-700/40 text-gray-300 text-xs font-medium disabled:opacity-50"
+                                    >
+                                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                        Baixar
+                                    </button>
                                     <button
                                         onClick={() => { onShare(); setIsToolsSheetOpen(false); }}
                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-gray-800/80 border border-gray-700/40 text-gray-300 text-sm font-medium active:scale-95 transition-all"
@@ -595,12 +563,12 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                             <FullAnalysisToolbar
                                 activeTool={activeTool}
                                 onToolChange={onToolChange}
-                                onOpenColorPicker={onOpenColorPicker}
-                                onOpenAnalysis={onOpenAnalysis}
-                                onOpenEvents={onOpenEvents}
-                                onAddPlayer={onAddPlayer}
-                                showLabels={showLabels}
-                                onToggleLabels={() => setShowLabels(v => !v)}
+                                onExport={onExport}
+                                onShare={onShare}
+                                onSave={onSave}
+                                isSaving={isSaving}
+                                isDownloading={isDownloading}
+                                hasUnsavedChanges={hasUnsavedChanges}
                                 showBall={showBall}
                                 onToggleBall={() => setShowBall(v => !v)}
                             />
@@ -614,23 +582,9 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                     100% — box-sizing border-box —, entao cada bloco continua
                     valendo exatamente uma tela. */}
                 <div className="flex-1 min-h-0 overflow-y-auto px-4">
-                    {/* Tela 1: abas + campo. */}
-                    <div className="flex h-full flex-col gap-3 py-3" style={{ minHeight: 360 }}>
-                        {/* Abas por fora do campo, como ja e feito no mobile. Dentro
-                            do TacticalField elas forcam um pt-12 que comeria a altura
-                            da caixa e faria o campo encolher de novo. */}
-                        {tabsSlot && <div className="shrink-0">{tabsSlot}</div>}
-
-                        {/* Agora a altura manda: o campo preenche a tela na vertical
-                            e o TacticalField preserva a proporcao 105x68, sobrando
-                            uma folga nas laterais quando a janela e muito larga. */}
-                        <div className="relative min-h-0 w-full flex-1">
-                            <TacticalField
-                                {...tacticalFieldProps}
-                                orientation="horizontal"
-                                tabsSlot={undefined}
-                            />
-                        </div>
+                    {/* As abas acompanham o tamanho real do campo, sem folga. */}
+                    <div className="h-full py-3" style={{ minHeight: 360 }}>
+                        <TacticalField {...tacticalFieldProps} orientation="horizontal" />
                     </div>
 
                     {/* Tela 2: anotacao unica do time — segue o switcher de posse

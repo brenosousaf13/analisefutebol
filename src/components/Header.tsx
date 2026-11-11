@@ -28,9 +28,10 @@ interface HeaderProps {
     onHighlightClick?: () => void;
     /** Acoes da analise (baixar, compartilhar, salvar) no canto direito. */
     actions?: React.ReactNode;
+    hideNavigationControls?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick, actions }) => {
+const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, onHeaderTeamClick, videoUrl, onHighlightClick, actions, hideNavigationControls = false }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
@@ -66,14 +67,14 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
     return (
         <header className="fixed top-0 left-0 right-0 h-10 lg:h-16 bg-nav-dark/50 backdrop-blur-md border-b border-white/5 px-2 lg:px-4 flex items-center justify-between shrink-0 z-50">
             {/* Left: Hamburger Menu */}
-            <div className="flex items-center shrink-0">
+            {!hideNavigationControls && <div className="flex items-center shrink-0">
                 <button
                     onClick={() => setIsMenuOpen(true)}
                     className="p-1.5 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
-            </div>
+            </div>}
 
             {/* Center: Match Info — campeonato | times + placar | data.
                 Grade 1fr/auto/1fr dentro de um bloco centralizado na tela: o
@@ -88,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                             {matchInfo.competition || '—'}
                         </span>
 
-                        <div className="flex items-center justify-center gap-1.5 lg:gap-4 min-w-0">
+                        <div className="col-start-2 flex items-center justify-center gap-1.5 lg:gap-4 min-w-0">
                             {/* Home Team */}
                             <div
                                 className="flex items-center gap-1 lg:gap-3 justify-end min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -134,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
             )}
 
             {/* Right: Team Switcher (desktop) & Theme Toggle (desktop) */}
-            <div className="flex items-center justify-end shrink-0 gap-2 lg:gap-4">
+            <div className="ml-auto flex items-center justify-end shrink-0 gap-2 lg:gap-4">
                 {matchInfo && activeTeam && onTeamChange && (
                     <div className="hidden lg:flex bg-gray-800 rounded-lg p-1 items-center">
                         <button
@@ -167,7 +168,7 @@ const Header: React.FC<HeaderProps> = ({ matchInfo, activeTeam, onTeamChange, on
                 {actions && <div className="flex items-center gap-1">{actions}</div>}
 
                 {/* Theme Toggle — desktop only on analysis pages */}
-                {isAnalysisPage && <div className="hidden lg:block"><ThemeToggle /></div>}
+                {isAnalysisPage && !hideNavigationControls && <div className="hidden lg:block"><ThemeToggle /></div>}
             </div>
 
             {/* Sidebar Overlay - Rendered outside the header flow conceptually via fixed positioning */}

@@ -24,10 +24,9 @@ import EventsSidebar from '../components/EventsSidebar';
 import ColorPickerModal from '../components/ColorPickerModal';
 import { AnalysisTabs } from '../components/AnalysisTabs';
 import HighlightsModal from '../components/HighlightsModal';
-import IconButton from '../components/analysis/IconButton';
-import { Download, Share2, Save } from 'lucide-react';
 import { downloadFieldImage, fieldFileName } from '../utils/captureField';
 import { apiFootballService } from '../services/apiFootballService';
+import { loadAnalysisCoaches } from '../services/analysisCoaches';
 import { normalizeAnalysisPlayers, normalizePlayerGroups } from '../utils/uniquePlayers.ts';
 
 function FullAnalysisPage() {
@@ -56,6 +55,7 @@ function FullAnalysisPage() {
     // Loading state removed as unused in UI
     const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const [loading, setLoading] = useState(false);
+    const [loadedAnalysisId, setLoadedAnalysisId] = useState<string>();
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     // Anotacao unica por time (HTML). Migration 20260801.
@@ -176,6 +176,7 @@ function FullAnalysisPage() {
             setLoading(true);
             analysisService.getAnalysis(routeAnalysisId).then(data => {
                 if (data) {
+                    setLoadedAnalysisId(routeAnalysisId);
                     setCurrentAnalysisId(data.id);
                     setMatchInfo(prev => ({
                         ...prev,
@@ -257,13 +258,6 @@ function FullAnalysisPage() {
                     setHomeCoach(data.homeCoach || '');
                     setAwayCoach(data.awayCoach || '');
 
-                    // O tecnico e sempre o da escalacao da API-Football — o campo
-                    // deixou de ser editavel na tela. O que veio do banco fica
-                    // como valor inicial e so vale se a API nao responder.
-                    if (data.matchId) {
-                        void fetchCoachesFromApi(data.matchId, data.homeTeam, data.awayTeam);
-                    }
-
                     if (data.shareToken) setShareToken(data.shareToken);
 
                     const rawEvents = data.events || [];
@@ -311,6 +305,22 @@ function FullAnalysisPage() {
             }).finally(() => setLoading(false));
         }
     }, [routeAnalysisId, navigate]);
+
+    useEffect(() => {
+        if (loading || (routeAnalysisId && routeAnalysisId !== 'new' && loadedAnalysisId !== routeAnalysisId)) return;
+        let cancelled = false;
+        void loadAnalysisCoaches({
+            fixtureId: matchInfo.matchId,
+            date: matchInfo.date,
+            home: { name: matchInfo.homeTeam, logo: matchInfo.homeTeamLogo },
+            away: { name: matchInfo.awayTeam, logo: matchInfo.awayTeamLogo },
+        }).then(coaches => {
+            if (cancelled) return;
+            if (coaches.home) setHomeCoach(coaches.home);
+            if (coaches.away) setAwayCoach(coaches.away);
+        });
+        return () => { cancelled = true; };
+    }, [loading, loadedAnalysisId, routeAnalysisId, matchInfo.matchId, matchInfo.date, matchInfo.homeTeam, matchInfo.awayTeam, matchInfo.homeTeamLogo, matchInfo.awayTeamLogo]);
 
     // --- Board Management ---
 
@@ -645,8 +655,6 @@ function FullAnalysisPage() {
             setActiveBoardId(d.activeBoardId ?? null);
             setHomeScore(d.homeScore || 0);
             setAwayScore(d.awayScore || 0);
-            setHomeCoach(d.homeCoach || '');
-            setAwayCoach(d.awayCoach || '');
             setHomeTeamColor(d.homeTeamColor || '#EF4444');
             setAwayTeamColor(d.awayTeamColor || '#3B82F6');
             setHomeTeamBgColor(d.homeTeamBgColor || '#090909');
@@ -985,32 +993,6 @@ function FullAnalysisPage() {
         toast.success('Evento removido');
     };
 
-    /**
-     * Busca o nome dos tecnicos na escalacao da API-Football.
-     *
-     * Fonte unica: o campo nao e mais editavel na tela. Silenciosa de proposito
-     * — se a API nao publicou a escalacao ou a cota estourou, fica o que estava
-     * salvo no banco, sem interromper o usuario.
-     */
-    const fetchCoachesFromApi = async (fixtureId: number, homeName: string, awayName: string) => {
-        try {
-            const lineups = await apiFootballService.getLineups(fixtureId);
-            if (lineups.length === 0) return;
-
-            const matchTeam = (teamName: string) =>
-                lineups.find(l => l.team?.name?.toLowerCase() === teamName.toLowerCase());
-
-            // A ordem da API costuma ser [casa, visitante]; o nome e mais confiavel.
-            const home = matchTeam(homeName) ?? lineups[0];
-            const away = matchTeam(awayName) ?? lineups[1];
-
-            if (home?.coach?.name) setHomeCoach(home.coach.name);
-            if (away?.coach?.name) setAwayCoach(away.coach.name);
-        } catch {
-            /* segue com o campo manual */
-        }
-    };
-
     const handleDownloadField = async () => {
         setIsDownloading(true);
         try {
@@ -1049,28 +1031,7 @@ function FullAnalysisPage() {
             onHeaderTeamClick={handleTeamClick}
             videoUrl={videoUrl}
             onHighlightClick={() => setShowHighlights(true)}
-            actions={
-                <>
-                    <IconButton
-                        icon={<Download className="w-4 h-4" />}
-                        label="Baixar imagem do campinho"
-                        onClick={handleDownloadField}
-                        isLoading={isDownloading}
-                    />
-                    <IconButton
-                        icon={<Share2 className="w-4 h-4" />}
-                        label="Compartilhar análise"
-                        onClick={() => setIsShareModalOpen(true)}
-                    />
-                    <IconButton
-                        icon={<Save className="w-4 h-4" />}
-                        label="Salvar análise"
-                        onClick={handleSave}
-                        isLoading={saveStatus === 'loading'}
-                        badge={hasUnsavedChanges}
-                    />
-                </>
-            }
+            hideNavigationControls
         >
 
 
@@ -1164,7 +1125,8 @@ function FullAnalysisPage() {
                     onOpenAnalysis={() => setIsAnalysisSidebarOpen(true)}
                     onOpenEvents={() => setIsEventsSidebarOpen(true)}
                     onSave={handleSave}
-                    onExport={() => toast.error('Em breve')}
+                    onExport={handleDownloadField}
+                    isDownloading={isDownloading}
                     onAddPlayer={() => setIsCreatePlayerModalOpen(true)}
                     isSaving={saveStatus === 'loading'}
                     hasUnsavedChanges={hasUnsavedChanges}
