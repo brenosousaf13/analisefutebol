@@ -10,6 +10,7 @@ import {
     Download,
     Share2,
     Save,
+    Palette,
 } from 'lucide-react';
 import { type ToolType } from './Toolbar';
 import IconButton from './analysis/IconButton';
@@ -17,6 +18,7 @@ import IconButton from './analysis/IconButton';
 interface FullAnalysisToolbarProps {
     activeTool: ToolType;
     onToolChange: (tool: ToolType) => void;
+    onOpenColorPicker: () => void;
     onExport: () => void;
     onShare: () => void;
     onSave: () => void;
@@ -38,6 +40,7 @@ const Divider = () => <div className="mx-1 h-8 w-px shrink-0 bg-white/10" />;
 export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
     activeTool,
     onToolChange,
+    onOpenColorPicker,
     onExport, onShare, onSave, isSaving, isDownloading, hasUnsavedChanges,
     showBall = true,
     onToggleBall,
@@ -94,6 +97,13 @@ export const FullAnalysisToolbar: React.FC<FullAnalysisToolbarProps> = ({
         />
 
         <Divider />
+
+        <IconButton
+            icon={<Palette className="h-5 w-5" />}
+            label="Editar cores dos times"
+            onClick={onOpenColorPicker}
+            tooltipSide="up"
+        />
 
         <IconButton
             icon={<Download className="h-5 w-5" />}

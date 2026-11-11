@@ -10,7 +10,7 @@ import type { Rectangle } from '../types/Rectangle';
 import {
     Eye, EyeOff, ChevronDown, ChevronUp,
     Hand, MoveRight, Square, Eraser, Circle, CircleOff,
-    Download, Share2, Save, Loader2,
+    Download, Share2, Save, Loader2, Palette,
     Pencil, Users, Trash2,
 } from 'lucide-react';
 import CoachNotesModal from './CoachNotesModal';
@@ -191,7 +191,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
     homePlayersDef, homePlayersOff, homeSubstitutes, homeArrows, homeRectangles,
     awayPlayersDef, awayPlayersOff, awaySubstitutes, awayArrows, awayRectangles,
     onBallMove, onPlayerMove, onBenchPlayerClick, onPlayerClick, onPlayerDoubleClick,
-    activeTool, onToolChange,
+    activeTool, onToolChange, onOpenColorPicker,
     onSave, onExport, isSaving, isDownloading = false, hasUnsavedChanges, onShare,
     onAddArrow, onRemoveArrow, onMoveArrow,
     onAddRectangle, onRemoveRectangle, onMoveRectangle,
@@ -455,7 +455,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
 
                             <div className="px-4 pb-4">
                                 {/* Tool grid — row 1: drawing tools */}
-                                <div className="grid grid-cols-4 gap-2 mb-2">
+                                <div className="grid grid-cols-5 gap-2 mb-2">
                                     {[
                                         { tool: 'select' as const, icon: <Hand className="w-5 h-5" />, label: 'Mover' },
                                         { tool: 'arrow' as const, icon: <MoveRight className="w-5 h-5" />, label: 'Seta' },
@@ -475,6 +475,15 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                                             <span className="text-[10px] font-medium">{label}</span>
                                         </button>
                                     ))}
+                                    <button
+                                        type="button"
+                                        aria-label="Editar cores dos times"
+                                        onClick={() => { setIsToolsSheetOpen(false); onOpenColorPicker(); }}
+                                        className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-xl border border-gray-700/40 bg-gray-800/70 text-gray-300 transition-all hover:text-white active:scale-95"
+                                    >
+                                        <Palette className="h-5 w-5" />
+                                        <span className="text-[10px] font-medium">Cores</span>
+                                    </button>
                                 </div>
 
                                 {/* Baixar, compartilhar e salvar */}
@@ -591,6 +600,7 @@ export const FullAnalysisMode: React.FC<FullAnalysisModeProps> = ({
                             <FullAnalysisToolbar
                                 activeTool={activeTool}
                                 onToolChange={onToolChange}
+                                onOpenColorPicker={onOpenColorPicker}
                                 onExport={onExport}
                                 onShare={onShare}
                                 onSave={onSave}
