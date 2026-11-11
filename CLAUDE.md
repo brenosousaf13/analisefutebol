@@ -205,9 +205,22 @@ De cima para baixo ([Home.tsx](src/pages/Home.tsx)):
   `LEAGUE_ORDER` em [leagueDisplay.ts](src/utils/leagueDisplay.ts), que também traduz rodadas
   ("Regular Season - 34" → "Rodada 34") e países. A API chama o Brasileirão de "Serie A/B/C";
   `LEAGUE_NAMES` troca por "Brasileirão Série A/B/C". Cards em 1/2/3 colunas (mobile/md/xl).
-  [FixtureCard](src/components/home/FixtureCard.tsx): escudos e nomes à esquerda, horário ou
-  placar à direita; o card inteiro é um botão que cria a análise. Tags: "Encerrada",
-  "AGORA · minuto" e "Escalações confirmadas".
+  [FixtureCard](src/components/home/FixtureCard.tsx) (estrutura pedida pelo Lucas em 10/11,
+  inspirada num app de placares; só a composição importa, o visual é provisório): três colunas —
+  mandante à esquerda (escudo grande **acima** do nome), visitante à direita (idem) e, no meio,
+  o placar ("3 – 3") ou o horário ("21:00"), com a situação logo abaixo: círculo vermelho + minuto
+  (ao vivo), "Encerrada" ou "Escalações confirmadas". Sem data, sem odds e sem rótulo de grupo
+  (o campeonato e a rodada já estão no título da seção). O card inteiro é um botão que cria a análise.
+
+**Amistosos internacionais (liga 10).** Não entram todos os jogos que a API traz (centenas, com
+U17/U19/U23 e seleções pequenas): [trackedFixtures.ts](src/utils/trackedFixtures.ts) só deixa passar
+a partida se (1) as **duas** equipes forem seleções **principais** — nome sem sufixo U\d\d, W/Women,
+Olympic, B, II (`isMainNationalTeam`) — e (2) **pelo menos uma** estiver nos 70 países de
+[friendlyNations.ts](src/data/friendlyNations.ts) ("paises amistosos.txt" do Lucas, 10/11/2026).
+O casamento é pelo **nome em inglês da API** (`apiNames`), já conferido: "USA", "Türkiye",
+"Czechia", "Bosnia & Herzegovina", "Rep. Of Ireland", "Cape Verde Islands", "Congo DR", etc. Amistosos
+femininos (liga 666) não estão na lista de competições. O filtro vale em `getDayFixtures` (recorte
+`tracked`); as outras competições não são afetadas. Para mudar a lista de países, edite o arquivo.
 
 **Ligas.** Só aparecem as competições de [trackedLeagues.ts](src/data/trackedLeagues.ts) — as 41 da
 planilha "ligas zona 14.xlsx" do Lucas (11/2026), com ID da API-Football, nome em português e grupo.

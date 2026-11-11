@@ -11,7 +11,7 @@ export const AgendaSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => (
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: count }, (_, i) => (
-                <span key={i} className="h-[108px] animate-pulse rounded-control border border-line bg-surface-raised" />
+                <span key={i} className="h-[150px] animate-pulse rounded-control border border-line bg-surface-raised" />
             ))}
         </div>
     </div>

@@ -3,7 +3,7 @@ import { uniquePlayersById } from '../utils/uniquePlayers.ts';
 import { hasConfirmedLineups, hasStartingEleven, isFixtureFinished, isFixtureLive, isFixtureSettled, isFixtureStartingSoon, type LineupConfirmation } from '../utils/fixtureStatus';
 import { todayInBrasilia } from '../utils/agendaDates';
 import { normalizeTeamText, rankTeams, teamNameMatches, teamSearchAliases } from '../utils/teamSearch';
-import { TRACKED_LEAGUE_IDS } from '../data/trackedLeagues';
+import { isTrackedFixture } from '../utils/trackedFixtures';
 import type { TeamOption } from '../types/teamOption';
 import { createFootballRequestQueue, FootballPlanError, planWindowError } from './footballRequestQueue';
 import type { ApiFootballResponse, ApiTeam, ApiPlayer, ApiFixture, ApiLineup, ApiCountry, ApiLeague, ApiSquadPlayer } from '../types/api-football';
@@ -48,7 +48,7 @@ function todayCacheTtl(fixtures: ApiFixture[]): number {
     return active ? TODAY_ACTIVE_TTL_MS : TODAY_IDLE_TTL_MS;
 }
 
-const isTrackedLeague = (fixture: ApiFixture) => TRACKED_LEAGUE_IDS.has(fixture.league?.id);
+const isTrackedLeague = isTrackedFixture;
 
 function dayCacheTtl(date: string, today: string, all: ApiFixture[]): number {
     if (date === today) return todayCacheTtl(all.filter(isTrackedLeague));

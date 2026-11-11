@@ -37,7 +37,8 @@ const reply = (response, errors = []) => ({
 const fixture = (id, status = 'NS', date = '2026-10-31T23:30:00-03:00', league = 39) => ({
     fixture: { id, date, timestamp: Date.parse(date) / 1000, status: { short: status } },
     league: { id: league, name: `Liga ${league}` },
-    teams: { home: { id: id * 2 }, away: { id: id * 2 + 1 } },
+    // Amistosos de seleções só entram com seleções principais da lista: aqui, Brasil x Japão.
+    teams: { home: { id: id * 2, name: 'Brazil' }, away: { id: id * 2 + 1, name: 'Japan' } },
     goals: { home: 2, away: 1 },
 });
 const soon = (id, minutes = 30) => fixture(id, 'NS', new Date(Date.now() + minutes * 60000).toISOString());
